@@ -1,3 +1,24 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Build products, local configuration and original game data.
+**/bin/
+**/obj/
+/.local/
+/work/
+/imports/
+*.local.json
+*.[dD][aA][tT]
+*.[mM][aA][pP]
+*.[sS][aA][vV]
+*.[pP][rR][oO]
+*.[fF][rR][mM]
+*.[fF][rR][0-5]
+*.[iI][nN][tT]
+*.[aA][cC][mM]
+*.[mM][vV][eE]
+*.[pP][aA][lL]
+*.[eE][dD][gG]
+*.exe
+*.dll
