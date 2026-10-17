@@ -13,9 +13,10 @@ public partial class ImportSmoke : Node
             string[] args = OS.GetCmdlineUserArgs();
             if (args.Length != 2 || args[0] != "--data-dir")
                 throw new ArgumentException("Use -- --data-dir <Fallout 2 language folder>.");
-            GameResource resource = new GameData(args[1]).Read("maps/artemple.map");
-            MapPrefix map = MapPrefix.Read(resource.Bytes);
-            GD.Print($"IMPORT_SMOKE_OK: {map.Header.Name}; map ID {map.Header.MapIndex}; {map.Layers.Count} layers; {map.UnparsedScriptsAndObjects.Length} bytes unparsed (scripts/objects).");
+            var data = new GameData(args[1]);
+            MapDocument map = MapDocument.Read(data.Read("maps/arcaves.map"), data.Read);
+            MapLayoutWriter.Verify(map);
+            GD.Print($"IMPORT_SMOKE_OK: {map.Prefix.Header.Name}; map ID {map.Prefix.Header.MapIndex}; {map.DeclaredRootObjects} root objects; {map.ConsumedBytes} bytes parsed; exact reconstruction verified.");
             GetTree().Quit();
         }
         catch (Exception error)

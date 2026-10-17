@@ -1,90 +1,90 @@
-# Temple of Trials: contrato inicial de importação
+# Temple of Trials: contrato de importação
 
-## Confirmado nos dados locais
+## Área correta e estado atual
 
-`maps/artemple.map`, proveniente de `master.dat`, tem 92.780 bytes, versão 20 e
-ID de mapa **126**. O registro correspondente foi confirmado em `data/maps.txt`
-de `patch000.dat`. Entrada: hex **18492**, elevação **0**, rotação **0**.
-O campo de script é **745**: o CE usa `scriptIndex - 1`, que encontra
-`ARTemple.int` na posição 744 de `scripts/scripts.lst` (base zero). Tanto essa lista
-quanto `scripts/artemple.int` (4.308 bytes) são resolvidos em `patch000.dat`.
+**Interior: `maps/arcaves.map`, ID 3. Exterior: `maps/artemple.map`, ID 126.**
+Esta distinção corrige a identificação do primeiro marco, baseada apenas no nome
+`ARTEMPLE`. Foi confirmada pelo cadastro `data/maps.txt`, pelas ligações entre mapas
+e pelos scripts de criaturas, portas e armadilhas das instâncias.
 
-Flags **12**: somente a elevação 0 tem camada de quadrados gravada. Ela contém
-10.000 palavras, 167 IDs distintos de piso e um ID distinto de teto.
-Não são 10.000 áreas caminháveis: incluem células de preenchimento.
-O trecho interpretado termina no byte **40236**; os **52544** bytes restantes
-contêm a região de scripts/objetos ainda não interpretada nem validada.
+O leitor interpreta estruturalmente os dois MAPs até o fim e verifica sua
+reconstrução byte a byte em memória. O interior tem 4.528 objetos diretamente no
+mapa, 8 registros de inventário e 47 registros ativos de scripts. Números, hashes,
+divergências e comandos estão no [registro de validação](validation-objects-2026-10-17.md).
 
 ## Formatos e dependências
 
-| Recurso | Papel e regra a preservar |
+| Recurso | Regra preservada |
 | --- | --- |
-| `master.dat`, `critter.dat`, `patchNNN.dat` | Contêiner DAT de Fallout 2: rodapé com tamanho do índice e do contêiner; índice com nome, compressão, tamanhos e offset. Inteiros little-endian, compressão zlib. |
-| `maps/artemple.map` | Inteiros big-endian. Cabeçalho de 236 bytes, variáveis globais, locais, camadas, scripts e objetos. |
-| Camadas do MAP | Grade 100×100 por elevação. Bits 2/4/8 do cabeçalho indicam camada omitida. Palavra de 32 bits: piso nos 16 baixos, teto nos 16 altos; cada metade contém ID de 12 bits e flags de 4 bits. |
-| `art/tiles/tiles.lst` e `.frm` | IDs dos quadrados indexam a lista de arte em base zero. FRM contém sprites, não malhas 3D. Não reordenar a lista nem remover entradas para compactá-la. |
-| `proto/{tipo}/{tipo}.lst` e `.pro` | Protótipos determinam o subtipo e o tamanho variável dos dados de cada objeto. Tipo no byte alto do PID; índice baixo de 24 bits é baseado em 1 na lista PRO. |
-| `art/{tipo}/{tipo}.lst`, `.frm`/`.fr0`… | Resolução de FID para arte; preservar o FID completo, incluindo orientação/animação. Critters têm regras próprias de nome. |
-| `scripts/scripts.lst`, `scripts/artemple.int` | Associação entre IDs/índices e programas. Neste marco nenhum bytecode é executado. |
-| `data/maps.txt` | Registro de mapas, identificação e configuração; usar o arquivo efetivamente resolvido pelos patches. |
-| `maps/artemple.edg` | Arquivo encontrado pelo catálogo; limites da extensão de alta resolução. Tratamento e formato ficam para etapa posterior. |
+| DAT de Fallout 2 | Índice/rodapé little-endian; nomes, compressão zlib, tamanhos e offsets. |
+| MAP v20 | Inteiros big-endian; cabeçalho de 236 bytes, variáveis globais/locais, camadas, scripts e objetos. |
+| Camadas | 100×100 quadrados por elevação. Bits 2/4/8 indicam camada omitida. Palavra de 32 bits: piso nos 16 baixos, teto nos 16 altos; cada metade tem ID de 12 bits e flags de 4 bits. |
+| Scripts no MAP | Cinco categorias, blocos com 16 registros físicos e contagem de slots ativos. Tamanho varia pelo tipo do SID de cada registro, inclusive slots de preenchimento. |
+| Objetos no MAP | Contagem total de raízes e contagem por elevação. Cabeçalho de 18 inteiros, metadados de inventário e corpo variável conforme tipo/subtipo PRO. Inventários são recursivos e possuem quantidades. |
+| `proto/{tipo}/{tipo}.lst`/`.pro` | Tipo no byte alto do PID; índice baixo de 24 bits baseado em **1** na lista. Comprimento e subtipo PRO validados; atributos completos permanecem em bytes brutos. |
+| `scripts/scripts.lst`/`.int` | Índice do cabeçalho MAP baseado em **1**; índice dos registros de script baseado em **0**. Programa associado pelo SID, com origem/hash. INT não é executado. |
+| `art/{tipo}/{tipo}.lst`, FRM/FR0… | Arte futura. IDs das camadas indexam a lista de tiles em base zero. FIDs completos são conservados; resolução de arte/variantes ainda não implementada. |
+| `data/maps.txt`, EDG | Cadastro usado para identificar as áreas; EDG é extensão de limites e ainda não é interpretado. |
 
-Há recursos chamados `temple01…99.frm` em paredes e `temple01…08.frm` em cenários.
-Essa busca por nome identifica **candidatos**, não prova que todos sejam usados pelo
-mapa. A lista completa de PIDs/FIDs usados só será conhecida após ler os objetos.
-`ACTemVil`, `AITemDor`, `ACKlint` e `AITemCst` também são candidatos identificados
-pelas descrições da lista de scripts, ainda sem vínculo de instância confirmado.
+O catálogo não elimina linhas vazias ou comentários para compactar listas: isso
+mudaria os IDs. Uma referência a uma linha sem nome válido é rejeitada.
 
-## Incremento implementado
+## Representação e limites
 
-`src/Import` é C# independente de Godot, compartilhado com o inspetor de console.
-Lê DAT, resolve recursos do perfil padrão e interpreta cabeçalho/variáveis/camadas
-de MAP versão 20. Guarda nome bruto, campos reservados, índices, flags, palavras
-originais e uma cópia integral do MAP em memória. O trecho restante é opaco;
-preservar seus bytes **não equivale a importar seus objetos**.
+`src/Import` é C# independente de Godot, usado pelo console e pela cena de diagnóstico.
+`MapDocument` contém a estrutura, dependências e diagnósticos; `MapLayoutWriter`
+reconstrói os bytes exclusivamente a partir dos campos interpretados para validação.
+`MapPrefix` continua disponível como leitura parcial, sem afirmar que valida o restante.
 
-Prioridade do perfil padrão, da maior para a menor: `f2_res.dat`, patches numerados
-em ordem decrescente, `data/`, `critter.dat`, `master.dat`. Derivada da ordem de
-registro e busca do CE. Não lê caminhos personalizados de CFG/Sfall, mods, o fallback
-do diretório de trabalho nem saves `.sav`. Passe a pasta de idioma explicitamente.
-Limite de 64 MiB por recurso e índice DAT; versão 19 é recusada.
+Preservados: IDs, PIDs, FIDs, SIDs, índice de script, hex, elevação gravada, elevação
+do contêiner, rotação, deslocamentos 2D, frame, flags, iluminação, campos desconhecidos,
+campos de combate/inventário e destinos das grades de saída. A chave técnica é
+`SHA256-do-MAP:offset-do-registro`; IDs originais nunca são substituídos nem presumidos únicos.
+Offsets/comprimentos distinguem o próprio registro e a subárvore de inventário.
+Capacidade e ponteiros antigos são dados brutos, nunca usados para alocar memória.
 
-## Próximo incremento pequeno: instâncias e protótipos
+A exportação opcional JSON **v2**, apenas em `.local/<mapa>.v2.json`, inclui os bytes
+originais do MAP/PRO, campos interpretados, slots não usados, relações de inventário
+e origem/hash das dependências efetivamente lidas. Não versionar ou distribuir essa
+exportação. Ela não é um pacote completo de arte, áudio, diálogos ou dependências
+transitivas de scripts. As listas e programas são referenciados por hash, não embutidos.
 
-1. Ler as cinco categorias de scripts e seus blocos de 16 registros, respeitando
-   os campos variáveis de scripts espaciais/temporizados. Preservar SIDs, índices,
-   offsets, campos desconhecidos e bytes; não executar nem aplicar correções do CE.
-2. Resolver PRO por PID antes de ler o corpo variável de cada objeto. Ler as
-   contagens por elevação e inventários recursivos, impondo limites de profundidade
-   e tamanho. Manter `id`, `pid`, `fid`, `sid`, `scriptIndex`, tile, elevação,
-   rotação, flags, offsets de sprite, inventário e campos de saída/transição.
-   Usar `(hash do MAP, offset do registro)` como chave técnica adicional; nunca
-   substituir IDs originais por IDs do Godot nem assumir que `id` é único.
-3. Produzir representação intermediária versionada apenas em `.local/`, com origem
-   e hash de cada recurso, offsets e dependências resolvidas. Rejeitar truncamento
-   ou subtipo desconhecido sem descartar registros silenciosamente. Conferir que
-   os blocos consumidos explicam todo o arquivo e que as contagens são consistentes.
-4. Só então criar uma cena de inspeção com formas simples: piso, paredes, portas,
-   saída e marcadores. Validar entrada/saída, vizinhos e rotações contra o original.
+Perfil padrão, maior prioridade primeiro: `f2_res.dat`, patches numerados decrescentes,
+`data/`, `critter.dat`, `master.dat`. Não interpreta caminhos CFG/Sfall personalizados,
+mods, fallback do diretório de trabalho ou saves. Suporta MAP v20, até 64 MiB por
+recurso/índice DAT, 100.000 registros de objetos (incluindo inventários), 100.000 scripts
+por categoria e profundidade de inventário até 32. PRO de criatura com 412 ou 416 bytes
+é aceito; o campo final opcional não é inventado. PID especial de jogador, outros
+formatos/subtipos e extensões de PRO são recusados.
 
-Geometria: preservar separadamente índice da grade de quadrados (100×100), hex
-de objetos (200×200), elevação, rotação e deslocamentos 2D. A projeção original
-inverte o eixo da coluna e considera paridade nos hexes; não usar uma conversão
-quadrada ingênua. Escala em metros, altura de paredes e malhas são decisões futuras,
-não dados recuperáveis automaticamente dos sprites. A transformação para Godot
-deve ser separada e testada por pontos de referência, sem alterar coordenadas fonte.
-Combate, diálogos executáveis e acabamento visual ficam fora deste marco.
+Truncamento, contagens incompatíveis, subtipos desconhecidos e bytes extras causam
+erro. Divergências de associação (SID ausente, proprietário, índice de script ou
+elevação gravada) viram diagnósticos sem apagar/corrigir o valor fonte. Validação
+estrutural não confirma o comportamento dos scripts nem a correção visual.
 
-## Referência técnica fixada
+## Próximo incremento: cena de inspeção
+
+Começar pela elevação 0 de `ARCAVES`: piso, paredes, portas, saídas e marcadores com
+formas simples. Manter dados fonte separados dos nós Godot e selecionar uma instância
+pela chave técnica para consultar IDs/flags. Conferir entrada, saídas, vizinhos,
+paridade dos hexes e as seis rotações com pontos de referência do original.
+
+Não confundir quadrados (100×100) com hexes de objetos (200×200). A projeção original
+inverte a coluna e considera paridade dos hexes. Escala em metros e altura das malhas
+são decisões futuras, não geometria 3D recuperável automaticamente de FRM.
+Combate, execução de diálogos e acabamento inspirado em Wasteland 3 ficam para depois.
+
+## Referência técnica
 
 [Fallout 2 Community Edition](https://github.com/alexbatalov/fallout2-ce), commit
-`e97087b9582f37075db347a89898887320753f8b`. A cópia consultada ficou fora deste
-repositório. O leitor foi escrito em C# para este marco; não incorpora o motor C++.
+`e97087b9582f37075db347a89898887320753f8b`, consultado fora deste repositório.
+O leitor C# não incorpora o motor C++.
 
 - [DAT](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/dfile.cc): `dbaseOpen`.
 - [MAP](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/map.cc): `mapHeaderRead`, `_square_load`, `mapLoad`.
-- [Objetos](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/object.cc): `objectRead`, `objectLoadAllInternal`, `_obj_load_obj`.
-- [Protótipos](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/proto.cc): resolução de listas, `objectDataRead`.
+- [Objetos](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/object.cc): `objectRead`, `objectLoadAllInternal`, `_obj_load_obj`, `objectSaveAll`.
+- [PRO e corpos variáveis](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/proto.cc): `_proto_list_str`, `protoRead`, `objectDataRead`.
+- [PRO de criatura](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/critter.cc): `protoCritterDataRead`.
 - [Scripts](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/scripts.cc): `scriptRead`, `scriptListExtentRead`, `scriptLoadAll`.
 - [Coordenadas](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/tile.cc): `tileToScreenXY`, `squareTileToScreenXY`.
 - Prioridade de recursos: `game.cc` → `db.cc` → `xfile.cc` no mesmo commit.

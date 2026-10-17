@@ -1,47 +1,59 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using FalloutRemake.Import;
 
 try
 {
     if (args.Length == 1 && args[0] == "--self-test") return SelfTests.Run();
-    if (args.Length < 2 || args[0] != "--data-dir" || args.Length > 3)
+    if (args.Length < 2 || args[0] != "--data-dir")
     {
-        Console.Error.WriteLine("Usage: TempleInspector --self-test | --data-dir <language-folder> [maps/artemple.map]");
+        Console.Error.WriteLine("Usage: TempleInspector --self-test | --data-dir <language-folder> [--map maps/arcaves.map] [--export-local]");
         return 2;
     }
+    bool export = false;
+    string mapPath = "maps/arcaves.map";
+    for (int i = 2; i < args.Length; i++)
+    {
+        if (args[i] == "--export-local" && !export) export = true;
+        else if (args[i] == "--map" && i + 1 < args.Length) mapPath = args[++i];
+        else throw new ArgumentException($"Unknown/incomplete argument: {args[i]}");
+    }
+    mapPath = DatArchive.NormalizePath(mapPath);
+    if (!mapPath.StartsWith("maps/") || !mapPath.EndsWith(".map")) throw new ArgumentException("Expected maps/<name>.map.");
+    if (export && !File.Exists("project.godot")) throw new ArgumentException("Run --export-local from the project root.");
     var data = new GameData(args[1]);
-    GameResource resource = data.Read(args.Length == 3 ? args[2] : "maps/artemple.map");
-    MapPrefix map = MapPrefix.Read(resource.Bytes);
+    MapDocument map = MapDocument.Read(data.Read(mapPath), data.Read);
+    MapLayoutWriter.Verify(map);
+    MapObject[] objects = map.AllObjects.ToArray();
+    string? exportedFile = null;
+    if (export)
+    {
+        Directory.CreateDirectory(".local");
+        exportedFile = Path.GetFullPath(".local/" + Path.GetFileNameWithoutExtension(mapPath) + ".v2.json");
+        File.WriteAllText(exportedFile + ".tmp", MapExport.ToJson(map));
+        File.Move(exportedFile + ".tmp", exportedFile, true);
+    }
     var report = new
     {
-        SchemaVersion = 1,
-        Status = "prefix-only; scripts and objects NOT parsed or validated",
+        SchemaVersion = 2,
+        Status = "MAP structural parse complete; byte-for-byte reconstruction verified; no script execution",
         Profile = "standard CE source order; custom CFG and Sfall mods unsupported",
-        resource.Path, resource.Source,
-        Size = resource.Bytes.Length,
-        Sha256 = Convert.ToHexString(SHA256.HashData(resource.Bytes)),
-        data.SourcePriority,
-        Header = new { map.Header.Version, map.Header.Name, map.Header.MapIndex,
-            map.Header.EnteringTile, map.Header.EnteringElevation, map.Header.EnteringRotation,
-            map.Header.Flags, map.Header.ScriptIndex, map.Header.GlobalVariablesCount, map.Header.LocalVariablesCount },
-        Layers = map.Layers.Select(layer => new { layer.Elevation, Squares = layer.Tiles.Length,
-            UniqueFloorIds = layer.Tiles.Select(t => t.FloorId).Distinct().Count(),
-            UniqueRoofIds = layer.Tiles.Select(t => t.RoofId).Distinct().Count() }),
-        map.UnparsedOffset,
-        UnparsedBytes = map.UnparsedScriptsAndObjects.Length,
-        CandidateResourcesByName = data.FindPaths("temple"),
-        Dependencies = new[] { "data/maps.txt", "art/tiles/tiles.lst", "scripts/scripts.lst", "scripts/artemple.int",
-            "proto/items/items.lst", "proto/critters/critters.lst", "proto/scenery/scenery.lst",
-            "proto/walls/walls.lst", "proto/misc/misc.lst", "art/scenery/scenery.lst", "art/walls/walls.lst",
-            "art/critters/critters.lst", "art/items/items.lst", "art/misc/misc.lst" }.Select(path =>
-            {
-                GameResource dependency = data.Read(path);
-                return new { dependency.Path, dependency.Source, Size = dependency.Bytes.Length };
-            }),
-        TempleMapRegistry = RelevantLines(data.Read("data/maps.txt"), "artemple", 3),
-        TempleScriptListEntries = RelevantLines(data.Read("scripts/scripts.lst"), "temple", 0)
+        map.Source, data.SourcePriority,
+        Header = map.Prefix.Header,
+        Layers = map.Prefix.Layers.Select(l => new { l.Elevation, Squares = l.Tiles.Length,
+            UniqueFloorIds = l.Tiles.Select(t => t.FloorId).Distinct().Count() }),
+        Scripts = map.ScriptGroups.Select(g => new { g.Type, g.DeclaredCount, Blocks = g.Blocks.Length }),
+        map.ObjectsOffset, map.DeclaredRootObjects,
+        TotalObjectRecords = objects.Length,
+        InventoryObjectRecords = objects.Length - map.DeclaredRootObjects,
+        ObjectsByType = objects.GroupBy(o => o.Header.Pid >> 24).OrderBy(g => g.Key).Select(g => new { Type = g.Key, Count = g.Count() }),
+        Elevations = map.ObjectLayers.Select(l => new { l.Elevation, l.DeclaredCount }),
+        UniquePids = map.Prototypes.Length,
+        UniqueFids = objects.Select(o => o.Header.Fid).Distinct().Count(),
+        DoorRecords = objects.Where(o => (o.Header.Pid >> 24) == 2 && o.Subtype == 0).Select(o => new { o.Offset, o.Header, o.State }),
+        ExitGrids = objects.Where(o => o.Header.Pid >= 0x05000010 && o.Header.Pid <= 0x05000017).Select(o => new { o.Offset, o.Header, o.State }),
+        map.MapProgram, map.ScriptBindings, map.Dependencies, map.Diagnostics, map.ConsumedBytes,
+        RemainingMapBytes = map.Source.Size - map.ConsumedBytes,
+        ExportedFile = exportedFile
     };
     Console.WriteLine(JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
     return 0;
@@ -50,14 +62,4 @@ catch (Exception error) when (error is IOException or InvalidDataException or Un
 {
     Console.Error.WriteLine($"Inspection failed: {error.Message}");
     return 1;
-}
-
-static object[] RelevantLines(GameResource resource, string fragment, int context)
-{
-    string[] lines = Encoding.Latin1.GetString(resource.Bytes).Replace("\r", "").Split('\n');
-    var indices = new SortedSet<int>();
-    for (int i = 0; i < lines.Length; i++)
-        if (lines[i].Contains(fragment, StringComparison.OrdinalIgnoreCase))
-            for (int j = Math.Max(0, i - context); j <= Math.Min(lines.Length - 1, i + context); j++) indices.Add(j);
-    return indices.Select(i => (object)new { ZeroBasedIndex = i, Text = lines[i] }).ToArray();
 }

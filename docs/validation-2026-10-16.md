@@ -1,5 +1,10 @@
 # Validação — 16/10/2026 (America/Bahia)
 
+**Registro histórico do primeiro marco. Correção no segundo marco:** `ARTEMPLE.MAP`
+(126), inspecionado abaixo, é a área externa. O interior do Temple of Trials é
+`ARCAVES.MAP` (3). A estrutura completa de ambos já foi validada; consulte
+[os resultados atuais](validation-objects-2026-10-17.md).
+
 ## Ambiente localizado
 
 - Projeto: `C:\Dev\FalloutRemake`; inicialmente só os arquivos básicos de Godot,

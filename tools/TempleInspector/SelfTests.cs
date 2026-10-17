@@ -122,6 +122,7 @@ internal static class SelfTests
                 Reject(() => MapPrefix.Read(bytes[..235]));
                 Reject(() => MapPrefix.Read(bytes[..^5]));
             });
+            StructuralTests.Run(Check);
             Console.WriteLine($"{passed} synthetic test groups passed.");
             return 0;
         }
