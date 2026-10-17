@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://dptpgswddnmhx"]
 
-[ext_resource type="Script" path="res://src/Preview/TemplePreview.cs" id="1"]
+[ext_resource type="Script" uid="uid://2715tfa0doje" path="res://src/Preview/TemplePreview.cs" id="1"]
 
-[node name="TemplePreview" type="Node3D"]
+[node name="TemplePreview" type="Node3D" unique_id=89658220]
 script = ExtResource("1")
