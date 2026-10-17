@@ -124,6 +124,7 @@ internal static class SelfTests
             });
             StructuralTests.Run(Check);
             GeometryTests.Run(Check);
+        NavigationTests.Run(Check);
             Console.WriteLine($"{passed} synthetic test groups passed.");
             return 0;
         }

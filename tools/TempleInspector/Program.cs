@@ -6,14 +6,15 @@ try
     if (args.Length == 1 && args[0] == "--self-test") return SelfTests.Run();
     if (args.Length < 2 || args[0] != "--data-dir")
     {
-        Console.Error.WriteLine("Usage: TempleInspector --self-test | --data-dir <language-folder> [--map maps/arcaves.map] [--export-local]");
+        Console.Error.WriteLine("Usage: TempleInspector --self-test | --data-dir <language-folder> [--map maps/arcaves.map] [--export-local] [--navigation]");
         return 2;
     }
-    bool export = false;
+    bool export = false, navigation = false;
     string mapPath = "maps/arcaves.map";
     for (int i = 2; i < args.Length; i++)
     {
         if (args[i] == "--export-local" && !export) export = true;
+        else if (args[i] == "--navigation") navigation = true;
         else if (args[i] == "--map" && i + 1 < args.Length) mapPath = args[++i];
         else throw new ArgumentException($"Unknown/incomplete argument: {args[i]}");
     }
@@ -53,7 +54,8 @@ try
         ExitGrids = objects.Where(o => o.Header.Pid >= 0x05000010 && o.Header.Pid <= 0x05000017).Select(o => new { o.Offset, o.Header, o.State }),
         map.MapProgram, map.ScriptBindings, map.Dependencies, map.Diagnostics, map.ConsumedBytes,
         RemainingMapBytes = map.Source.Size - map.ConsumedBytes,
-        ExportedFile = exportedFile
+        ExportedFile = exportedFile,
+        Navigation = navigation ? NavigationReport.Create(map) : null
     };
     Console.WriteLine(JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
     return 0;

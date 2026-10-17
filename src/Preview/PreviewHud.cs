@@ -6,11 +6,17 @@ namespace FalloutRemake.Preview;
 
 public partial class PreviewHud : CanvasLayer
 {
+    private readonly ResourceScope _resources = new();
     private readonly Label _status = new();
     private readonly Label _selectionTitle = new();
     private readonly RichTextLabel _details = new();
     private readonly Label _counts = new();
     private readonly OptionButton _elevation = new() { CustomMinimumSize = new Vector2(0, 32) };
+    private readonly Label _navigationStatus = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly Button _walkMode = new() { Text = "Caminhar [M]", CustomMinimumSize = new Vector2(0, 30) };
+    private readonly Button _resetWalker = new() { Text = "Reiniciar marcador", CustomMinimumSize = new Vector2(0, 30) };
+    private PanelContainer? _navigationPanel;
+    public Action? WalkModeRequested, ResetWalkerRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -20,14 +26,15 @@ public partial class PreviewHud : CanvasLayer
         ["exit"] = true, ["marker"] = false, ["hidden"] = false
     };
     public bool MouseOverPanel => GetViewport().GetMousePosition().X > GetViewport().GetVisibleRect().Size.X - 306
-        || GetViewport().GetMousePosition().Y < 78 || GetViewport().GetMousePosition().Y > GetViewport().GetVisibleRect().Size.Y - 56;
+        || GetViewport().GetMousePosition().Y < 78 || GetViewport().GetMousePosition().Y > GetViewport().GetVisibleRect().Size.Y - 56
+        || (_navigationPanel?.GetGlobalRect().HasPoint(GetViewport().GetMousePosition()) ?? false);
 
     public override void _Ready()
     {
         var root = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
         root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(root);
-        var theme = new Theme { DefaultFontSize = 14 };
+        var theme = _resources.Own(new Theme { DefaultFontSize = 14 });
         theme.SetColor("font_color", "Label", new Color("d9dfdb"));
         theme.SetColor("font_color", "CheckBox", new Color("b5c3bd"));
         theme.SetStylebox("normal", "Button", Box("253531", 6));
@@ -71,6 +78,17 @@ public partial class PreviewHud : CanvasLayer
         _details.Text = "Clique em um volume para consultar os IDs e a posição do objeto original.\n\nAs formas e alturas são provisórias."; column.AddChild(_details);
         Button(column, "Próximo no mesmo hex", () => CycleRequested?.Invoke());
 
+        _navigationPanel = new PanelContainer { AnchorTop = 1, AnchorBottom = 1,
+            OffsetLeft = 16, OffsetRight = 556, OffsetTop = -172, OffsetBottom = -64 };
+        _navigationPanel.AddThemeStyleboxOverride("panel", Box("15211ff2", 10)); root.AddChild(_navigationPanel);
+        var navigation = new VBoxContainer(); navigation.AddThemeConstantOverride("separation", 6); _navigationPanel.AddChild(navigation);
+        var actions = new HBoxContainer(); actions.AddThemeConstantOverride("separation", 12); navigation.AddChild(actions);
+        _walkMode.Pressed += () => WalkModeRequested?.Invoke(); actions.AddChild(_walkMode);
+        _resetWalker.Pressed += () => ResetWalkerRequested?.Invoke(); actions.AddChild(_resetWalker);
+        _navigationStatus.AddThemeFontSizeOverride("font_size", 12); navigation.AddChild(_navigationStatus);
+        var legend = new Label { Text = "Verde: alcançável  ·  Vermelho: bloqueio  ·  Âmbar: saída", Modulate = new Color("9fb2a8") };
+        legend.AddThemeFontSizeOverride("font_size", 12); navigation.AddChild(legend);
+
         var footer = Panel(root, 16, -52, -16, -12, true);
         footer.AnchorTop = 1; footer.AnchorBottom = 1;
         var help = new Label { Text = "W A S D  mover    ·    Botão direito  arrastar    ·    Roda  zoom    ·    Q / E  girar    ·    Clique  inspecionar",
@@ -81,6 +99,12 @@ public partial class PreviewHud : CanvasLayer
     public void Status(string text) => _status.Text = text;
     public void Counts(string text) => _counts.Text = text;
     public void Elevation(int elevation) => _elevation.Select(elevation);
+    public void Navigation(bool available, bool walkingMode, string status)
+    {
+        _walkMode.Disabled = !available; _resetWalker.Disabled = !available;
+        _walkMode.Text = walkingMode ? "Inspecionar [M]" : "Caminhar [M]";
+        _navigationStatus.Text = status;
+    }
     public void Select(string title, string text) { _selectionTitle.Text = title; _details.Text = text; }
 
     private void AddFilter(VBoxContainer column, string key, string label, string color)
@@ -95,15 +119,16 @@ public partial class PreviewHud : CanvasLayer
         var button = new Button { Text = text, CustomMinimumSize = new Vector2(0, 32), MouseDefaultCursorShape = Control.CursorShape.PointingHand };
         button.Pressed += pressed; container.AddChild(button);
     }
-    private static PanelContainer Panel(Control parent, float left, float top, float right, float bottom, bool stretch)
+    private PanelContainer Panel(Control parent, float left, float top, float right, float bottom, bool stretch)
     {
         var panel = new PanelContainer { AnchorRight = stretch ? 1 : 0, OffsetLeft = left, OffsetTop = top, OffsetRight = right, OffsetBottom = bottom };
         panel.AddThemeStyleboxOverride("panel", Box("15211ff2", 10)); parent.AddChild(panel); return panel;
     }
-    private static StyleBoxFlat Box(string color, int radius) => new()
+    private StyleBoxFlat Box(string color, int radius) => _resources.Own(new StyleBoxFlat
     {
         BgColor = new Color(color), CornerRadiusTopLeft = radius, CornerRadiusTopRight = radius,
         CornerRadiusBottomLeft = radius, CornerRadiusBottomRight = radius,
         ContentMarginLeft = 16, ContentMarginRight = 16, ContentMarginTop = 10, ContentMarginBottom = 10
-    };
+    });
+    public override void _ExitTree() => _resources.Dispose();
 }

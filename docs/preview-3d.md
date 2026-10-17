@@ -54,11 +54,11 @@ Orientação e extensão de malhas de paredes/portas ainda não são inferidas d
 Alturas, larguras, materiais e iluminação são escolhas provisórias. Esta cena não
 recupera modelos 3D dos sprites. A reconstrução espacial usa os índices fonte, mas
 a aparência ainda não foi comparada lado a lado com o jogo original. Não há tetos,
-arte FRM, execução de scripts, navegação, colisão de jogo ou personagem controlável.
+arte FRM, execução de scripts ou personagem com regras completas de jogo.
 
-Próximo: classificar bloqueio por hex com flags e estados de portas, validar entrada
-e corredores, e só então testar movimentação de um marcador. A geometria usada para
-seleção não deve virar automaticamente a geometria de navegação.
+A [camada de navegação](navigation.md) agora classifica bloqueio por FID/flags e move
+um marcador na elevação 0. É independente das formas usadas para seleção e dos
+filtros visuais. Portas fechadas e saídas são limites explícitos deste marco.
 
 Referência consultada localmente: [Fallout 2 CE, tile.cc](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/tile.cc),
 commit `e97087b9582f37075db347a89898887320753f8b`; também `object.cc` e `obj_types.h`.

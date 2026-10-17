@@ -22,6 +22,9 @@ public partial class TemplePreview : Node3D
 	private readonly Dictionary<ulong, PreviewObject> _lookup = new();
 	private readonly Dictionary<string, StaticBody3D> _bodies = new();
 	private readonly Dictionary<PreviewKind, StandardMaterial3D> _materials = new();
+	private readonly Dictionary<PreviewKind, Mesh> _meshes = new();
+	private readonly Dictionary<PreviewKind, BoxShape3D> _shapes = new();
+	private readonly ResourceScope _resources = new();
 	private PreviewObject? _selected;
 	private Vector3 _focus;
 	private float _yaw = Mathf.DegToRad(40);
@@ -37,18 +40,19 @@ public partial class TemplePreview : Node3D
 		{
 			AddChild(_camera); _camera.Current = true;
 			AddChild(_hud); AddChild(_world);
-			AddChild(new WorldEnvironment { Environment = new Godot.Environment
+			AddChild(new WorldEnvironment { Environment = _resources.Own(new Godot.Environment
 			{
 				BackgroundMode = Godot.Environment.BGMode.Color, BackgroundColor = new Color("101918"),
 				AmbientLightSource = Godot.Environment.AmbientSource.Color, AmbientLightColor = new Color("b2c4b7"), AmbientLightEnergy = 0.65f,
 				ReflectedLightSource = Godot.Environment.ReflectionSource.Disabled, TonemapMode = Godot.Environment.ToneMapper.Filmic
-			} });
+			}) });
 			var sun = new DirectionalLight3D { LightColor = new Color("f0d8ac"), LightEnergy = 1.3f,
 				RotationDegrees = new Vector3(-55, -25, 0), ShadowEnabled = true, DirectionalShadowMaxDistance = 180 };
 			AddChild(sun);
 			_hud.EntryRequested = GoToEntry; _hud.FrameRequested = FrameAll; _hud.OpenRequested = ChooseFolder;
 			_hud.ElevationRequested = ChangeElevation;
 			_hud.FilterChanged = (_, _) => ApplyFilters(); _hud.CycleRequested = CycleSelection;
+			_hud.WalkModeRequested = ToggleWalkMode; _hud.ResetWalkerRequested = ResetWalker;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -68,6 +72,7 @@ public partial class TemplePreview : Node3D
 				await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 				if (_test) await CheckPreview();
+				if (_test) await CheckNavigation();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -93,12 +98,13 @@ public partial class TemplePreview : Node3D
 	private void BuildWorld()
 	{
 		if (_map == null) return;
+		using var resources = new ResourceScope();
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
 		_lookup.Clear(); _bodies.Clear(); _selected = null;
 		_layout = PreviewLayout.Create(_map, _elevation);
-		var mesh = new BoxMesh { Size = new Vector3((float)FalloutGrid.FloorWidth * .985f, .08f, 1.97f) };
-		var floorInstances = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true,
-			Mesh = mesh, InstanceCount = _layout.Floors.Length };
+		var mesh = resources.Own(new BoxMesh { Size = new Vector3((float)FalloutGrid.FloorWidth * .985f, .08f, 1.97f) });
+		var floorInstances = resources.Own(new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true,
+			Mesh = mesh, InstanceCount = _layout.Floors.Length });
 		for (int i = 0; i < _layout.Floors.Length; i++)
 		{
 			PreviewFloor floor = _layout.Floors[i];
@@ -107,42 +113,36 @@ public partial class TemplePreview : Node3D
 			floorInstances.SetInstanceColor(i, new Color(shade * .94f, shade, shade * .91f));
 		}
 		_floor = new MultiMeshInstance3D { Name = "OriginalFloorCells", Multimesh = floorInstances,
-			MaterialOverride = new StandardMaterial3D { VertexColorUseAsAlbedo = true, Roughness = 1 }, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+			MaterialOverride = resources.Own(new StandardMaterial3D { VertexColorUseAsAlbedo = true, Roughness = 1 }), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
 		_world.AddChild(_floor);
-		_materials.Clear();
 		foreach (PreviewObject obj in _layout.Objects)
 		{
 			Vector3 size = Dimensions(obj.Kind);
 			var body = new StaticBody3D { Name = $"Object_{obj.Source.Offset}", Position = Point(obj.Position, size.Y / 2), CollisionLayer = 1, CollisionMask = 0 };
 			body.SetMeta("source_key", obj.Source.Key); body.SetMeta("source_id", obj.Source.Header.Id);
 			body.SetMeta("pid", obj.Source.Header.Pid); body.SetMeta("fid", obj.Source.Header.Fid); body.SetMeta("hex", obj.Source.Header.Tile);
-			Mesh shape = obj.Kind switch
-			{
-				PreviewKind.Critter => new CapsuleMesh { Radius = .24f, Height = size.Y },
-				PreviewKind.Exit or PreviewKind.Marker => new CylinderMesh { TopRadius = size.X / 2, BottomRadius = size.X / 2, Height = size.Y, RadialSegments = 6 },
-				PreviewKind.Scenery => new CylinderMesh { TopRadius = .22f, BottomRadius = .30f, Height = size.Y, RadialSegments = 8 },
-				_ => new BoxMesh { Size = size }
-			};
-			body.AddChild(new MeshInstance3D { Mesh = shape, MaterialOverride = Material(obj.Kind) });
-			body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size } });
+			body.AddChild(new MeshInstance3D { Mesh = ObjectMesh(obj.Kind), MaterialOverride = Material(obj.Kind) });
+			if (!_shapes.TryGetValue(obj.Kind, out BoxShape3D? shape)) _shapes[obj.Kind] = shape = _resources.Own(new BoxShape3D { Size = size });
+			body.AddChild(new CollisionShape3D { Shape = shape });
 			_world.AddChild(body); _lookup.Add(body.GetInstanceId(), obj); _bodies.Add(obj.Source.Key, body);
 		}
-		_highlight = new MeshInstance3D { Name = "Selection", Mesh = new CylinderMesh { TopRadius = .72f, BottomRadius = .72f, Height = .025f, RadialSegments = 48 },
-			MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(.9f, .75f, .36f, .4f), Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-				ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, NoDepthTest = true }, Visible = false };
+		_highlight = new MeshInstance3D { Name = "Selection", Mesh = resources.Own(new CylinderMesh { TopRadius = .72f, BottomRadius = .72f, Height = .025f, RadialSegments = 48 }),
+			MaterialOverride = resources.Own(new StandardMaterial3D { AlbedoColor = new Color(.9f, .75f, .36f, .4f), Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+				ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, NoDepthTest = true }), Visible = false };
 		_world.AddChild(_highlight);
-		_arrow = new MeshInstance3D { MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color("f1d28d"), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, NoDepthTest = true } };
+		_arrow = new MeshInstance3D { MaterialOverride = resources.Own(new StandardMaterial3D { AlbedoColor = new Color("f1d28d"), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, NoDepthTest = true }) };
 		_world.AddChild(_arrow);
 		if (_elevation == _map.Prefix.Header.EnteringElevation)
 		{
-			var beacon = new MeshInstance3D { Position = new Vector3(0, .1f, 0), Mesh = new CylinderMesh { TopRadius = .63f, BottomRadius = .63f, Height = .15f, RadialSegments = 32 },
-				MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color("9dd9a0"), EmissionEnabled = true, Emission = new Color("57795a"), EmissionEnergyMultiplier = .6f } };
+			var beacon = new MeshInstance3D { Position = new Vector3(0, .1f, 0), Mesh = resources.Own(new CylinderMesh { TopRadius = .63f, BottomRadius = .63f, Height = .15f, RadialSegments = 32 }),
+				MaterialOverride = resources.Own(new StandardMaterial3D { AlbedoColor = new Color("9dd9a0"), EmissionEnabled = true, Emission = new Color("57795a"), EmissionEnergyMultiplier = .6f }) };
 			_world.AddChild(beacon);
 			_world.AddChild(new Label3D { Text = "ENTRADA", Position = new Vector3(0, 1.45f, 0), FontSize = 40, PixelSize = .012f,
 				Modulate = new Color("b6edb4"), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, NoDepthTest = true });
 		}
 		ClearSelection();
 		ApplyFilters();
+		BuildNavigation();
 	}
 
 	private static Vector3 Dimensions(PreviewKind kind) => kind switch
@@ -157,9 +157,22 @@ public partial class TemplePreview : Node3D
 		if (_materials.TryGetValue(kind, out StandardMaterial3D? material)) return material;
 		string color = kind switch { PreviewKind.Wall => "ae9c80", PreviewKind.Door => "cfad62", PreviewKind.Critter => "c87761",
 			PreviewKind.Exit => "59b49e", PreviewKind.Item => "c9c18d", PreviewKind.Marker => "7b87a0", _ => "8d795b" };
-		material = new StandardMaterial3D { AlbedoColor = new Color(color), Roughness = .88f };
+		material = _resources.Own(new StandardMaterial3D { AlbedoColor = new Color(color), Roughness = .88f });
 		if (kind == PreviewKind.Exit) { material.EmissionEnabled = true; material.Emission = new Color(color); material.EmissionEnergyMultiplier = .35f; }
 		_materials.Add(kind, material); return material;
+	}
+	private Mesh ObjectMesh(PreviewKind kind)
+	{
+		if (_meshes.TryGetValue(kind, out Mesh? mesh)) return mesh;
+		Vector3 size = Dimensions(kind);
+		mesh = kind switch
+		{
+			PreviewKind.Critter => new CapsuleMesh { Radius = .24f, Height = size.Y },
+			PreviewKind.Exit or PreviewKind.Marker => new CylinderMesh { TopRadius = size.X / 2, BottomRadius = size.X / 2, Height = size.Y, RadialSegments = 6 },
+			PreviewKind.Scenery => new CylinderMesh { TopRadius = .22f, BottomRadius = .30f, Height = size.Y, RadialSegments = 8 },
+			_ => new BoxMesh { Size = size }
+		};
+		_resources.Own(mesh); _meshes.Add(kind, mesh); return mesh;
 	}
 	private bool VisibleObject(PreviewObject obj)
 	{
@@ -185,6 +198,7 @@ public partial class TemplePreview : Node3D
 	public override void _Process(double delta)
 	{
 		if (_map == null) return;
+		AdvanceWalker(delta);
 		float x = (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
 		float z = (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0);
 		Vector3 right = new(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));
@@ -201,6 +215,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.Home) FrameAll();
 			if (key.PhysicalKeycode == Key.Q) _yaw -= Mathf.Pi / 6;
 			if (key.PhysicalKeycode == Key.E) _yaw += Mathf.Pi / 6;
+			if (key.PhysicalKeycode == Key.M) ToggleWalkMode();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;
@@ -208,7 +223,7 @@ public partial class TemplePreview : Node3D
 		{
 			if (mouse.ButtonIndex == MouseButton.WheelUp) _camera.Size = Mathf.Clamp(_camera.Size * .86f, 8, 220);
 			if (mouse.ButtonIndex == MouseButton.WheelDown) _camera.Size = Mathf.Clamp(_camera.Size / .86f, 8, 220);
-			if (mouse.ButtonIndex == MouseButton.Left) Pick(mouse.Position);
+			if (mouse.ButtonIndex == MouseButton.Left) { if (_walkMode) WalkAtScreen(mouse.Position); else Pick(mouse.Position); }
 		}
 		if (input is InputEventMouseMotion motion && (motion.ButtonMask & MouseButtonMask.Right) != 0)
 		{
@@ -254,7 +269,8 @@ public partial class TemplePreview : Node3D
 	private void Pick(Vector2 screen)
 	{
 		Vector3 origin = _camera.ProjectRayOrigin(screen), end = origin + _camera.ProjectRayNormal(screen) * 700;
-		var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(origin, end, 1));
+		using var query = PhysicsRayQueryParameters3D.Create(origin, end, 1);
+		using var hit = GetWorld3D().DirectSpaceState.IntersectRay(query);
 		if (hit.TryGetValue("collider", out Variant collider) && collider.AsGodotObject() is StaticBody3D body && _lookup.TryGetValue(body.GetInstanceId(), out PreviewObject? obj)) SelectObject(obj);
 		else
 		{
@@ -273,7 +289,7 @@ public partial class TemplePreview : Node3D
 		_highlight!.Position = Point(obj.Position, .04f); _highlight.Visible = true;
 		GroundPoint facing = FalloutGrid.Facing(h.Rotation);
 		Vector3 start = Point(obj.Position, .1f), tip = start + new Vector3((float)facing.X, 0, (float)facing.Z) * 1.25f;
-		var line = new ImmediateMesh(); line.SurfaceBegin(Mesh.PrimitiveType.Lines);
+		using var line = new ImmediateMesh(); line.SurfaceBegin(Mesh.PrimitiveType.Lines);
 		line.SurfaceAddVertex(start); line.SurfaceAddVertex(tip);
 		Vector3 side = new Vector3(-(float)facing.Z, 0, (float)facing.X) * .18f;
 		Vector3 back = (tip - start).Normalized() * .3f;
@@ -285,6 +301,7 @@ public partial class TemplePreview : Node3D
 		if (obj.Source.State.TryGetValue("destinationMap", out int destination)) text += $"\n\nDestino: mapa {destination}";
 		foreach (var (field, label) in new[] { ("destinationTile", "Hex de destino"), ("destinationElevation", "Elevação de destino"), ("destinationRotation", "Rotação de destino") })
 			if (obj.Source.State.TryGetValue(field, out int value)) text += $"\n{label}: {value}";
+		text += NavigationDetails(obj);
 		_hud.Select($"{title} · objeto {h.Id}", text);
 	}
 	private void ClearSelection()
@@ -328,7 +345,8 @@ public partial class TemplePreview : Node3D
 		if (DisplayServer.GetName() == "headless") throw new InvalidOperationException("Use a graphical display driver for viewport capture.");
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-		using Image image = GetViewport().GetTexture().GetImage();
+		using ViewportTexture texture = GetViewport().GetTexture();
+		using Image image = texture.GetImage();
 		Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
 		Error saved = image.SavePng(path);
 		if (saved != Error.Ok) throw new IOException($"Capture failed: {saved}");
@@ -339,7 +357,8 @@ public partial class TemplePreview : Node3D
 	{
 		if (_map == null || _layout == null || _layout.Elevation != 0 || _layout.Objects.Length != 1842 || _lookup.Count != 1842)
 			throw new InvalidDataException("Elevation 0 preview count mismatch.");
-		if (_floor?.Multimesh.InstanceCount != _layout.Floors.Length) throw new InvalidDataException("Floor instance mismatch.");
+		using var floorInstances = _floor?.Multimesh;
+		if (floorInstances?.InstanceCount != _layout.Floors.Length) throw new InvalidDataException("Floor instance mismatch.");
 		foreach (PreviewObject obj in _layout.Objects)
 		{
 			if (_bodies[obj.Source.Key].GetMeta("source_key").AsString() != obj.Source.Key) throw new InvalidDataException("Source metadata mismatch.");
@@ -357,7 +376,8 @@ public partial class TemplePreview : Node3D
 		await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
 		// A vertical ray isolates the original hex, independently of camera orientation.
 		Vector3 p = Point(target.Position, 0);
-		var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(p + Vector3.Up * 5, p - Vector3.Up, 1));
+		using var query = PhysicsRayQueryParameters3D.Create(p + Vector3.Up * 5, p - Vector3.Up, 1);
+		using var hit = GetWorld3D().DirectSpaceState.IntersectRay(query);
 		if (!hit.TryGetValue("collider", out Variant value) || value.AsGodotObject() is not StaticBody3D hitBody
 			|| !_lookup.TryGetValue(hitBody.GetInstanceId(), out PreviewObject? picked) || picked.Source.Header.Tile != target.Source.Header.Tile)
 			throw new InvalidDataException("Object picking ray missed.");
@@ -382,11 +402,14 @@ public partial class TemplePreview : Node3D
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		if (_elevation != 0 || _lookup.Count != 1842) throw new InvalidDataException("Return to entry failed.");
 		float yaw = _yaw;
-		_UnhandledInput(new InputEventKey { Pressed = true, PhysicalKeycode = Key.E });
+		using var clockwise = new InputEventKey { Pressed = true, PhysicalKeycode = Key.E };
+		_UnhandledInput(clockwise);
 		if (Math.Abs(_yaw - yaw - Mathf.Pi / 6) > .0001f) throw new InvalidDataException("Camera rotation input failed.");
-		_UnhandledInput(new InputEventKey { Pressed = true, PhysicalKeycode = Key.Q });
+		using var counterclockwise = new InputEventKey { Pressed = true, PhysicalKeycode = Key.Q };
+		_UnhandledInput(counterclockwise);
 		MapLayoutWriter.Verify(_map);
 		ClearSelection(); FocusEntry();
 		GD.Print($"PREVIEW_TEST_OK: elevation 0; {_layout!.Floors.Length} floor cells; {_lookup.Count} source objects; metadata, transforms, camera picking/rotation, filters, elevation switching and source bytes verified.");
 	}
+	public override void _ExitTree() => _resources.Dispose();
 }

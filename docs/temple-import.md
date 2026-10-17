@@ -76,11 +76,12 @@ inverte a coluna e considera paridade dos hexes. Escala em metros e altura das m
 são decisões futuras, não geometria 3D recuperável automaticamente de FRM.
 Combate, execução de diálogos e acabamento inspirado em Wasteland 3 ficam para depois.
 
-Próximo incremento: produzir uma camada explícita de hexes caminháveis na elevação 0,
-considerando flags dos objetos, portas e bloqueadores conforme CE, antes de permitir
-movimentação de um marcador de personagem. Não usar a presença de piso ou as caixas
-de seleção como regra de colisão. Conferir trechos da entrada, porta e corredor com
-o jogo original; essa comparação visual ainda não foi realizada.
+A [navegação inicial](navigation.md) já classifica hexes usando FID/flags, incluindo
+multihex, e permite mover um marcador na elevação 0. Portas fechadas bloqueiam e
+saídas são terminais. Não usa presença de piso ou caixas de seleção como colisão.
+Próximo: interpretar a primeira porta e seus scripts para uma interação explícita,
+mantendo o estado de execução separado do MAP original. Conferir entrada, porta e
+corredor com o jogo original; essa comparação visual ainda não foi realizada.
 
 ## Referência técnica
 

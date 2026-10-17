@@ -29,6 +29,27 @@ public static class FalloutGrid
         return new GroundPoint((99 - square % 100) * FloorWidth, square / 100 * FloorDepth);
     }
 
+    // Nearest regular-hex center, using the same affine frame as HexCenter.
+    public static int? HexAt(GroundPoint point)
+    {
+        if (!double.IsFinite(point.X) || !double.IsFinite(point.Z)) return null;
+        double columnValue = point.X / ColumnStep - 1.0 / 12;
+        if (columnValue < -1 || columnValue > 200 || point.Z < -2 || point.Z > 201) return null;
+        int approximate = (int)Math.Round(columnValue);
+        int? result = null; double best = double.MaxValue;
+        // Include virtual neighbors outside the board so picking never clamps to an edge.
+        for (int column = approximate - 1; column <= approximate + 1; column++)
+        {
+            int row = (int)Math.Round(point.Z - (column & 1) * .5 + .625);
+            double x = (column + 1.0 / 12) * ColumnStep, z = row + (column & 1) * .5 - .625;
+            double distance = (x - point.X) * (x - point.X) + (z - point.Z) * (z - point.Z);
+            if (distance >= best) continue;
+            best = distance;
+            result = column is >= 0 and < 200 && row is >= 0 and < 200 ? row * 200 + 199 - column : null;
+        }
+        return result;
+    }
+
     public static int? SquareAt(GroundPoint point)
     {
         int column = (int)Math.Floor(point.X / FloorWidth + 0.5);
