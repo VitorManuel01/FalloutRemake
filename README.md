@@ -1,14 +1,29 @@
-# Fallout Remake — importação estrutural do templo
+# Fallout Remake — prévia 3D do templo
 
 Projeto pessoal em Godot 4 .NET/C#, começando por Fallout 2. A direção visual futura é
-um ambiente isométrico 3D inspirado em Wasteland 3. O leitor já interpreta a estrutura
-do Temple of Trials e reconstrói seus bytes em memória; ainda não há cena 3D jogável.
+um ambiente isométrico 3D inspirado em Wasteland 3. A cena principal já permite
+explorar o Temple of Trials com formas provisórias e inspecionar os objetos originais.
+O leitor verifica a reconstrução dos bytes do mapa antes de montar a cena.
+Ainda não há personagem controlável, combate ou arte final.
 
 **Correção do primeiro marco:** o interior é `maps/arcaves.map`, ID 3.
 `maps/artemple.map`, ID 126, é a área externa com Klint. O inspetor agora usa o interior
 como padrão. O cadastro local e os scripts dos objetos confirmaram essa distinção.
 
 ## Executar
+
+Abra `project.godot` no **Godot .NET** e pressione **F5**. A prévia lê a pasta
+salva em `.local/preview-settings.json` (configurada nesta máquina). Em outra máquina,
+use **Abrir dados** e selecione a pasta de idioma que contém `master.dat` e `critter.dat`.
+A escolha fica salva apenas localmente; não é necessário extrair ou exportar o MAP.
+
+- **WASD / botão direito:** mover a câmera; **roda:** zoom; **Q/E:** girar.
+- **F / Entrada:** voltar à entrada na elevação 0; **Home / Ver tudo:** enquadrar a camada.
+- **Clique:** consultar objeto ou piso; painel lateral: elevações 0–2 e filtros.
+- **Próximo no mesmo hex:** alternar objetos sobrepostos sem confundir seus IDs.
+
+Paredes são volumes de referência nos hexes originais. Alturas, dimensões e cores
+são provisórias; os pisos não indicam, por si só, onde será possível caminhar.
 
 Na raiz do repositório, com SDK .NET capaz de compilar `net8.0` e runtime .NET 8:
 
@@ -24,16 +39,19 @@ máquina, informe explicitamente a pasta de idioma que contém `master.dat` e `c
 Não selecione a pasta `Fallout1in2`. Para conferir a área externa, acrescente
 `--map maps/artemple.map`.
 
-Para testar o mesmo leitor dentro do Godot, após compilar:
+Para testar a prévia e o leitor dentro do Godot, após compilar:
 
 ```powershell
 $godotExe = 'D:\Downloads\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe'
+& $godotExe --headless --path . -- --data-dir 'D:\Games\fallout2\Fallout 2 English' --preview-test
 & $godotExe --headless --path . res://scenes/ImportSmoke.tscn -- --data-dir 'D:\Games\fallout2\Fallout 2 English'
 ```
 
-Sucesso: `IMPORT_SMOKE_OK`, seguido de saída com código 0. O caminho acima foi obtido
-do atalho local do Godot; ajuste-o em outra máquina. A cena é um diagnóstico sem janela.
-O projeto continua sem cena principal de jogo.
+Sucesso: `PREVIEW_TEST_OK` / `IMPORT_SMOKE_OK`, seguidos de saída com código 0.
+O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
+Para capturar a cena, execute sem `--headless` e acrescente
+`--capture .local/temple-preview.png` após `--`. Com `--preview-test`, também é gerada
+uma captura `.selection.png` da porta selecionada. Ambas ficam fora do Git.
 
 O leitor abre os dados em modo de leitura e imprime um resumo JSON, com contagens,
 origens, hashes e divergências dos dados originais. Sempre verifica uma reconstrução
@@ -43,5 +61,7 @@ esse arquivo é privado, regenerável e ignorado pelo Git. Execute esse modo na 
 Não inclua dados originais, exportações ou arte convertida no repositório.
 
 - [Formatos, limites e próximo incremento](docs/temple-import.md)
-- [Validação atual: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
+- [Coordenadas e limites da prévia 3D](docs/preview-3d.md)
+- [Validação atual: prévia 3D](docs/validation-preview-2026-10-17.md)
+- [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
 - [Validação histórica do primeiro marco](docs/validation-2026-10-16.md)

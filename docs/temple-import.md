@@ -62,17 +62,25 @@ erro. Divergências de associação (SID ausente, proprietário, índice de scri
 elevação gravada) viram diagnósticos sem apagar/corrigir o valor fonte. Validação
 estrutural não confirma o comportamento dos scripts nem a correção visual.
 
-## Próximo incremento: cena de inspeção
+## Cena de inspeção e próximo incremento
 
-Começar pela elevação 0 de `ARCAVES`: piso, paredes, portas, saídas e marcadores com
-formas simples. Manter dados fonte separados dos nós Godot e selecionar uma instância
-pela chave técnica para consultar IDs/flags. Conferir entrada, saídas, vizinhos,
-paridade dos hexes e as seis rotações com pontos de referência do original.
+A cena `TemplePreview` já exibe as três elevações de `ARCAVES`, começando na entrada
+da elevação 0. Usa piso e volumes simples para paredes, portas, saídas, criaturas,
+cenário e marcadores. Dados fonte permanecem separados dos nós Godot; seleção usa
+a chave técnica, com consulta de IDs, flags e destinos. Coordenadas, paridade,
+seis rotações e vizinhos são conferidos contra as fórmulas da referência CE.
+Detalhes em [prévia 3D](preview-3d.md) e [validação](validation-preview-2026-10-17.md).
 
 Não confundir quadrados (100×100) com hexes de objetos (200×200). A projeção original
 inverte a coluna e considera paridade dos hexes. Escala em metros e altura das malhas
 são decisões futuras, não geometria 3D recuperável automaticamente de FRM.
 Combate, execução de diálogos e acabamento inspirado em Wasteland 3 ficam para depois.
+
+Próximo incremento: produzir uma camada explícita de hexes caminháveis na elevação 0,
+considerando flags dos objetos, portas e bloqueadores conforme CE, antes de permitir
+movimentação de um marcador de personagem. Não usar a presença de piso ou as caixas
+de seleção como regra de colisão. Conferir trechos da entrada, porta e corredor com
+o jogo original; essa comparação visual ainda não foi realizada.
 
 ## Referência técnica
 

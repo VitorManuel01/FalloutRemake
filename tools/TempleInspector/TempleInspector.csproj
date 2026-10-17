@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/Import/*.cs" Link="Import/%(Filename)%(Extension)" />
+    <Compile Include="../../src/Geometry/*.cs" Link="Geometry/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>
