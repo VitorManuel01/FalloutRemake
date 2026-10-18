@@ -52,7 +52,11 @@ public partial class TemplePreview
     }
 
     private void NavigationStatus(string text)
-    { _hud.Navigation(_walker != null, _walkMode, text); RefreshTravelAction(); RefreshCheckpointActions(); }
+    {
+        _hud.Navigation(_walker != null, _walkMode, text);
+        _hud.StopAction(_walker?.Moving == true, _walker?.StopRequested == true);
+        RefreshTravelAction(); RefreshCheckpointActions();
+    }
 
     private void RefreshReachability()
     {
@@ -120,7 +124,7 @@ public partial class TemplePreview
             RouteStatus.AlreadyThere => $"O marcador já está no hex {target}.",
             RouteStatus.Blocked => $"Hex {target} bloqueado · {BlockerLabel(target)}",
             RouteStatus.Unreachable => "Sem caminho com as portas e bloqueadores atuais.",
-            RouteStatus.Busy => "Aguarde o percurso terminar ou reinicie o marcador.",
+            RouteStatus.Busy => "Aguarde o percurso terminar ou use Parar [Esc].",
             _ => "Esse ponto fica fora da malha do mapa."
         };
         NavigationStatus(message);
@@ -155,14 +159,17 @@ public partial class TemplePreview
     private void AdvanceWalker(double delta)
     {
         if (_walker == null || _checkingNavigation || !_walker.Moving) return;
+        bool stopping = _walker.StopRequested;
         _walker.Advance(delta); UpdateWalkerPosition();
         if (!_walker.Moving)
         {
+            ClearRouteVisual();
             RefreshReachability();
             if (_selected?.Kind == PreviewKind.Door) SelectObject(_selected);
             RefreshDoorAction();
             NavigationStatus(_navigation!.IsExit(_walker.CurrentHex)
                 ? ExitHint(CurrentExit())
+                : stopping ? $"Caminhada interrompida no hex {_walker.CurrentHex} · escolha outro destino"
                 : $"Chegou ao hex {_walker.CurrentHex} · clique em outro destino");
         }
     }

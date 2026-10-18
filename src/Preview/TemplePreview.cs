@@ -64,6 +64,7 @@ public partial class TemplePreview : Node3D
 			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
 			_hud.CharacterFocusRequested = FocusCharacter;
 			_hud.OriginalFloorRequested = SetOriginalFloor;
+			_hud.StopRequested = StopWalking;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -92,6 +93,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckCheckpoint();
 				if (_test) await CheckCharacterCamera();
 				if (_test) await CheckOriginalFloor();
+				if (_test) await CheckStopWalking();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -256,6 +258,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.F9) LoadCheckpoint();
 			if (key.PhysicalKeycode == Key.C) FocusCharacter();
 			if (key.PhysicalKeycode == Key.O) SetOriginalFloor(!_useOriginalFloor);
+			if (key.PhysicalKeycode == Key.Escape) StopWalking();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;

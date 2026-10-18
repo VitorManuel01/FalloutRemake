@@ -116,6 +116,7 @@ public sealed class HexWalker
     private int _index;
     public int CurrentHex { get; private set; }
     public bool Moving => _index + 1 < _route.Length;
+    public bool StopRequested { get; private set; }
     public double Progress { get; private set; }
     public int NextHex => Moving ? _route[_index + 1] : CurrentHex;
     public HexWalker(HexNavigation navigation, int start)
@@ -127,8 +128,19 @@ public sealed class HexWalker
     {
         if (Moving) return new(RouteStatus.Busy, Array.Empty<int>());
         HexRoute result = _navigation.FindRoute(CurrentHex, target);
-        if (result.Status == RouteStatus.Ready) { _route = (int[])result.Tiles.Clone(); _index = 0; Progress = 0; }
+        if (result.Status == RouteStatus.Ready) { _route = (int[])result.Tiles.Clone(); _index = 0; Progress = 0; StopRequested = false; }
         return result;
+    }
+    public bool RequestStop()
+    {
+        if (!Moving) return false;
+        if (StopRequested) return true;
+        // Complete a step already in progress; never jump backwards or save a fractional hex.
+        if (Progress > 0)
+        { _route = new[] { CurrentHex, NextHex }; StopRequested = true; }
+        else _route = Array.Empty<int>();
+        _index = 0;
+        return true;
     }
     public void Advance(double seconds)
     {
@@ -140,7 +152,7 @@ public sealed class HexWalker
             if (!_navigation.Walkable(NextHex)) throw new InvalidOperationException("Route entered a blocked hex.");
             CurrentHex = NextHex; _index++; Progress -= 1;
         }
-        if (!Moving) Progress = 0;
+        if (!Moving) { Progress = 0; StopRequested = false; }
     }
     public GroundPoint Position
     {

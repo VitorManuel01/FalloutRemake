@@ -19,6 +19,7 @@ public partial class PreviewHud : CanvasLayer
     private readonly Label _counts = new();
     private readonly OptionButton _elevation = new() { CustomMinimumSize = new Vector2(0, 32) };
     private readonly Label _navigationStatus = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly Button _stop = new() { Name = "StopWalkingAction", Text = "Parar [Esc]", Disabled = true };
     private readonly Button _walkMode = new() { Text = "Caminhar [M]", CustomMinimumSize = new Vector2(0, 30) };
     private readonly Button _resetWalker = new() { Text = "Reiniciar prévia", CustomMinimumSize = new Vector2(0, 30) };
     private readonly Button _doorUse = new() { Text = "Usar porta [U]", Disabled = true, CustomMinimumSize = new Vector2(0, 30) };
@@ -33,6 +34,7 @@ public partial class PreviewHud : CanvasLayer
     public Action? SaveRequested, LoadRequested;
     public Action? CharacterFocusRequested;
     public Action<bool>? OriginalFloorRequested;
+    public Action? StopRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -109,7 +111,10 @@ public partial class PreviewHud : CanvasLayer
         _lockpick.Pressed += () => LockpickRequested?.Invoke(); actions.AddChild(_lockpick);
         _exit.Pressed += () => ExitRequested?.Invoke(); actions.AddChild(_exit);
         _character.AddThemeFontSizeOverride("font_size", 12); _character.Modulate = new Color("d2c397"); navigation.AddChild(_character);
-        _navigationStatus.AddThemeFontSizeOverride("font_size", 12); navigation.AddChild(_navigationStatus);
+        var movement = new HBoxContainer(); navigation.AddChild(movement);
+        _navigationStatus.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _navigationStatus.AddThemeFontSizeOverride("font_size", 12); movement.AddChild(_navigationStatus);
+        _stop.Pressed += () => StopRequested?.Invoke(); movement.AddChild(_stop);
         var legend = new Label { Text = "Verde: alcançável  ·  Vermelho: bloqueio  ·  Âmbar: saída", Modulate = new Color("9fb2a8") };
         legend.AddThemeFontSizeOverride("font_size", 12); navigation.AddChild(legend);
 
@@ -124,6 +129,8 @@ public partial class PreviewHud : CanvasLayer
     public void Area(string text) => _area.Text = text;
     public void CameraFollow(bool following) => _focusCharacter.Text = following ? "Seguindo [C]" : "Personagem [C]";
     public void OriginalFloor(bool enabled) => _originalFloor.SetPressedNoSignal(enabled);
+    public void StopAction(bool moving, bool stopping)
+    { _stop.Disabled = !moving || stopping; _stop.Text = stopping ? "Parando…" : "Parar [Esc]"; }
     public void CheckpointActions(bool saveAvailable, bool loadAvailable)
     { _save.Disabled = !saveAvailable; _load.Disabled = !loadAvailable; }
     public void Counts(string text) => _counts.Text = text;

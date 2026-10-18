@@ -81,6 +81,28 @@ internal static class NavigationTests
             Assert(FalloutGrid.HexAt(new GroundPoint(p.X, p.Z - 1)) == null);
             Assert(FalloutGrid.HexAt(new GroundPoint(double.NaN, 0)) == null);
         });
+        check("stopping mid-step preserves position and completes only the immediate next hex", () =>
+        {
+            var walker = new HexWalker(new HexNavigation(Array.Empty<MapObject>(), 0), 20100);
+            walker.WalkTo(20103); walker.Advance(.07);
+            var position = walker.Position; int next = walker.NextHex; double progress = walker.Progress;
+            Assert(walker.RequestStop() && walker.RequestStop() && walker.StopRequested && walker.Moving
+                && walker.Position == position && walker.Progress == progress);
+            walker.Advance(100);
+            Assert(!walker.Moving && !walker.StopRequested && walker.CurrentHex == next && walker.Progress == 0
+                && walker.Position == FalloutGrid.HexCenter(next) && !walker.RequestStop());
+            Assert(walker.WalkTo(20103).Status == RouteStatus.Ready);
+            walker.Advance(100); Assert(walker.CurrentHex == 20103);
+        });
+        check("stopping at a step boundary never advances an extra hex or blocks a new route", () =>
+        {
+            var walker = new HexWalker(new HexNavigation(Array.Empty<MapObject>(), 0), 20100);
+            walker.WalkTo(20103); Assert(walker.RequestStop() && !walker.Moving && walker.CurrentHex == 20100);
+            HexRoute route = walker.WalkTo(20103); walker.Advance(.2); int current = walker.CurrentHex;
+            Assert(current == route.Tiles[1] && walker.Progress == 0 && walker.RequestStop() && !walker.Moving);
+            walker.Advance(100); Assert(walker.CurrentHex == current && walker.Position == FalloutGrid.HexCenter(current));
+            Assert(walker.WalkTo(20103).Status == RouteStatus.Ready && !walker.StopRequested);
+        });
     }
     private static MapObject Obj(int tile, int type, int flags = 0, int? fid = null) => new($"fixture:{tile}", tile, 0, 0, 0,
         new ObjectHeader(42, tile, 0, 0, 0, 0, 0, 0, fid ?? type << 24, flags, 0, (type << 24) | 1, -1, 0, 0, 0, -1, -1),
