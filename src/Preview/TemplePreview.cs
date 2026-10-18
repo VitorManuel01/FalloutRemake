@@ -61,6 +61,7 @@ public partial class TemplePreview : Node3D
 			_hud.DoorUseRequested = UseSelectedDoor;
 			_hud.LockpickRequested = UseSelectedLockpick;
 			_hud.ExitRequested = UseExit;
+			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -86,6 +87,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckLockpick();
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();
+				if (_test) await CheckCheckpoint();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -241,6 +243,8 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.U) UseSelectedDoor();
 			if (key.PhysicalKeycode == Key.L) UseSelectedLockpick();
 			if (key.PhysicalKeycode is Key.Enter or Key.KpEnter) UseExit();
+			if (key.PhysicalKeycode == Key.F6) SaveCheckpoint();
+			if (key.PhysicalKeycode == Key.F9) LoadCheckpoint();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;

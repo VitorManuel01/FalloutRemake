@@ -7,6 +7,9 @@ using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
+public sealed record SavedDoor(string Key, int Flags, int OpenFlags);
+public sealed record SavedDoorSession(SavedDoor[] Doors, int[]? TempleLocals, int Experience);
+
 public enum DoorUseStatus { Ready, NoDoor, Unavailable, ScriptRequired, Locked, Busy, TooFar, Occupied, Inconsistent, AtExit, Jammed, StateChanged }
 public sealed record DoorState(MapObject Source, int Flags, int OpenFlags, bool Scripted)
 {
@@ -45,6 +48,47 @@ public sealed class DoorSession
         _roots = roots.ToArray(); _scriptedPrototypes = new(scriptedPrototypes ?? Array.Empty<int>()); Reset();
     }
     public DoorState? Get(string key) => _doors.GetValueOrDefault(key);
+    public SavedDoorSession Capture() => new(_doors.Values.OrderBy(d => d.Source.Key, StringComparer.Ordinal)
+        .Select(d => new SavedDoor(d.Source.Key, d.Flags, d.OpenFlags)).ToArray(), _temple?.Snapshot.Locals.ToArray(), _temple?.Snapshot.Experience ?? 0);
+    public void Restore(SavedDoorSession saved)
+    {
+        if (saved?.Doors == null || saved.Doors.Length != _doors.Count)
+            throw new InvalidDataException("Checkpoint door count differs from its source MAP.");
+        var restored = new Dictionary<string, DoorState>();
+        foreach (SavedDoor value in saved.Doors)
+        {
+            if (value == null || value.Key == null || !_doors.TryGetValue(value.Key, out DoorState? source) || restored.ContainsKey(value.Key))
+                throw new InvalidDataException("Checkpoint contains an unknown or duplicate door key.");
+            bool adapted = _temple?.SourceKey == value.Key;
+            int originalFlags = source.Source.Header.Flags, originalOpen = source.Source.State["openFlags"];
+            bool changed = value.Flags != originalFlags || value.OpenFlags != originalOpen;
+            if (changed && source.Scripted && !adapted
+                || ((value.Flags ^ originalFlags) & ~OpenDoorMask) != 0
+                || ((value.OpenFlags ^ originalOpen) & ~(adapted ? 1 | Locked | Jammed : 1)) != 0)
+                throw new InvalidDataException("Checkpoint attempts an unsupported door-state change.");
+            if (changed && (!adapted && (originalOpen & Locked) != 0
+                || (originalFlags & (HexNavigation.Hidden | HexNavigation.Multihex)) != 0
+                || ((source.Source.Header.Fid >> 24) & 15) != 2))
+                throw new InvalidDataException("Checkpoint modifies an unavailable door.");
+            if (changed && value.Flags != ((value.OpenFlags & 1) != 0 ? originalFlags | OpenDoorMask : originalFlags & ~OpenDoorMask))
+                throw new InvalidDataException("Checkpoint door geometry flags are inconsistent.");
+            restored.Add(value.Key, source with { Flags = value.Flags, OpenFlags = value.OpenFlags });
+        }
+        if (_temple == null)
+        {
+            if (saved.TempleLocals != null || saved.Experience != 0) throw new InvalidDataException("Checkpoint grants XP to an unsupported script.");
+        }
+        else
+        {
+            DoorState door = restored[_temple.SourceKey];
+            if (!TempleDoorAdapter.ValidCheckpoint(saved.TempleLocals, saved.Experience)
+                || door.IsLocked != (saved.TempleLocals![0] == 0) || door.IsJammed && !door.IsLocked)
+                throw new InvalidDataException("Checkpoint script locals, tranca or XP are inconsistent.");
+            _temple.Restore(saved.TempleLocals!, saved.Experience);
+        }
+        _doors.Clear(); foreach (var pair in restored) _doors.Add(pair.Key, pair.Value);
+        _revision++;
+    }
     public void Reset()
     {
         _revision++;

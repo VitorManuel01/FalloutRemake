@@ -9,6 +9,8 @@ public partial class PreviewHud : CanvasLayer
     private readonly ResourceScope _resources = new();
     private readonly Label _status = new();
     private readonly Label _area = new() { Text = "FALLOUT 2", Modulate = new Color("e4e6df") };
+    private readonly Button _save = new() { Name = "SaveAction", Text = "Salvar [F6]", Disabled = true };
+    private readonly Button _load = new() { Name = "LoadAction", Text = "Carregar [F9]", Disabled = true };
     private readonly Label _selectionTitle = new();
     private readonly RichTextLabel _details = new();
     private readonly Label _counts = new();
@@ -25,6 +27,7 @@ public partial class PreviewHud : CanvasLayer
     public Action? DoorUseRequested;
     public Action? LockpickRequested;
     public Action? ExitRequested;
+    public Action? SaveRequested, LoadRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -60,6 +63,8 @@ public partial class PreviewHud : CanvasLayer
         Button(row, "Abrir dados", () => OpenRequested?.Invoke());
         Button(row, "Entrada  [F]", () => EntryRequested?.Invoke());
         Button(row, "Ver tudo  [Home]", () => FrameRequested?.Invoke());
+        _save.Pressed += () => SaveRequested?.Invoke(); row.AddChild(_save);
+        _load.Pressed += () => LoadRequested?.Invoke(); row.AddChild(_load);
 
         var side = new PanelContainer { AnchorLeft = 1, AnchorRight = 1, AnchorTop = 0, AnchorBottom = 1,
             OffsetLeft = -300, OffsetRight = -16, OffsetTop = 84, OffsetBottom = -64 };
@@ -110,6 +115,8 @@ public partial class PreviewHud : CanvasLayer
 
     public void Status(string text) => _status.Text = text;
     public void Area(string text) => _area.Text = text;
+    public void CheckpointActions(bool saveAvailable, bool loadAvailable)
+    { _save.Disabled = !saveAvailable; _load.Disabled = !loadAvailable; }
     public void Counts(string text) => _counts.Text = text;
     public void Elevation(int elevation) => _elevation.Select(elevation);
     public void Navigation(bool available, bool walkingMode, string status)

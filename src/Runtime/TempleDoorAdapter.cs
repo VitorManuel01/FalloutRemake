@@ -48,6 +48,11 @@ internal sealed class TempleDoorAdapter
     }
 
     internal void Reset() { Array.Clear(_locals); _experience = 0; }
+    internal static bool ValidCheckpoint(int[]? locals, int experience) => locals is { Length: 8 }
+        && locals[0] is 0 or 1 && locals[1] == 1 && locals[2] == 0 && locals[3] == 1
+        && locals[4] == 0 && locals[5] is 0 or 1 && locals[6] == 0 && locals[7] == 0 && experience == locals[5] * 25;
+    internal void Restore(int[] locals, int experience)
+    { Array.Copy(locals, _locals, 8); _experience = experience; }
     internal DoorState EnterMap(DoorState door)
     {
         if (_locals[3] == 0) { _locals[3] = 1; _locals[0] = 0; _locals[1] = 1; }

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
@@ -65,5 +67,32 @@ public sealed class WorldSession
     {
         foreach (WorldArea area in _areas.Values) { area.Doors.Reset(); area.Travel.Reset(); }
         CurrentMap = InitialMap;
+    }
+    private static string DependenciesHash(MapDocument map) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+        string.Join("\n", map.Dependencies.OrderBy(d => d.Path, StringComparer.Ordinal).Select(d => $"{d.Path}|{d.Size}|{d.Sha256}")))));
+    public WorldCheckpoint Capture(string catalogHash) => new(1, "neutral-v1", catalogHash, InitialMap, CurrentMap,
+        Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
+            DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture())).ToArray());
+    public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3)
+    {
+        if (checkpoint == null || checkpoint.Version != 1 || checkpoint.Profile != "neutral-v1" || checkpoint.CatalogHash != catalogHash
+            || checkpoint.InitialMap != initialMap || checkpoint.Areas is not { Length: > 0 and <= 16 })
+            throw new InvalidDataException("Checkpoint version, profile or catalog is incompatible.");
+        var allowed = allowedMaps.ToHashSet();
+        if (checkpoint.Areas.Length > allowed.Count || checkpoint.Areas.Any(a => a == null || !allowed.Contains(a.Map))
+            || checkpoint.Areas.Select(a => a.Map).Distinct().Count() != checkpoint.Areas.Length
+            || !checkpoint.Areas.Any(a => a.Map == initialMap) || !checkpoint.Areas.Any(a => a.Map == checkpoint.CurrentMap))
+            throw new InvalidDataException("Checkpoint area set is invalid.");
+        var candidate = new WorldSession(load, allowed, initialMap);
+        foreach (SavedArea saved in checkpoint.Areas)
+        {
+            WorldArea area = candidate.EnsureArea(saved.Map);
+            if (saved.SourceHash != area.Map.Source.Sha256 || saved.DependenciesHash != DependenciesHash(area.Map)
+                || saved.Location == null || saved.Location.Map != saved.Map || saved.Session == null)
+                throw new InvalidDataException("Checkpoint source or dependency fingerprints changed.");
+            area.Doors.Restore(saved.Session); area.Travel.Arrive(saved.Location);
+        }
+        candidate.CurrentMap = checkpoint.CurrentMap;
+        return candidate;
     }
 }

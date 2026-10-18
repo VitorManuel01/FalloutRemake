@@ -165,7 +165,7 @@ internal static class TempleAdapterTests
     { ObjectLayers = new[] { new ObjectLayer(0, 0, 1, new[] { change(map.ObjectLayers[0].Objects[0]) }) } };
 
     // Synthetic metadata fixture, not original MAP/INT/PRO bytes. Real provenance is checked separately by the CLI scenario.
-    private static MapDocument Fixture()
+    internal static MapDocument Fixture()
     {
         var source = new ResourceIdentity("maps/arcaves.map", "synthetic", 526972, TempleDoorAdapter.MapHash);
         var program = new ResourceIdentity("scripts/doorl100.int", "synthetic", 12054, TempleDoorAdapter.ProgramHash);
@@ -173,7 +173,7 @@ internal static class TempleAdapterTests
             new ObjectHeader(102, 11108, 0, 0, 0, 0, 0, 0, 33555377, 32768, 0, 33555366, -1, 0, 0, 0, 50331648, 25),
             0, 0, 0, 0, new Dictionary<string, int> { ["openFlags"] = 0 }, Array.Empty<InventoryEntry>());
         var header = new MapHeader(20, Encoding.ASCII.GetBytes("ARCAVES.MAP"), 28906, 0, 0, 0, 25, 0, 1, 0, 3, 0, new int[44]);
-        var prefix = new MapPrefix(header, Array.Empty<int>(), Array.Empty<int>(), Array.Empty<MapLayer>(), 0, ReadOnlyMemory<byte>.Empty);
+        var prefix = new MapPrefix(header, Array.Empty<int>(), Array.Empty<int>(), new[] { new MapLayer(0, Array.Empty<SquareTile>()) }, 0, ReadOnlyMemory<byte>.Empty);
         var fields = new int[14]; fields[1] = 25; fields[3] = 102; fields[4] = -1;
         var script = new MapScript(122560, 64, 50331648, -1, Array.Empty<int>(), fields);
         return new MapDocument(source, prefix,

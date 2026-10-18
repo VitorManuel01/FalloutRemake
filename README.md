@@ -34,6 +34,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   no painel apenas inspeciona; o personagem e os XP permanecem no lugar.
 - **Enter / Passar:** ao chegar a uma saída interna, atravessa para a elevação de
   destino, preservando portas e XP. Caminhe na elevação onde o personagem está.
+- **F6 / Salvar:** checkpoint local quando estiver parado. **F9 / Carregar:**
+  recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
 
 Paredes são volumes de referência nos hexes originais. Alturas, dimensões e cores
 são provisórias. O bloqueio usa FID/flags dos objetos, sem depender do piso ou dos
@@ -73,7 +75,8 @@ $godotExe = 'D:\Downloads\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mon
 ```
 
 Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
-`LOCKPICK_PREVIEW_OK`, `TRAVEL_PREVIEW_OK` e `WORLD_PREVIEW_OK` / `IMPORT_SMOKE_OK`,
+`LOCKPICK_PREVIEW_OK`, `TRAVEL_PREVIEW_OK`, `WORLD_PREVIEW_OK` e
+`CHECKPOINT_PREVIEW_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Para capturar a cena, execute sem `--headless` e acrescente
@@ -110,6 +113,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Arrombamento na prévia: perfil e controles](docs/lockpick-preview-2026-10-18.md)
 - [Passagens internas: destinos e estado do personagem](docs/travel-2026-10-18.md)
 - [Áreas externas e retorno: cache e validação](docs/world-2026-10-18.md)
+- [Checkpoint local: formato e restauração](docs/checkpoint-2026-10-18.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

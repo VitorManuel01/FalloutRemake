@@ -52,7 +52,7 @@ public partial class TemplePreview
     }
 
     private void NavigationStatus(string text)
-    { _hud.Navigation(_walker != null, _walkMode, text); RefreshTravelAction(); }
+    { _hud.Navigation(_walker != null, _walkMode, text); RefreshTravelAction(); RefreshCheckpointActions(); }
 
     private void RefreshReachability()
     {
