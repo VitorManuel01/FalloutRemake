@@ -28,7 +28,7 @@ public partial class TemplePreview
         {
             NavigationStatus("Caminhada disponível apenas na elevação 0."); return;
         }
-        _navigation = HexNavigation.FromMap(_map, 0);
+        _navigation = _doors!.Navigation(0);
         int start = _map.Prefix.Header.EnteringTile;
         if (!_navigation.Walkable(start)) { NavigationStatus("Entrada bloqueada nos dados; marcador não criado."); return; }
         _walker = new HexWalker(_navigation, start);
@@ -46,6 +46,7 @@ public partial class TemplePreview
             MaterialOverride = resources.Own(new StandardMaterial3D { AlbedoColor = new Color("c47920"), NoDepthTest = true, CullMode = BaseMaterial3D.CullModeEnum.Disabled,
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded }) }; _world.AddChild(_routeVisual);
         RefreshReachability(); UpdateWalkerPosition();
+        ApplyDoorVisuals(); RefreshDoorAction();
         NavigationStatus($"Marcador na entrada · M para caminhar · {_reachable!.Count} hexes alcançáveis");
     }
 
@@ -84,21 +85,24 @@ public partial class TemplePreview
         _walkMode = !_walkMode;
         _navigationOverlay!.Visible = _walkMode;
         if (_routeVisual != null) _routeVisual.Visible = _walkMode && _routeVisual.Mesh != null;
-        NavigationStatus(_walkMode ? "Caminhada · clique no chão · portas fechadas bloqueiam" : "Inspeção · clique em um objeto para consultar os dados");
+        NavigationStatus(_walkMode ? "Clique no chão para caminhar ou em uma porta para se aproximar" : "Inspeção · clique em um objeto para consultar os dados");
     }
 
     private void ResetWalker()
     {
         if (_map == null || _navigation == null || _walker == null) return;
+        _doors!.Reset(); _navigation = _doors.Navigation(0);
         _walker = new HexWalker(_navigation, _map.Prefix.Header.EnteringTile);
         _routeVisual!.Mesh = null; _routeVisual.Visible = false;
         RefreshReachability(); UpdateWalkerPosition(); FocusEntry();
+        ApplyDoorVisuals(); if (_selected != null) SelectObject(_selected); RefreshDoorAction();
         NavigationStatus($"Marcador reiniciado · {_reachable!.Count} hexes alcançáveis");
     }
 
     private void WalkAtScreen(Vector2 screen)
     {
         if (_layout == null || _walker == null) return;
+        if (TryPickDoor(screen) is PreviewObject door) { ApproachDoor(door); return; }
         Vector3 origin = _camera.ProjectRayOrigin(screen), direction = _camera.ProjectRayNormal(screen);
         if (Math.Abs(direction.Y) < .001f) return;
         Vector3 point = origin + direction * (-origin.Y / direction.Y);
@@ -121,6 +125,7 @@ public partial class TemplePreview
         };
         NavigationStatus(message);
         if (route.Status == RouteStatus.Ready) DrawRoute(route.Tiles);
+        RefreshDoorAction();
         return route;
     }
 
@@ -154,6 +159,8 @@ public partial class TemplePreview
         if (!_walker.Moving)
         {
             RefreshReachability();
+            if (_selected?.Kind == PreviewKind.Door) SelectObject(_selected);
+            RefreshDoorAction();
             NavigationStatus(_navigation!.IsExit(_walker.CurrentHex)
                 ? "Saída alcançada · transição ainda não implementada · reinicie o marcador"
                 : $"Chegou ao hex {_walker.CurrentHex} · clique em outro destino");
@@ -169,8 +176,8 @@ public partial class TemplePreview
         if (_navigation == null) return "";
         bool blocks = _navigation.BlockersAt(obj.Source.Header.Tile).Any(b => b.Key == obj.Source.Key);
         string text = $"\n\nBloqueio por este objeto: {(blocks ? "sim" : "não")}\nTipo FID: {(obj.Source.Header.Fid >> 24) & 15}";
-        if (obj.Kind == PreviewKind.Door && obj.Source.State.TryGetValue("openFlags", out int flags))
-            text += $"\nPorta gravada: {((flags & 1) != 0 ? "aberta" : "fechada")}\nTrancada: {((flags & 0x02000000) != 0 ? "sim" : "não")}\nAbertura automática ainda não implementada.";
+        if (obj.Kind == PreviewKind.Door && _doors?.Get(obj.Source.Key) is { } door)
+            text = $"\n\nPorta na prévia: {(door.IsOpen ? "aberta" : "fechada")}\nTrancada: {(door.IsLocked ? "sim" : "não")}\n{DoorHint(DoorStatus(obj.Source.Key))}\nFonte preservada: {((obj.Source.State["openFlags"] & 1) != 0 ? "aberta" : "fechada")}" + text;
         return text;
     }
 

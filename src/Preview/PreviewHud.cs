@@ -14,9 +14,11 @@ public partial class PreviewHud : CanvasLayer
     private readonly OptionButton _elevation = new() { CustomMinimumSize = new Vector2(0, 32) };
     private readonly Label _navigationStatus = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Button _walkMode = new() { Text = "Caminhar [M]", CustomMinimumSize = new Vector2(0, 30) };
-    private readonly Button _resetWalker = new() { Text = "Reiniciar marcador", CustomMinimumSize = new Vector2(0, 30) };
+    private readonly Button _resetWalker = new() { Text = "Reiniciar prévia", CustomMinimumSize = new Vector2(0, 30) };
+    private readonly Button _doorUse = new() { Text = "Usar porta [U]", Disabled = true, CustomMinimumSize = new Vector2(0, 30) };
     private PanelContainer? _navigationPanel;
     public Action? WalkModeRequested, ResetWalkerRequested;
+    public Action? DoorUseRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -85,13 +87,14 @@ public partial class PreviewHud : CanvasLayer
         var actions = new HBoxContainer(); actions.AddThemeConstantOverride("separation", 12); navigation.AddChild(actions);
         _walkMode.Pressed += () => WalkModeRequested?.Invoke(); actions.AddChild(_walkMode);
         _resetWalker.Pressed += () => ResetWalkerRequested?.Invoke(); actions.AddChild(_resetWalker);
+        _doorUse.Pressed += () => DoorUseRequested?.Invoke(); actions.AddChild(_doorUse);
         _navigationStatus.AddThemeFontSizeOverride("font_size", 12); navigation.AddChild(_navigationStatus);
         var legend = new Label { Text = "Verde: alcançável  ·  Vermelho: bloqueio  ·  Âmbar: saída", Modulate = new Color("9fb2a8") };
         legend.AddThemeFontSizeOverride("font_size", 12); navigation.AddChild(legend);
 
         var footer = Panel(root, 16, -52, -16, -12, true);
         footer.AnchorTop = 1; footer.AnchorBottom = 1;
-        var help = new Label { Text = "W A S D  mover    ·    Botão direito  arrastar    ·    Roda  zoom    ·    Q / E  girar    ·    Clique  inspecionar",
+        var help = new Label { Text = "W A S D  mover    ·    Botão direito  arrastar    ·    Roda  zoom    ·    Q / E  girar    ·    M  caminhar    ·    U  usar porta",
             HorizontalAlignment = HorizontalAlignment.Center, Modulate = new Color("9fb2a8") };
         help.AddThemeFontSizeOverride("font_size", 12); footer.AddChild(help);
     }
@@ -106,6 +109,11 @@ public partial class PreviewHud : CanvasLayer
         _navigationStatus.Text = status;
     }
     public void Select(string title, string text) { _selectionTitle.Text = title; _details.Text = text; }
+    public void DoorAction(bool enabled, bool open, string hint)
+    {
+        _doorUse.Disabled = !enabled; _doorUse.Text = open ? "Fechar porta [U]" : "Abrir porta [U]";
+        _doorUse.TooltipText = hint;
+    }
 
     private void AddFilter(VBoxContainer column, string key, string label, string color)
     {

@@ -8,8 +8,9 @@ namespace FalloutRemake.Geometry;
 public sealed record HexBlocker(string Key, int Id, int Hex, int FidType, bool IsDoor, bool Multihex);
 public enum RouteStatus { Ready, AlreadyThere, OutsideGrid, Blocked, Unreachable, Busy }
 public sealed record HexRoute(RouteStatus Status, int[] Tiles);
+public readonly record struct ObjectTraversalState(int Flags, int? DoorOpenFlags);
 
-/// <summary>Single-hex movement against the serialized MAP snapshot; no scripts or automatic door use.</summary>
+/// <summary>Single-hex movement using source geometry and optional session flags; no scripts or automatic door use.</summary>
 public sealed class HexNavigation
 {
     public const int Hidden = 0x1, NoBlock = 0x10, Multihex = 0x800;
@@ -24,7 +25,7 @@ public sealed class HexNavigation
         new(map.ObjectLayers.SelectMany(layer => layer.Objects), elevation);
 
     // Accept roots only. Inventory records are never placed in the world.
-    public HexNavigation(IEnumerable<MapObject> roots, int elevation)
+    public HexNavigation(IEnumerable<MapObject> roots, int elevation, Func<MapObject, ObjectTraversalState>? stateFor = null)
     {
         if (elevation is < 0 or > 2) throw new ArgumentOutOfRangeException(nameof(elevation));
         Elevation = elevation;
@@ -32,14 +33,17 @@ public sealed class HexNavigation
         {
             ObjectHeader h = obj.Header;
             if (h.Elevation != elevation || !Valid(h.Tile)) continue;
+            ObjectTraversalState state = stateFor?.Invoke(obj) ?? new ObjectTraversalState(h.Flags,
+                obj.State.TryGetValue("openFlags", out int sourceOpen) ? sourceOpen : null);
+            int flags = state.Flags;
             bool door = (h.Pid >> 24) == 2 && obj.Subtype == 0;
-            if (door && obj.State.TryGetValue("openFlags", out int open)
-                && ((open & 1) != 0) != ((h.Flags & NoBlock) != 0)) DoorFlagDisagreements++;
-            if ((h.Flags & Hidden) == 0 && h.Pid is >= 0x05000010 and <= 0x05000017) _exits.Add(h.Tile);
+            if (door && state.DoorOpenFlags is int open
+                && ((open & 1) != 0) != ((flags & NoBlock) != 0)) DoorFlagDisagreements++;
+            if ((flags & Hidden) == 0 && h.Pid is >= 0x05000010 and <= 0x05000017) _exits.Add(h.Tile);
             // CE _obj_blocking_at uses the FID nibble, not the PID or the preview shape.
             int type = (h.Fid >> 24) & 0xF;
-            if ((h.Flags & (Hidden | NoBlock)) != 0 || type is < 1 or > 3) continue;
-            var blocker = new HexBlocker(obj.Key, h.Id, h.Tile, type, door, (h.Flags & Multihex) != 0);
+            if ((flags & (Hidden | NoBlock)) != 0 || type is < 1 or > 3) continue;
+            var blocker = new HexBlocker(obj.Key, h.Id, h.Tile, type, door, (flags & Multihex) != 0);
             Add(h.Tile, blocker);
             if (blocker.Multihex)
                 for (int direction = 0; direction < 6; direction++)

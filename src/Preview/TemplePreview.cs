@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using FalloutRemake.Geometry;
 using FalloutRemake.Import;
+using FalloutRemake.Runtime;
 using Godot;
 
 namespace FalloutRemake.Preview;
@@ -32,12 +33,14 @@ public partial class TemplePreview : Node3D
 	private bool _test;
 	private string? _capture;
 	private string? _directory;
+	private bool _shuttingDown;
 	private string SettingsPath => ProjectSettings.GlobalizePath("res://.local/preview-settings.json");
 
 	public override async void _Ready()
 	{
 		try
 		{
+			GetTree().AutoAcceptQuit = false;
 			AddChild(_camera); _camera.Current = true;
 			AddChild(_hud); AddChild(_world);
 			AddChild(new WorldEnvironment { Environment = _resources.Own(new Godot.Environment
@@ -53,6 +56,7 @@ public partial class TemplePreview : Node3D
 			_hud.ElevationRequested = ChangeElevation;
 			_hud.FilterChanged = (_, _) => ApplyFilters(); _hud.CycleRequested = CycleSelection;
 			_hud.WalkModeRequested = ToggleWalkMode; _hud.ResetWalkerRequested = ResetWalker;
+			_hud.DoorUseRequested = UseSelectedDoor;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -64,6 +68,7 @@ public partial class TemplePreview : Node3D
 			if (_directory == null && File.Exists(SettingsPath))
 				_directory = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(SettingsPath))?.GetValueOrDefault("GameDataDirectory");
 			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			if (_shuttingDown) return;
 			if (_directory != null) LoadMap(_directory);
 			else _hud.Status("Escolha a pasta de idioma do Fallout 2 para começar.");
 			if (_test || _capture != null)
@@ -73,12 +78,14 @@ public partial class TemplePreview : Node3D
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 				if (_test) await CheckPreview();
 				if (_test) await CheckNavigation();
+				if (_test) await CheckDoors();
 				if (_capture != null)
 				{
 					FocusEntry();
 					await Capture(_capture);
 				}
-				GetTree().Quit();
+				if (_test) _Notification((int)NotificationWMCloseRequest);
+				else await Shutdown(0);
 			}
 		}
 		catch (Exception error) { Fail(error); }
@@ -90,6 +97,7 @@ public partial class TemplePreview : Node3D
 		MapDocument candidate = MapDocument.Read(data.Read("maps/arcaves.map"), data.Read);
 		MapLayoutWriter.Verify(candidate);
 		_map = candidate; _directory = directory;
+		_doors = DoorSession.FromMap(candidate);
 		_elevation = _map.Prefix.Header.EnteringElevation; _hud.Elevation(_elevation);
 		BuildWorld(); FocusEntry();
 		_hud.Status("ARCAVES · mapa 3 · formas provisórias · selecione um elemento");
@@ -216,6 +224,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.Q) _yaw -= Mathf.Pi / 6;
 			if (key.PhysicalKeycode == Key.E) _yaw += Mathf.Pi / 6;
 			if (key.PhysicalKeycode == Key.M) ToggleWalkMode();
+			if (key.PhysicalKeycode == Key.U) UseSelectedDoor();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;
@@ -301,8 +310,11 @@ public partial class TemplePreview : Node3D
 		if (obj.Source.State.TryGetValue("destinationMap", out int destination)) text += $"\n\nDestino: mapa {destination}";
 		foreach (var (field, label) in new[] { ("destinationTile", "Hex de destino"), ("destinationElevation", "Elevação de destino"), ("destinationRotation", "Rotação de destino") })
 			if (obj.Source.State.TryGetValue(field, out int value)) text += $"\n{label}: {value}";
-		text += NavigationDetails(obj);
+		string navigation = NavigationDetails(obj);
+		text = obj.Kind == PreviewKind.Door ? navigation.Trim() + "\n\n" + text : text + navigation;
+		if (obj.Kind == PreviewKind.Door && _doors?.Get(obj.Source.Key) is { } doorState) title += doorState.IsOpen ? " aberta" : " fechada";
 		_hud.Select($"{title} · objeto {h.Id}", text);
+		RefreshDoorAction();
 	}
 	private void ClearSelection()
 	{
@@ -310,6 +322,7 @@ public partial class TemplePreview : Node3D
 		if (_highlight != null) _highlight.Visible = false;
 		if (_arrow != null) _arrow.Visible = false;
 		_hud.Select("Nenhum elemento selecionado", "Clique em um volume para consultar os IDs e a posição do objeto original.\n\nAs formas e alturas são provisórias.");
+		RefreshDoorAction();
 	}
 	private void CycleSelection()
 	{
@@ -332,11 +345,11 @@ public partial class TemplePreview : Node3D
 		};
 		dialog.Canceled += () => dialog.QueueFree(); dialog.PopupCenteredRatio(.7f);
 	}
-	private void Fail(Exception error)
+	private async void Fail(Exception error)
 	{
 		GD.PushError(error.Message); _hud.Status("Não foi possível abrir os dados. Use ‘Abrir dados’ para escolher outra pasta.");
 		_hud.Select("Dados indisponíveis", error.Message);
-		if (_test || _capture != null) GetTree().Quit(1);
+		if (_test || _capture != null) await Shutdown(1);
 	}
 	private static Vector3 Point(GroundPoint point, float y) => new((float)point.X, y, (float)point.Z);
 
@@ -412,4 +425,21 @@ public partial class TemplePreview : Node3D
 		GD.Print($"PREVIEW_TEST_OK: elevation 0; {_layout!.Floors.Length} floor cells; {_lookup.Count} source objects; metadata, transforms, camera picking/rotation, filters, elevation switching and source bytes verified.");
 	}
 	public override void _ExitTree() => _resources.Dispose();
+	public override void _Notification(int what)
+	{
+		if (what == NotificationWMCloseRequest) _ = Shutdown(0);
+	}
+	private async System.Threading.Tasks.Task Shutdown(int code)
+	{
+		if (_shuttingDown) return;
+		_shuttingDown = true; SetProcess(false); SetProcessUnhandledInput(false);
+		// Finish node deletion and managed finalizers while the native engine is still alive.
+		for (int i = GetChildCount() - 1; i >= 0; i--) GetChild(i).QueueFree();
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		_resources.Dispose(); _materials.Clear(); _meshes.Clear(); _shapes.Clear(); _bodies.Clear(); _lookup.Clear();
+		GC.Collect(); GC.WaitForPendingFinalizers();
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		GetTree().Quit(code);
+	}
 }

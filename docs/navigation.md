@@ -2,8 +2,9 @@
 
 O modo **M / Caminhar** move um marcador azul na elevação 0 de `ARCAVES`. Clique no
 chão; o percurso aparece em âmbar. Durante um percurso, novos destinos são recusados
-até chegar ou reiniciar. **Reiniciar marcador** cancela o percurso e volta à entrada.
-Trocar de elevação também reinicia; F apenas reenquadra a entrada na mesma elevação.
+até chegar ou reiniciar. **Reiniciar prévia** cancela o percurso, volta à entrada e
+restaura as portas. Trocar de elevação reinicia o marcador e preserva o estado das
+portas. F apenas reenquadra a entrada na mesma elevação.
 
 ## Regras da fotografia inicial do mapa
 
@@ -25,7 +26,9 @@ Portas usam os flags de ocupação gravados. `openFlags` bit 0 indica estado abe
 bit `0x02000000` indica tranca. Desacordos entre estado aberto e `NO_BLOCK` são
 contados no relatório, sem corrigir a fonte. Não houve desacordos na elevação 0.
 O CE pode permitir uso automático de determinadas portas; **isso não foi implementado**.
-Uma porta fechada sem `NO_BLOCK` permanece bloqueadora neste incremento.
+Uma porta fechada sem `NO_BLOCK` permanece bloqueadora até ser explicitamente aberta.
+A [interação com portas](doors-2026-10-17.md) usa estado de sessão separado da fonte,
+fornecendo flags efetivos à mesma consulta de navegação.
 
 Grades de saída visíveis, PIDs `0x05000010`–`0x05000017`, são destinos terminais:
 chegar é permitido, atravessar para continuar buscando caminho não é. Ao chegar,
@@ -48,16 +51,18 @@ O teste cobre a ida e volta de todos os 40.000 índices.
 ## Resultado local e limite
 
 Elevação 0: **1.206 hexes bloqueados**, **540 alcançáveis** desde 28906, **31 hexes de
-saída** (13 alcançáveis). A porta ID 1482, hex 24308, continua fechada. Sua aproximação
+saída** (13 alcançáveis), com a primeira porta fechada. A porta ID 1482, hex 24308,
+começa fechada. Sua aproximação
 no hex 24508 exige 23 passos; a saída 31306 exige 12. A porta ID 102, hex 11108, fica
 além do trecho alcançável com a primeira porta fechada.
 
-Não há IA, combate, abertura de portas, armadilhas ativas, scripts, EDG, personagem
+Abrir a primeira porta aumenta o alcance a **2184 hexes**. Não há IA, combate,
+destrancamento, armadilhas ativas, execução de scripts, EDG, personagem
 multihex ou comparação visual lado a lado com o jogo original. O resultado descreve
 os dados serializados, não uma simulação completa do estado após executar os scripts.
 
-Próximo marco: examinar o script da primeira porta, identificar a interação necessária
-e criar estado de execução separado dos dados fonte antes de permitir abrir/fechar.
+Foi confirmado que a primeira porta não tem script. A segunda está associada a
+`doorl100.int`; mapear esse programa e seus requisitos é o próximo incremento.
 
 Referência local [Fallout 2 CE](https://github.com/alexbatalov/fallout2-ce/tree/e97087b9582f37075db347a89898887320753f8b):
 `object.cc` (`_obj_blocking_at`), `obj_types.h` (FID/flags), `proto_instance.cc`
