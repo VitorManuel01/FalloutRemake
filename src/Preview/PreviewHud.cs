@@ -14,6 +14,8 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _focusCharacter = new() { Name = "CharacterFocusAction", Text = "Personagem [C]" };
     private readonly Button _originalFloor = new() { Name = "OriginalFloorAction", Text = "Piso original [O]", ToggleMode = true,
         TooltipText = "Comparar com o piso da instalação local" };
+    private readonly Button _revealActor = new() { Name = "WallOcclusionAction", Text = "Auto [V]", ToggleMode = true, ButtonPressed = true,
+        TooltipText = "Ocultar paredes que encobrem o personagem. Os bloqueios permanecem." };
     private readonly Label _selectionTitle = new();
     private readonly RichTextLabel _details = new();
     private readonly Label _counts = new();
@@ -35,6 +37,7 @@ public partial class PreviewHud : CanvasLayer
     public Action? CharacterFocusRequested;
     public Action<bool>? OriginalFloorRequested;
     public Action? StopRequested;
+    public Action<bool>? RevealActorRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -85,7 +88,8 @@ public partial class PreviewHud : CanvasLayer
         column.AddChild(new HSeparator());
         _originalFloor.Toggled += enabled => OriginalFloorRequested?.Invoke(enabled); column.AddChild(_originalFloor);
         AddFilter(column, "floor", "Piso", "68766d");
-        AddFilter(column, "wall", "Paredes", "b6a17d");
+        _revealActor.Toggled += enabled => RevealActorRequested?.Invoke(enabled);
+        AddFilter(column, "wall", "Paredes", "b6a17d").AddChild(_revealActor);
         AddFilter(column, "scenery", "Cenário e itens", "a9865b");
         AddFilter(column, "critter", "Criaturas", "c87761");
         AddFilter(column, "exit", "Portas e saídas", "65bea9");
@@ -129,6 +133,7 @@ public partial class PreviewHud : CanvasLayer
     public void Area(string text) => _area.Text = text;
     public void CameraFollow(bool following) => _focusCharacter.Text = following ? "Seguindo [C]" : "Personagem [C]";
     public void OriginalFloor(bool enabled) => _originalFloor.SetPressedNoSignal(enabled);
+    public void RevealActor(bool enabled) => _revealActor.SetPressedNoSignal(enabled);
     public void StopAction(bool moving, bool stopping)
     { _stop.Disabled = !moving || stopping; _stop.Text = stopping ? "Parando…" : "Parar [Esc]"; }
     public void CheckpointActions(bool saveAvailable, bool loadAvailable)
@@ -155,12 +160,13 @@ public partial class PreviewHud : CanvasLayer
     public void ExitAction(bool visible, bool enabled, string hint)
     { _exit.Visible = visible; _exit.Disabled = !enabled; _exit.TooltipText = hint; }
 
-    private void AddFilter(VBoxContainer column, string key, string label, string color)
+    private HBoxContainer AddFilter(VBoxContainer column, string key, string label, string color)
     {
         var line = new HBoxContainer(); column.AddChild(line);
         line.AddChild(new Label { Text = "●", Modulate = new Color(color), CustomMinimumSize = new Vector2(18, 0) });
         var check = new CheckBox { Text = label, ButtonPressed = Filters[key], SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         check.AddThemeFontSizeOverride("font_size", 13); check.Toggled += value => { Filters[key] = value; FilterChanged?.Invoke(key, value); }; line.AddChild(check);
+        return line;
     }
     private static void Button(Container container, string text, Action pressed)
     {

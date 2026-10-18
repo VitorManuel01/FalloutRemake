@@ -65,6 +65,7 @@ public partial class TemplePreview : Node3D
 			_hud.CharacterFocusRequested = FocusCharacter;
 			_hud.OriginalFloorRequested = SetOriginalFloor;
 			_hud.StopRequested = StopWalking;
+			_hud.RevealActorRequested = SetRevealActor;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -94,6 +95,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckCharacterCamera();
 				if (_test) await CheckOriginalFloor();
 				if (_test) await CheckStopWalking();
+				if (_test) await CheckWallOcclusion();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -133,6 +135,8 @@ public partial class TemplePreview : Node3D
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
 		_lookup.Clear(); _bodies.Clear(); _selected = null;
 		_layout = PreviewLayout.Create(_map, _elevation);
+		_walls = _layout.Objects.Where(o => o.Kind == PreviewKind.Wall).ToArray();
+		_cutWalls.Clear(); _occlusionDirty = true;
 		var mesh = resources.Own(new BoxMesh { Size = new Vector3((float)FalloutGrid.FloorWidth * .985f, .08f, 1.97f) });
 		var floorInstances = resources.Own(new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true,
 			Mesh = mesh, InstanceCount = _layout.Floors.Length });
@@ -226,6 +230,7 @@ public partial class TemplePreview : Node3D
 		}
 		_hud.Counts($"{_layout.Floors.Length:N0} células de piso\n{visible:N0} / {_layout.Objects.Length:N0} objetos visíveis");
 		if (_selected != null && !VisibleObject(_selected)) ClearSelection();
+		_occlusionDirty = true; UpdateWallOcclusion();
 	}
 
 	public override void _Process(double delta)
@@ -240,6 +245,7 @@ public partial class TemplePreview : Node3D
 		if (_followActor && !_checkingNavigation && _walkerNode != null && _walker != null) _focus = _walkerNode.Position;
 		_focus += (right * x + down * z) * (float)delta * _camera.Size * .55f;
 		UpdateCamera();
+		UpdateWallOcclusion();
 	}
 	public override void _UnhandledInput(InputEvent input)
 	{
@@ -259,6 +265,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.C) FocusCharacter();
 			if (key.PhysicalKeycode == Key.O) SetOriginalFloor(!_useOriginalFloor);
 			if (key.PhysicalKeycode == Key.Escape) StopWalking();
+			if (key.PhysicalKeycode == Key.V) SetRevealActor(!_revealActor);
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;
