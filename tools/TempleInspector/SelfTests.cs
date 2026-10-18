@@ -127,6 +127,7 @@ internal static class SelfTests
             NavigationTests.Run(Check);
             DoorTests.Run(Check);
             IntTests.Run(Check);
+            TempleAdapterTests.Run(Check);
             Console.WriteLine($"{passed} synthetic test groups passed.");
             return 0;
         }

@@ -63,7 +63,8 @@ os dados serializados, não uma simulação completa do estado após executar os
 
 Foi confirmado que a primeira porta não tem script. A segunda está associada a
 `doorl100.int`; suas [condições já foram mapeadas](door-script-2026-10-18.md).
-O próximo incremento é um adaptador de sessão para inicialização e Lockpick.
+O [adaptador de sessão](door-adapter-2026-10-18.md) já valida inicialização e Lockpick
+em um cenário determinístico separado. A prévia ainda usa o perfil sem esse adaptador.
 
 Referência local [Fallout 2 CE](https://github.com/alexbatalov/fallout2-ce/tree/e97087b9582f37075db347a89898887320753f8b):
 `object.cc` (`_obj_blocking_at`), `obj_types.h` (FID/flags), `proto_instance.cc`
