@@ -11,6 +11,8 @@ public partial class PreviewHud : CanvasLayer
     private readonly Label _area = new() { Text = "FALLOUT 2", Modulate = new Color("e4e6df") };
     private readonly Button _save = new() { Name = "SaveAction", Text = "Salvar [K]", Disabled = true };
     private readonly Button _load = new() { Name = "LoadAction", Text = "Carregar [R]", Disabled = true };
+    private readonly Button _inventory = new() { Name = "InventoryAction", Text = "Inventário [I]", Disabled = true,
+        TooltipText = "Consultar o inventário original do objeto selecionado, sem transferir itens" };
     private readonly Button _focusCharacter = new() { Name = "CharacterFocusAction", Text = "Personagem [C]" };
     private readonly Button _originalFloor = new() { Name = "OriginalFloorAction", Text = "Piso original [O]", ToggleMode = true,
         TooltipText = "Comparar com o piso da instalação local" };
@@ -38,6 +40,7 @@ public partial class PreviewHud : CanvasLayer
     public Action<bool>? OriginalFloorRequested;
     public Action? StopRequested;
     public Action<bool>? RevealActorRequested;
+    public Action? InventoryRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -102,7 +105,9 @@ public partial class PreviewHud : CanvasLayer
         _details.BbcodeEnabled = false; _details.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
         _details.CustomMinimumSize = new Vector2(0, 90); _details.AddThemeFontSizeOverride("normal_font_size", 13);
         _details.Text = "Clique em um volume para consultar os IDs e a posição do objeto original.\n\nAs formas e alturas são provisórias."; column.AddChild(_details);
-        Button(column, "Próximo no mesmo hex", () => CycleRequested?.Invoke());
+        var selectionActions = new HBoxContainer(); column.AddChild(selectionActions);
+        Button(selectionActions, "Próximo", () => CycleRequested?.Invoke()).TooltipText = "Próximo objeto no mesmo hex";
+        _inventory.Pressed += () => InventoryRequested?.Invoke(); selectionActions.AddChild(_inventory);
 
         _navigationPanel = new PanelContainer { AnchorTop = 1, AnchorBottom = 1,
             OffsetLeft = 16, OffsetRight = 864, OffsetTop = -212, OffsetBottom = -64 };
@@ -149,6 +154,7 @@ public partial class PreviewHud : CanvasLayer
     public void Select(string title, string text) { _selectionTitle.Text = title; _details.Text = text; }
     public string SelectionHeading => _selectionTitle.Text;
     public string SelectionDetails => _details.Text;
+    public void InventoryAction(bool enabled) => _inventory.Disabled = !enabled;
     public void DoorAction(bool enabled, bool open, string hint)
     {
         _doorUse.Disabled = !enabled; _doorUse.Text = open ? "Fechar porta [U]" : "Abrir porta [U]";
@@ -170,10 +176,11 @@ public partial class PreviewHud : CanvasLayer
         check.AddThemeFontSizeOverride("font_size", 13); check.Toggled += value => { Filters[key] = value; FilterChanged?.Invoke(key, value); }; line.AddChild(check);
         return line;
     }
-    private static void Button(Container container, string text, Action pressed)
+    private static Button Button(Container container, string text, Action pressed)
     {
         var button = new Button { Text = text, CustomMinimumSize = new Vector2(0, 32), MouseDefaultCursorShape = Control.CursorShape.PointingHand };
         button.Pressed += pressed; container.AddChild(button);
+        return button;
     }
     private PanelContainer Panel(Control parent, float left, float top, float right, float bottom, bool stretch)
     {

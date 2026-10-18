@@ -126,6 +126,7 @@ internal static class SelfTests
             GeometryTests.Run(Check);
             OcclusionTests.Run(Check);
             MessageTextTests.Run(Check);
+            InventoryViewTests.Run(Check);
             FloorArtTests.Run(Check);
             NavigationTests.Run(Check);
             DoorTests.Run(Check);

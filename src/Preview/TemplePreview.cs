@@ -66,6 +66,7 @@ public partial class TemplePreview : Node3D
 			_hud.OriginalFloorRequested = SetOriginalFloor;
 			_hud.StopRequested = StopWalking;
 			_hud.RevealActorRequested = SetRevealActor;
+			_hud.InventoryRequested = OpenInventory;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -97,6 +98,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckStopWalking();
 				if (_test) await CheckWallOcclusion();
 				if (_test) await CheckObjectText();
+				if (_test) await CheckInventoryInspector();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -237,7 +239,7 @@ public partial class TemplePreview : Node3D
 
 	public override void _Process(double delta)
 	{
-		if (_map == null) return;
+		if (_map == null || InspectorOpen) return;
 		AdvanceWalker(delta);
 		float x = (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
 		float z = (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0);
@@ -252,6 +254,11 @@ public partial class TemplePreview : Node3D
 	public override void _UnhandledInput(InputEvent input)
 	{
 		if (_map == null) return;
+		if (InspectorOpen)
+		{
+			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.I }) CloseInventory();
+			return;
+		}
 		if (input is InputEventKey { Pressed: true, Echo: false } key)
 		{
 			if (key.PhysicalKeycode == Key.F) GoToEntry();
@@ -268,6 +275,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.O) SetOriginalFloor(!_useOriginalFloor);
 			if (key.PhysicalKeycode == Key.Escape) StopWalking();
 			if (key.PhysicalKeycode == Key.V) SetRevealActor(!_revealActor);
+			if (key.PhysicalKeycode == Key.I) OpenInventory();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;
@@ -357,11 +365,13 @@ public partial class TemplePreview : Node3D
 		if (original?.Description is { } description) text = description + "\n\n" + text;
 		if (original != null) text += $"\n\nTexto original · {_objectText!.Language}\n{original.Source.Path}\nMensagem  {original.MessageId}";
 		_hud.Select(original?.Name is { } name ? $"{ShortName(name)} · {title} · objeto {h.Id}" : $"{title} · objeto {h.Id}", text);
+		_hud.InventoryAction(CanInspectInventory(obj.Source));
 		RefreshDoorAction();
 	}
 	private void ClearSelection()
 	{
 		_selected = null;
+		_hud.InventoryAction(false);
 		if (_highlight != null) _highlight.Visible = false;
 		if (_arrow != null) _arrow.Visible = false;
 		_hud.Select("Nenhum elemento selecionado", "Clique em um volume para consultar os IDs e a posição do objeto original.\n\nAs formas e alturas são provisórias.");
