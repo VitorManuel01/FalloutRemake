@@ -3,7 +3,7 @@
 Projeto pessoal em Godot 4 .NET/C#, começando por Fallout 2. A direção visual futura é
 um ambiente isométrico 3D inspirado em Wasteland 3. A cena principal já permite
 explorar o Temple of Trials com formas provisórias, inspecionar os objetos originais
-e mover um marcador por hexágonos válidos na elevação 0. A primeira porta pode ser
+e mover um marcador por hexágonos válidos na elevação do personagem. A primeira porta pode ser
 aberta e fechada; a segunda já aceita arrombamento com um perfil de teste,
 atualizando os caminhos sem alterar os dados originais.
 O leitor verifica a reconstrução dos bytes do mapa antes de montar a cena.
@@ -21,7 +21,7 @@ use **Abrir dados** e selecione a pasta de idioma que contém `master.dat` e `cr
 A escolha fica salva apenas localmente; não é necessário extrair ou exportar o MAP.
 
 - **WASD / botão direito:** mover a câmera; **roda:** zoom; **Q/E:** girar.
-- **F / Entrada:** voltar à entrada na elevação 0; **Home / Ver tudo:** enquadrar a camada.
+- **F / Entrada:** reenquadrar a vista da entrada sem mover o personagem; **Home / Ver tudo:** enquadrar a camada.
 - **Clique:** consultar objeto ou piso; painel lateral: elevações 0–2 e filtros.
 - **Próximo no mesmo hex:** alternar objetos sobrepostos sem confundir seus IDs.
 - **M / Caminhar:** alternar para caminhada na elevação 0; clique no chão para mover
@@ -31,12 +31,15 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 - **L / Arrombar:** após se aproximar da segunda porta, tenta destrancar. U abre a
   passagem depois. L muda para **Retrancar** quando destrancada; os 25 XP não repetem.
 - **Reiniciar prévia:** voltar à entrada e restaurar as portas. Trocar de elevação
-  reinicia o marcador, preservando as portas; as elevações 1–2 são apenas para inspeção.
+  no painel apenas inspeciona; o personagem e os XP permanecem no lugar.
+- **Enter / Passar:** ao chegar a uma saída interna, atravessa para a elevação de
+  destino, preservando portas e XP. Caminhe na elevação onde o personagem está.
 
 Paredes são volumes de referência nos hexes originais. Alturas, dimensões e cores
 são provisórias. O bloqueio usa FID/flags dos objetos, sem depender do piso ou dos
-filtros visuais. Portas fechadas bloqueiam; saídas encerram o percurso sem trocar
-de mapa. A interação exige proximidade e marcador parado. Apenas o script conferido
+filtros visuais. Portas fechadas bloqueiam; saídas encerram o percurso e aguardam
+Enter. Passagens internas funcionam; saídas para outro MAP continuam indisponíveis.
+A interação exige proximidade e marcador parado. Apenas o script conferido
 da segunda porta possui adaptador; uma passagem ocupada não pode ser fechada.
 O perfil de teste usa PER/AGI/SOR 5, Arrombamento 20, dificuldade normal e primeiro
 dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do d100.
@@ -69,14 +72,15 @@ $godotExe = 'D:\Downloads\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mon
 ```
 
 Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
-`LOCKPICK_PREVIEW_OK` / `IMPORT_SMOKE_OK`,
+`LOCKPICK_PREVIEW_OK` e `TRAVEL_PREVIEW_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Para capturar a cena, execute sem `--headless` e acrescente
 `--capture .local/temple-preview.png` após `--`. Com `--preview-test`, também é gerada
 uma captura `.selection.png` da porta selecionada, `.navigation.png` do percurso
 e `.door.png` da primeira passagem aberta, além de `.lockpick.png` da segunda
-porta após arrombar e atravessar. Todas ficam fora do Git.
+porta após arrombar e atravessar. `.exit.png` mostra a passagem interna disponível e
+`.travel.png` a chegada na elevação 1. Todas ficam fora do Git.
 
 O leitor abre os dados em modo de leitura e imprime um resumo JSON, com contagens,
 origens, hashes e divergências dos dados originais. Sempre verifica uma reconstrução
@@ -103,6 +107,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Segunda porta: condições do script e leitor INT](docs/door-script-2026-10-18.md)
 - [Adaptador de arrombamento: regras e validação](docs/door-adapter-2026-10-18.md)
 - [Arrombamento na prévia: perfil e controles](docs/lockpick-preview-2026-10-18.md)
+- [Passagens internas: destinos e estado do personagem](docs/travel-2026-10-18.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

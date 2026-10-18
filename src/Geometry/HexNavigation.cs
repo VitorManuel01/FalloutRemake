@@ -70,7 +70,7 @@ public sealed class HexNavigation
         var queue = new Queue<int>(); queue.Enqueue(start); parent[start] = start; distance[start] = 0;
         while (queue.TryDequeue(out int current))
         {
-            // Exits are reachable endpoints; this milestone does not trigger map transitions.
+            // Exits are terminal endpoints. A separate travel session must resolve their destination.
             if (IsExit(current)) continue;
             for (int direction = 0; direction < 6; direction++)
             {

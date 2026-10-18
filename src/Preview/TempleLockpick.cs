@@ -11,7 +11,7 @@ namespace FalloutRemake.Preview;
 
 public partial class TemplePreview
 {
-    private DoorUseStatus LockpickStatus(string key) => _walker == null || _elevation != 0 ? DoorUseStatus.Unavailable
+    private DoorUseStatus LockpickStatus(string key) => _walker == null ? DoorUseStatus.Unavailable
         : _doors?.CanLockpick(key, _walker.CurrentHex, _elevation, _walker.Moving) ?? DoorUseStatus.NoDoor;
 
     private void UseSelectedLockpick()

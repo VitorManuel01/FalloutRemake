@@ -24,12 +24,13 @@ public partial class TemplePreview
         using var resources = new ResourceScope();
         _walker = null; _navigation = null; _reachable = null; _walkerNode = null;
         _navigationOverlay = null; _routeVisual = null; _walkMode = false;
-        if (_map == null || _layout == null || _elevation != 0)
+        ApplyDoorVisuals();
+        if (_map == null || _layout == null || _travel == null || _elevation != _travel.Location.Elevation)
         {
-            NavigationStatus("Caminhada disponível apenas na elevação 0."); return;
+            RefreshDoorAction(); NavigationStatus($"Inspeção · o personagem permanece na elevação {_travel?.Location.Elevation ?? 0}."); return;
         }
-        _navigation = _doors!.Navigation(0);
-        int start = _map.Prefix.Header.EnteringTile;
+        _navigation = _doors!.Navigation(_elevation);
+        int start = _travel.Location.Hex;
         if (!_navigation.Walkable(start)) { NavigationStatus("Entrada bloqueada nos dados; marcador não criado."); return; }
         _walker = new HexWalker(_navigation, start);
         _walkerNode = new Node3D { Name = "NavigationMarker" }; _world.AddChild(_walkerNode);
@@ -47,10 +48,11 @@ public partial class TemplePreview
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded }) }; _world.AddChild(_routeVisual);
         RefreshReachability(); UpdateWalkerPosition();
         ApplyDoorVisuals(); RefreshDoorAction();
-        NavigationStatus($"Marcador na entrada · M para caminhar · {_reachable!.Count} hexes alcançáveis");
+        NavigationStatus($"Personagem no hex {start} · M para caminhar · {_reachable!.Count} hexes alcançáveis");
     }
 
-    private void NavigationStatus(string text) => _hud.Navigation(_walker != null && _elevation == 0, _walkMode, text);
+    private void NavigationStatus(string text)
+    { _hud.Navigation(_walker != null, _walkMode, text); RefreshTravelAction(); }
 
     private void RefreshReachability()
     {
@@ -81,7 +83,7 @@ public partial class TemplePreview
 
     private void ToggleWalkMode()
     {
-        if (_walker == null || _elevation != 0) return;
+        if (_walker == null) return;
         _walkMode = !_walkMode;
         _navigationOverlay!.Visible = _walkMode;
         if (_routeVisual != null) _routeVisual.Visible = _walkMode && _routeVisual.Mesh != null;
@@ -90,8 +92,11 @@ public partial class TemplePreview
 
     private void ResetWalker()
     {
-        if (_map == null || _navigation == null || _walker == null) return;
-        _doors!.Reset(); _skills.Reset(); _navigation = _doors.Navigation(0);
+        if (_map == null || _travel == null) return;
+        _doors!.Reset(); _skills.Reset(); _travel.Reset();
+        if (_elevation != _travel.Location.Elevation || _walker == null)
+        { ChangeElevation(_travel.Location.Elevation); FocusEntry(); return; }
+        _navigation = _doors.Navigation(_elevation);
         _walker = new HexWalker(_navigation, _map.Prefix.Header.EnteringTile);
         _routeVisual!.Mesh = null; _routeVisual.Visible = false;
         RefreshReachability(); UpdateWalkerPosition(); FocusEntry();
@@ -162,12 +167,13 @@ public partial class TemplePreview
             if (_selected?.Kind == PreviewKind.Door) SelectObject(_selected);
             RefreshDoorAction();
             NavigationStatus(_navigation!.IsExit(_walker.CurrentHex)
-                ? "Saída alcançada · transição ainda não implementada · reinicie o marcador"
+                ? ExitHint(CurrentExit())
                 : $"Chegou ao hex {_walker.CurrentHex} · clique em outro destino");
         }
     }
     private void UpdateWalkerPosition()
     {
+        if (_walker != null && _travel != null && _elevation == _travel.Location.Elevation) _travel.MoveTo(_walker.CurrentHex);
         if (_walkerNode != null && _walker != null && _layout != null) _walkerNode.Position = Point(_walker.Position - _layout.Origin, 0);
     }
 
@@ -226,6 +232,8 @@ public partial class TemplePreview
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             GoToEntry();
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            if (_walker!.CurrentHex != 31306) throw new InvalidDataException("Inspection moved the actor away from its exit.");
+            ResetWalker();
             int frameTarget = Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(28906, d)!.Value)
                 .First(t => _navigation!.Walkable(t) && !_navigation.IsExit(t));
             RequestWalk(frameTarget);

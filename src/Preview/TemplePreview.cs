@@ -58,6 +58,7 @@ public partial class TemplePreview : Node3D
 			_hud.WalkModeRequested = ToggleWalkMode; _hud.ResetWalkerRequested = ResetWalker;
 			_hud.DoorUseRequested = UseSelectedDoor;
 			_hud.LockpickRequested = UseSelectedLockpick;
+			_hud.ExitRequested = UseExit;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -81,6 +82,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckNavigation();
 				if (_test) await CheckDoors();
 				if (_test) await CheckLockpick();
+				if (_test) await CheckTravel();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -100,6 +102,7 @@ public partial class TemplePreview : Node3D
 		MapLayoutWriter.Verify(candidate);
 		_map = candidate; _directory = directory;
 		_doors = DoorSession.FromMap(candidate, DoorSession.SupportsTempleDoorAdapter(candidate));
+		_travel = new TempleTravel(candidate, _doors);
 		_skills.Reset();
 		_elevation = _map.Prefix.Header.EnteringElevation; _hud.Elevation(_elevation);
 		BuildWorld(); FocusEntry();
@@ -229,6 +232,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.M) ToggleWalkMode();
 			if (key.PhysicalKeycode == Key.U) UseSelectedDoor();
 			if (key.PhysicalKeycode == Key.L) UseSelectedLockpick();
+			if (key.PhysicalKeycode is Key.Enter or Key.KpEnter) UseExit();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;

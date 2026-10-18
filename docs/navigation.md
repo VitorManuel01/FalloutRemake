@@ -1,10 +1,10 @@
 # Caminhada inicial por hexágonos
 
-O modo **M / Caminhar** move um marcador azul na elevação 0 de `ARCAVES`. Clique no
+O modo **M / Caminhar** move um marcador azul na elevação atual do personagem em `ARCAVES`. Clique no
 chão; o percurso aparece em âmbar. Durante um percurso, novos destinos são recusados
 até chegar ou reiniciar. **Reiniciar prévia** cancela o percurso, volta à entrada e
-restaura as portas. Trocar de elevação reinicia o marcador e preserva o estado das
-portas. F apenas reenquadra a entrada na mesma elevação.
+restaura as portas. Trocar a elevação de inspeção preserva a posição do personagem
+e o estado das portas. F reenquadra a vista da entrada sem transportar o personagem.
 
 ## Regras da fotografia inicial do mapa
 
@@ -33,8 +33,8 @@ fornecendo flags efetivos à mesma consulta de navegação.
 
 Grades de saída visíveis, PIDs `0x05000010`–`0x05000017`, são destinos terminais:
 chegar é permitido, atravessar para continuar buscando caminho não é. Ao chegar,
-o marcador para; reinicie para sair. Essa é uma restrição explícita da prévia,
-pois ainda não há transição de mapa ou elevação.
+o marcador para. **Enter / Passar** resolve as [passagens internas](travel-2026-10-18.md)
+e preserva a sessão. Saídas externas e recarregamentos continuam indisponíveis.
 
 ## Busca e movimento
 

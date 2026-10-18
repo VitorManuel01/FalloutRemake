@@ -57,10 +57,11 @@ a aparência ainda não foi comparada lado a lado com o jogo original. Não há 
 arte FRM, execução de scripts ou personagem com regras completas de jogo.
 
 A [camada de navegação](navigation.md) agora classifica bloqueio por FID/flags e move
-um marcador na elevação 0. É independente das formas usadas para seleção e dos
+um marcador na elevação do personagem. É independente das formas usadas para seleção e dos
 filtros visuais. A primeira porta já pode ser [aberta e fechada](doors-2026-10-17.md);
 a segunda possui [arrombamento com perfil de teste](lockpick-preview-2026-10-18.md).
-Scripts desconhecidos e transições nas saídas continuam fora do comportamento implementado.
+As [passagens internas entre elevações](travel-2026-10-18.md) já preservam personagem,
+portas e XP. Scripts desconhecidos e carregamento de outro MAP continuam indisponíveis.
 
 Referência consultada localmente: [Fallout 2 CE, tile.cc](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/tile.cc),
 commit `e97087b9582f37075db347a89898887320753f8b`; também `object.cc` e `obj_types.h`.

@@ -76,5 +76,5 @@ uma comparação jogável lado a lado com o executável original; esta segue pen
 
 Ainda não há criação de personagem, GCD, progressão completa, inventário, armadilhas
 ativas, combate ou transição de mapa. O perfil é fixo e explicitamente de teste.
-Próximo: mapear o destino da saída após a segunda porta e implementar uma transição
-mínima preservando o personagem e o estado da sessão.
+O passo seguinte já foi entregue: [passagem interna e retorno](travel-2026-10-18.md),
+preservando o personagem e o estado da sessão. Carregar outros MAPs ainda está pendente.

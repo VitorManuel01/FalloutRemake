@@ -77,13 +77,14 @@ são decisões futuras, não geometria 3D recuperável automaticamente de FRM.
 Combate, execução de diálogos e acabamento inspirado em Wasteland 3 ficam para depois.
 
 A [navegação inicial](navigation.md) já classifica hexes usando FID/flags, incluindo
-multihex, e permite mover um marcador na elevação 0. Portas fechadas bloqueiam e
+multihex, e permite mover um marcador na elevação do personagem. Portas fechadas bloqueiam e
 saídas são terminais. Não usa presença de piso ou caixas de seleção como colisão.
 O [estado de portas](doors-2026-10-17.md) já permite abrir e fechar a primeira,
 confirmada sem script associado. As [condições de `doorl100.int`](door-script-2026-10-18.md)
 foram mapeadas e o [adaptador](door-adapter-2026-10-18.md) já foi testado na sessão.
 O [personagem mínimo e Lockpick](lockpick-preview-2026-10-18.md) já estão na prévia.
-Próximo: mapear a saída e sua transição. Conferir entrada, porta e
+As [passagens internas](travel-2026-10-18.md) já usam os destinos gravados.
+Próximo: carregar outro MAP preservando as áreas visitadas. Conferir entrada, porta e
 corredor com o jogo original; essa comparação visual ainda não foi realizada.
 
 ## Referência técnica

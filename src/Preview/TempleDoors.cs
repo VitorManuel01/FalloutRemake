@@ -14,7 +14,7 @@ public partial class TemplePreview
     private DoorSession? _doors;
     private readonly PreviewSkillResolver _skills = new(PrototypeCharacter.Neutral);
 
-    private DoorUseStatus DoorStatus(string key) => _walker == null || _elevation != 0 ? DoorUseStatus.Unavailable
+    private DoorUseStatus DoorStatus(string key) => _walker == null ? DoorUseStatus.Unavailable
         : _doors?.CanToggle(key, _walker.CurrentHex, _elevation, _walker.Moving) ?? DoorUseStatus.NoDoor;
     private static string DoorHint(DoorUseStatus status) => status switch
     {
@@ -40,7 +40,7 @@ public partial class TemplePreview
         PrototypeCharacter character = _skills.Character;
         string hint = lockpick == DoorUseStatus.Ready ? "L tenta destrancar ou retrancar usando a perícia de Arrombamento." : DoorHint(lockpick);
         _hud.LockpickAction(lockpick == DoorUseStatus.Ready, door?.IsLocked != false, hint,
-            $"Perfil de teste · PER {character.Perception}  AGI {character.Agility}  SOR {character.Luck} · Arrombamento {character.Lockpick} · XP {_doors?.TempleDoor?.Experience ?? 0}");
+            $"Perfil de teste · PER {character.Perception}  AGI {character.Agility}  SOR {character.Luck} · Arrombamento {character.Lockpick} · XP {_doors?.TempleDoor?.Experience ?? 0} · Personagem na elevação {_travel?.Location.Elevation ?? 0}");
     }
     private void UseSelectedDoor()
     {
