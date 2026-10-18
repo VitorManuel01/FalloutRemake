@@ -1,11 +1,15 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 
 namespace FalloutRemake.Import;
 
 public sealed record Prototype(int Pid, int Type, int? Subtype, int Fid, int? ScriptId,
-    ResourceIdentity Resource, byte[] RawBytes);
+    ResourceIdentity Resource, byte[] RawBytes)
+{
+    public int MessageId => BinaryPrimitives.ReadInt32BigEndian(RawBytes.AsSpan(4, 4));
+}
 
 /// <summary>Validates PRO layout/length and reads identity/subtype; stats stay raw.</summary>
 public sealed class PrototypeCatalog

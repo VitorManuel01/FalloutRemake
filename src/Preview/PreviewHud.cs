@@ -147,6 +147,8 @@ public partial class PreviewHud : CanvasLayer
         _navigationStatus.Text = status;
     }
     public void Select(string title, string text) { _selectionTitle.Text = title; _details.Text = text; }
+    public string SelectionHeading => _selectionTitle.Text;
+    public string SelectionDetails => _details.Text;
     public void DoorAction(bool enabled, bool open, string hint)
     {
         _doorUse.Disabled = !enabled; _doorUse.Text = open ? "Fechar porta [U]" : "Abrir porta [U]";

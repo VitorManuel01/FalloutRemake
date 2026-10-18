@@ -96,6 +96,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckOriginalFloor();
 				if (_test) await CheckStopWalking();
 				if (_test) await CheckWallOcclusion();
+				if (_test) await CheckObjectText();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -115,6 +116,7 @@ public partial class TemplePreview : Node3D
 		var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 });
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
 		_floorArt = new FloorArtCatalog(data.Read);
+		LoadObjectText(data);
 		BindCurrentArea();
 		_skills.Reset();
 		_elevation = _map!.Prefix.Header.EnteringElevation; _hud.Elevation(_elevation);
@@ -351,7 +353,10 @@ public partial class TemplePreview : Node3D
 		string navigation = NavigationDetails(obj);
 		text = obj.Kind == PreviewKind.Door ? navigation.Trim() + "\n\n" + text : text + navigation;
 		if (obj.Kind == PreviewKind.Door && _doors?.Get(obj.Source.Key) is { } doorState) title += doorState.IsOpen ? " aberta" : " fechada";
-		_hud.Select($"{title} · objeto {h.Id}", text);
+		PrototypeText? original = OriginalText(obj.Source);
+		if (original?.Description is { } description) text = description + "\n\n" + text;
+		if (original != null) text += $"\n\nTexto original · {_objectText!.Language}\n{original.Source.Path}\nMensagem  {original.MessageId}";
+		_hud.Select(original?.Name is { } name ? $"{ShortName(name)} · {title} · objeto {h.Id}" : $"{title} · objeto {h.Id}", text);
 		RefreshDoorAction();
 	}
 	private void ClearSelection()

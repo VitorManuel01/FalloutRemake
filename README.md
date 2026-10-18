@@ -23,6 +23,7 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 - **WASD / botão direito:** mover a câmera; **roda:** zoom; **Q/E:** girar.
 - **F / Entrada:** reenquadrar a vista da entrada sem mover o personagem; **Home / Ver tudo:** enquadrar a camada.
 - **Clique:** consultar objeto ou piso; painel lateral: elevações 0–2 e filtros.
+  O inspetor inclui nome e descrição originais quando disponíveis na instalação.
 - **Próximo no mesmo hex:** alternar objetos sobrepostos sem confundir seus IDs.
 - **M / Caminhar:** alternar para caminhada na elevação 0; clique no chão para mover
   o marcador azul. Pontos verdes indicam alcance, vermelhos bloqueios e âmbar saídas.
@@ -86,7 +87,7 @@ $godotExe = 'D:\Downloads\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mon
 Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `LOCKPICK_PREVIEW_OK`, `TRAVEL_PREVIEW_OK`, `WORLD_PREVIEW_OK` e
 `CHECKPOINT_PREVIEW_OK`, `CHARACTER_CAMERA_OK`, `FLOOR_ART_PREVIEW_OK`,
-`STOP_WALKING_OK`, `WALL_OCCLUSION_OK` / `IMPORT_SMOKE_OK`,
+`STOP_WALKING_OK`, `WALL_OCCLUSION_OK`, `OBJECT_TEXT_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Para capturar a cena, execute sem `--headless` e acrescente
@@ -128,6 +129,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Piso original: formato e referência visual](docs/floor-art-2026-10-18.md)
 - [Parada da caminhada: continuidade e controles](docs/stop-walking-2026-10-18.md)
 - [Revelar o personagem: paredes e limites](docs/wall-occlusion-2026-10-18.md)
+- [Nomes e descrições: mensagens e idioma](docs/object-text-2026-10-18.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
