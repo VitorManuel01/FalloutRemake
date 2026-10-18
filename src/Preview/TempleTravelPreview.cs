@@ -36,6 +36,7 @@ public partial class TemplePreview
         ExitOption option = CurrentExit();
         if (option.Status != ExitStatus.Ready) { NavigationStatus(ExitHint(option)); return; }
         bool walking = _walkMode;
+        bool following = _followActor;
         option = _campaign!.UseExit(_walker!.Moving);
         if (option.Status != ExitStatus.Ready) { NavigationStatus(ExitHint(option)); return; }
         BindCurrentArea();
@@ -43,6 +44,7 @@ public partial class TemplePreview
         ChangeElevation(destination.Elevation);
         if (walking) ToggleWalkMode();
         _focus = Point(FalloutGrid.HexCenter(destination.Hex) - _layout!.Origin, 0); _camera.Size = 32; UpdateCamera();
+        SetCameraFollow(following);
         NavigationStatus($"Chegou ao mapa {destination.Map}, elevação {destination.Elevation} · portas e XP preservados");
     }
 

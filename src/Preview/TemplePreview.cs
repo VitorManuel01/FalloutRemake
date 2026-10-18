@@ -62,6 +62,7 @@ public partial class TemplePreview : Node3D
 			_hud.LockpickRequested = UseSelectedLockpick;
 			_hud.ExitRequested = UseExit;
 			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
+			_hud.CharacterFocusRequested = FocusCharacter;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -88,6 +89,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();
 				if (_test) await CheckCheckpoint();
+				if (_test) await CheckCharacterCamera();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -227,6 +229,8 @@ public partial class TemplePreview : Node3D
 		float z = (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0);
 		Vector3 right = new(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));
 		Vector3 down = new(Mathf.Sin(_yaw), 0, Mathf.Cos(_yaw));
+		if (x != 0 || z != 0) SetCameraFollow(false);
+		if (_followActor && !_checkingNavigation && _walkerNode != null && _walker != null) _focus = _walkerNode.Position;
 		_focus += (right * x + down * z) * (float)delta * _camera.Size * .55f;
 		UpdateCamera();
 	}
@@ -245,6 +249,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode is Key.Enter or Key.KpEnter) UseExit();
 			if (key.PhysicalKeycode == Key.F6) SaveCheckpoint();
 			if (key.PhysicalKeycode == Key.F9) LoadCheckpoint();
+			if (key.PhysicalKeycode == Key.C) FocusCharacter();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;
@@ -255,12 +260,7 @@ public partial class TemplePreview : Node3D
 			if (mouse.ButtonIndex == MouseButton.Left) { if (_walkMode) WalkAtScreen(mouse.Position); else Pick(mouse.Position); }
 		}
 		if (input is InputEventMouseMotion motion && (motion.ButtonMask & MouseButtonMask.Right) != 0)
-		{
-			float scale = _camera.Size / GetViewport().GetVisibleRect().Size.Y;
-			_focus -= (new Vector3(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw)) * motion.Relative.X
-				+ new Vector3(Mathf.Sin(_yaw), 0, Mathf.Cos(_yaw)) * motion.Relative.Y * 1.4f) * scale;
-			UpdateCamera();
-		}
+			DragCamera(motion.Relative);
 	}
 	private void UpdateCamera()
 	{
@@ -273,6 +273,7 @@ public partial class TemplePreview : Node3D
 	private void FocusEntry()
 	{
 		if (_map == null) return;
+		SetCameraFollow(false);
 		GroundPoint direction = FalloutGrid.Facing(_map.Prefix.Header.EnteringRotation);
 		_focus = new Vector3((float)direction.X * 6, 0, (float)direction.Z * 6); _camera.Size = 32; UpdateCamera();
 	}
@@ -290,6 +291,7 @@ public partial class TemplePreview : Node3D
 	private void FrameAll()
 	{
 		if (_layout == null || _layout.Floors.Length == 0) return;
+		SetCameraFollow(false);
 		float minX = (float)_layout.Floors.Min(f => f.Position.X), maxX = (float)_layout.Floors.Max(f => f.Position.X);
 		float minZ = (float)_layout.Floors.Min(f => f.Position.Z), maxZ = (float)_layout.Floors.Max(f => f.Position.Z);
 		_focus = new Vector3((minX + maxX) / 2, 0, (minZ + maxZ) / 2);

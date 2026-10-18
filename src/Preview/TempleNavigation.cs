@@ -93,6 +93,7 @@ public partial class TemplePreview
     private void ResetWalker()
     {
         if (_campaign == null) return;
+        SetCameraFollow(false);
         _campaign.Reset(); _skills.Reset(); BindCurrentArea();
         ChangeElevation(_travel!.Location.Elevation); FocusEntry();
         NavigationStatus($"Marcador reiniciado · {_reachable!.Count} hexes alcançáveis");

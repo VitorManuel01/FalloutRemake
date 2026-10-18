@@ -11,6 +11,7 @@ public partial class PreviewHud : CanvasLayer
     private readonly Label _area = new() { Text = "FALLOUT 2", Modulate = new Color("e4e6df") };
     private readonly Button _save = new() { Name = "SaveAction", Text = "Salvar [F6]", Disabled = true };
     private readonly Button _load = new() { Name = "LoadAction", Text = "Carregar [F9]", Disabled = true };
+    private readonly Button _focusCharacter = new() { Name = "CharacterFocusAction", Text = "Personagem [C]" };
     private readonly Label _selectionTitle = new();
     private readonly RichTextLabel _details = new();
     private readonly Label _counts = new();
@@ -28,6 +29,7 @@ public partial class PreviewHud : CanvasLayer
     public Action? LockpickRequested;
     public Action? ExitRequested;
     public Action? SaveRequested, LoadRequested;
+    public Action? CharacterFocusRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -63,6 +65,7 @@ public partial class PreviewHud : CanvasLayer
         Button(row, "Abrir dados", () => OpenRequested?.Invoke());
         Button(row, "Entrada  [F]", () => EntryRequested?.Invoke());
         Button(row, "Ver tudo  [Home]", () => FrameRequested?.Invoke());
+        _focusCharacter.Pressed += () => CharacterFocusRequested?.Invoke(); row.AddChild(_focusCharacter);
         _save.Pressed += () => SaveRequested?.Invoke(); row.AddChild(_save);
         _load.Pressed += () => LoadRequested?.Invoke(); row.AddChild(_load);
 
@@ -115,6 +118,7 @@ public partial class PreviewHud : CanvasLayer
 
     public void Status(string text) => _status.Text = text;
     public void Area(string text) => _area.Text = text;
+    public void CameraFollow(bool following) => _focusCharacter.Text = following ? "Seguindo [C]" : "Personagem [C]";
     public void CheckpointActions(bool saveAvailable, bool loadAvailable)
     { _save.Disabled = !saveAvailable; _load.Disabled = !loadAvailable; }
     public void Counts(string text) => _counts.Text = text;
