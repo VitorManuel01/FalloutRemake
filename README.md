@@ -38,6 +38,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
 - **C / Personagem:** reenquadra e acompanha o personagem. WASD ou arrasto retomam
   a câmera livre; recentrar mantém o percurso em andamento.
+- **O / Piso original:** compara o piso com imagens lidas da instalação local.
+  O filtro Piso funciona nos dois modos. Texturas ficam somente em memória.
 
 Paredes são volumes de referência nos hexes originais. Alturas, dimensões e cores
 são provisórias. O bloqueio usa FID/flags dos objetos, sem depender do piso ou dos
@@ -78,7 +80,7 @@ $godotExe = 'D:\Downloads\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mon
 
 Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `LOCKPICK_PREVIEW_OK`, `TRAVEL_PREVIEW_OK`, `WORLD_PREVIEW_OK` e
-`CHECKPOINT_PREVIEW_OK`, `CHARACTER_CAMERA_OK` / `IMPORT_SMOKE_OK`,
+`CHECKPOINT_PREVIEW_OK`, `CHARACTER_CAMERA_OK`, `FLOOR_ART_PREVIEW_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Para capturar a cena, execute sem `--headless` e acrescente
@@ -117,6 +119,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Áreas externas e retorno: cache e validação](docs/world-2026-10-18.md)
 - [Checkpoint local: formato e restauração](docs/checkpoint-2026-10-18.md)
 - [Câmera no personagem: controles e validação](docs/camera-2026-10-18.md)
+- [Piso original: formato e referência visual](docs/floor-art-2026-10-18.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

@@ -41,6 +41,7 @@ public partial class TemplePreview
             if (_campaign!.CurrentMap != 126 || _walker?.CurrentHex != 16486 || _campaign.Experience != 25
                 || _map!.DeclaredRootObjects != 567 || _lookup.Count != 567)
                 throw new InvalidDataException("Exterior transition failed to preserve destination, objects or XP.");
+            if (_useOriginalFloor) CheckOriginalFloorInstances();
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "outside.png"));
             int back = ClosestExitTo(3);
             RequestWalk(back); _walker!.Advance(1000); UpdateWalkerPosition(); UseExit();

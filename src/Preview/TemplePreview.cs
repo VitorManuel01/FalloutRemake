@@ -63,6 +63,7 @@ public partial class TemplePreview : Node3D
 			_hud.ExitRequested = UseExit;
 			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
 			_hud.CharacterFocusRequested = FocusCharacter;
+			_hud.OriginalFloorRequested = SetOriginalFloor;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -90,6 +91,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckWorldTravel();
 				if (_test) await CheckCheckpoint();
 				if (_test) await CheckCharacterCamera();
+				if (_test) await CheckOriginalFloor();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -108,6 +110,7 @@ public partial class TemplePreview : Node3D
 		var catalog = new MapCatalog(data.Read("data/maps.txt"));
 		var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 });
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
+		_floorArt = new FloorArtCatalog(data.Read);
 		BindCurrentArea();
 		_skills.Reset();
 		_elevation = _map!.Prefix.Header.EnteringElevation; _hud.Elevation(_elevation);
@@ -141,6 +144,7 @@ public partial class TemplePreview : Node3D
 		_floor = new MultiMeshInstance3D { Name = "OriginalFloorCells", Multimesh = floorInstances,
 			MaterialOverride = resources.Own(new StandardMaterial3D { VertexColorUseAsAlbedo = true, Roughness = 1 }), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
 		_world.AddChild(_floor);
+		_originalFloor = null;
 		foreach (PreviewObject obj in _layout.Objects)
 		{
 			Vector3 size = Dimensions(obj.Kind);
@@ -169,6 +173,7 @@ public partial class TemplePreview : Node3D
 		ClearSelection();
 		ApplyFilters();
 		BuildNavigation();
+		SetOriginalFloor(_useOriginalFloor);
 	}
 
 	private static Vector3 Dimensions(PreviewKind kind) => kind switch
@@ -209,7 +214,7 @@ public partial class TemplePreview : Node3D
 	private void ApplyFilters()
 	{
 		if (_layout == null || _floor == null) return;
-		_floor.Visible = _hud.Filters["floor"];
+		ApplyFloorVisibility();
 		int visible = 0;
 		foreach (PreviewObject obj in _layout.Objects)
 		{
@@ -250,6 +255,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.F6) SaveCheckpoint();
 			if (key.PhysicalKeycode == Key.F9) LoadCheckpoint();
 			if (key.PhysicalKeycode == Key.C) FocusCharacter();
+			if (key.PhysicalKeycode == Key.O) SetOriginalFloor(!_useOriginalFloor);
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;
@@ -309,7 +315,7 @@ public partial class TemplePreview : Node3D
 			float t = -origin.Y / direction.Y;
 			Vector3 point = origin + direction * t;
 			int? square = _layout == null ? null : FalloutGrid.SquareAt(new GroundPoint(point.X + _layout.Origin.X, point.Z + _layout.Origin.Z));
-			PreviewFloor? floor = _floor?.Visible == true ? _layout?.Floors.FirstOrDefault(f => f.Square == square) : null;
+			PreviewFloor? floor = _hud.Filters["floor"] ? _layout?.Floors.FirstOrDefault(f => f.Square == square) : null;
 			ClearSelection();
 			if (floor != null) _hud.Select($"Piso · célula {floor.Square}", $"Elevação  {_elevation}\nID de piso  {floor.Raw & 0xFFF}\nFlags  {(floor.Raw >> 12) & 15}\nValor bruto  0x{floor.Raw:X8}\n\nA célula não define, por si só, uma área caminhável.");
 		}
@@ -460,6 +466,7 @@ public partial class TemplePreview : Node3D
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		_resources.Dispose(); _materials.Clear(); _meshes.Clear(); _shapes.Clear(); _bodies.Clear(); _lookup.Clear();
+		_floorArtworkMaterials.Clear(); _floorArtworkMesh = null;
 		GC.Collect(); GC.WaitForPendingFinalizers();
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		GetTree().Quit(code);

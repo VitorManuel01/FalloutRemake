@@ -12,6 +12,8 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _save = new() { Name = "SaveAction", Text = "Salvar [F6]", Disabled = true };
     private readonly Button _load = new() { Name = "LoadAction", Text = "Carregar [F9]", Disabled = true };
     private readonly Button _focusCharacter = new() { Name = "CharacterFocusAction", Text = "Personagem [C]" };
+    private readonly Button _originalFloor = new() { Name = "OriginalFloorAction", Text = "Piso original [O]", ToggleMode = true,
+        TooltipText = "Comparar com o piso da instalação local" };
     private readonly Label _selectionTitle = new();
     private readonly RichTextLabel _details = new();
     private readonly Label _counts = new();
@@ -30,6 +32,7 @@ public partial class PreviewHud : CanvasLayer
     public Action? ExitRequested;
     public Action? SaveRequested, LoadRequested;
     public Action? CharacterFocusRequested;
+    public Action<bool>? OriginalFloorRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -78,6 +81,7 @@ public partial class PreviewHud : CanvasLayer
         _elevation.ItemSelected += index => ElevationRequested?.Invoke((int)index); column.AddChild(_elevation);
         _counts.AddThemeFontSizeOverride("font_size", 12); _counts.Modulate = new Color("8fa69a"); column.AddChild(_counts);
         column.AddChild(new HSeparator());
+        _originalFloor.Toggled += enabled => OriginalFloorRequested?.Invoke(enabled); column.AddChild(_originalFloor);
         AddFilter(column, "floor", "Piso", "68766d");
         AddFilter(column, "wall", "Paredes", "b6a17d");
         AddFilter(column, "scenery", "Cenário e itens", "a9865b");
@@ -119,6 +123,7 @@ public partial class PreviewHud : CanvasLayer
     public void Status(string text) => _status.Text = text;
     public void Area(string text) => _area.Text = text;
     public void CameraFollow(bool following) => _focusCharacter.Text = following ? "Seguindo [C]" : "Personagem [C]";
+    public void OriginalFloor(bool enabled) => _originalFloor.SetPressedNoSignal(enabled);
     public void CheckpointActions(bool saveAvailable, bool loadAvailable)
     { _save.Disabled = !saveAvailable; _load.Disabled = !loadAvailable; }
     public void Counts(string text) => _counts.Text = text;
