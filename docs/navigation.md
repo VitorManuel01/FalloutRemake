@@ -62,7 +62,8 @@ multihex ou comparação visual lado a lado com o jogo original. O resultado des
 os dados serializados, não uma simulação completa do estado após executar os scripts.
 
 Foi confirmado que a primeira porta não tem script. A segunda está associada a
-`doorl100.int`; mapear esse programa e seus requisitos é o próximo incremento.
+`doorl100.int`; suas [condições já foram mapeadas](door-script-2026-10-18.md).
+O próximo incremento é um adaptador de sessão para inicialização e Lockpick.
 
 Referência local [Fallout 2 CE](https://github.com/alexbatalov/fallout2-ce/tree/e97087b9582f37075db347a89898887320753f8b):
 `object.cc` (`_obj_blocking_at`), `obj_types.h` (FID/flags), `proto_instance.cc`

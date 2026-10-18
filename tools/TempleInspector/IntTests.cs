@@ -1,0 +1,83 @@
+using System.Buffers.Binary;
+using System.Text;
+using FalloutRemake.Import;
+
+internal static class IntTests
+{
+    public static void Run(Action<string, Action> check)
+    {
+        check("INT reads aliased procedures and preserves an independent source snapshot", () =>
+        {
+            byte[] bytes = Fixture(); byte[] expected = (byte[])bytes.Clone();
+            IntProgram program = Read(bytes); bytes[0] = 0;
+            byte[] copy = program.CopySourceBytes(); copy[0] = 0;
+            Assert(program.CopySourceBytes().SequenceEqual(expected));
+            Assert(program.Procedures.Count == 2 && program.Procedures.All(p => p.Name == "entry" && p.BodyOffset == 112));
+            Assert(program.ProcedureInstructions(0).SequenceEqual(program.ProcedureInstructions(1)));
+            Assert(program.Instructions.Last().Offset == 118 && program.IdentifiersOffset == 94 && program.StaticStringsOffset == 104);
+        });
+        check("INT preserves typed push bits and unknown two-byte operations without executing", () =>
+        {
+            byte[] bytes = Fixture(); U16(bytes, 112, 0xA001); I32(bytes, 114, unchecked((int)0xFFC12345)); U16(bytes, 118, 0x82FF);
+            IntInstruction[] code = Read(bytes).ProcedureInstructions(0).ToArray();
+            Assert(code[0].Opcode == 0xA001 && code[0].OperandBits == unchecked((int)0xFFC12345) && code[0].Length == 6);
+            Assert(code[1].Opcode == 0x82FF && code[1].OperandBits == null && code[1].Length == 2);
+        });
+        check("INT rejects truncated, overflowing and negative procedure/table counts", () =>
+        {
+            Reject(new byte[12]);
+            foreach (int value in new[] { -1, 0, 4097, int.MaxValue }) { byte[] bytes = Fixture(); I32(bytes, 42, value); Reject(bytes); }
+            foreach (int value in new[] { -1, int.MaxValue }) { byte[] bytes = Fixture(); I32(bytes, 94, value); Reject(bytes); }
+        });
+        check("INT bounds procedure names and requires their terminating zero inside the table", () =>
+        {
+            foreach (int value in new[] { -1, 0, 3, 10, int.MaxValue }) { byte[] bytes = Fixture(); I32(bytes, 46, value); Reject(bytes); }
+            byte[] unterminated = Fixture(); unterminated[103] = 65; Reject(unterminated);
+        });
+        check("INT rejects unsupported bootstrap and code targets inside metadata or immediates", () =>
+        {
+            byte[] badBootstrap = Fixture(); U16(badBootstrap, 16, 0x8000); Reject(badBootstrap);
+            foreach (int value in new[] { -1, 106, 111, 120, int.MaxValue }) { byte[] bytes = Fixture(); I32(bytes, 12, value); Reject(bytes); }
+            byte[] badBody = Fixture(); I32(badBody, 62, 114); Reject(badBody);
+            byte[] badCondition = Fixture(); I32(badCondition, 58, 114); Reject(badCondition);
+            byte[] badArgs = Fixture(); I32(badArgs, 66, -1); Reject(badArgs);
+        });
+        check("INT rejects partial instructions and bytes lacking the opcode flag", () =>
+        {
+            Reject(Fixture()[..^1]);
+            byte[] shortPush = Fixture(); U16(shortPush, 118, 0xC001); Reject(shortPush);
+            byte[] notOpcode = Fixture(); U16(notOpcode, 118, 0x0001); Reject(notOpcode);
+            byte[] invalidIndex = Fixture(); U16(invalidIndex, 118, 0xFFFF); Reject(invalidIndex);
+        });
+        check("INT permits imported zero-body records and separates physical procedure spans", () =>
+        {
+            byte[] bytes = Fixture(); I32(bytes, 74, 4); I32(bytes, 86, 0);
+            Assert(!Read(bytes).ProcedureInstructions(1).Any());
+            I32(bytes, 74, 0); I32(bytes, 86, 118);
+            IntProgram program = Read(bytes);
+            Assert(program.ProcedureInstructions(0).Single().Offset == 112 && program.ProcedureInstructions(1).Single().Offset == 118);
+        });
+    }
+    private static IntProgram Read(byte[] bytes) => IntProgram.Read(new GameResource("scripts/fixture.int", "synthetic", bytes));
+    private static void Reject(byte[] bytes)
+    {
+        try { Read(bytes); } catch (InvalidDataException) { return; }
+        throw new Exception("Malformed INT accepted.");
+    }
+    private static byte[] Fixture()
+    {
+        var bytes = new byte[120];
+        for (int offset = 0; offset < 42; offset += 2) U16(bytes, offset, 0x8000);
+        U16(bytes, 0, 0x8002); U16(bytes, 2, 0xC001); I32(bytes, 4, 18); U16(bytes, 8, 0x800D);
+        U16(bytes, 10, 0xC001); I32(bytes, 12, 112); U16(bytes, 16, 0x8004); U16(bytes, 18, 0x8010);
+        I32(bytes, 42, 2);
+        foreach (int offset in new[] { 46, 70 }) { I32(bytes, offset, 4); I32(bytes, offset + 16, 112); }
+        I32(bytes, 94, 6); Encoding.ASCII.GetBytes("entry\0").CopyTo(bytes, 98);
+        I32(bytes, 104, -1); I32(bytes, 108, -1);
+        U16(bytes, 112, 0xC001); I32(bytes, 114, 42); U16(bytes, 118, 0x8000);
+        return bytes;
+    }
+    private static void I32(byte[] bytes, int offset, int value) => BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(offset, 4), value);
+    private static void U16(byte[] bytes, int offset, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(offset, 2), value);
+    private static void Assert(bool condition) { if (!condition) throw new Exception("INT inspector assertion failed."); }
+}

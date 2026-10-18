@@ -80,8 +80,8 @@ A [navegação inicial](navigation.md) já classifica hexes usando FID/flags, in
 multihex, e permite mover um marcador na elevação 0. Portas fechadas bloqueiam e
 saídas são terminais. Não usa presença de piso ou caixas de seleção como colisão.
 O [estado de portas](doors-2026-10-17.md) já permite abrir e fechar a primeira,
-confirmada sem script associado. Próximo: mapear `doorl100.int` da segunda porta
-antes de reproduzir suas condições. Conferir entrada, porta e
+confirmada sem script associado. As [condições de `doorl100.int`](door-script-2026-10-18.md)
+foram mapeadas; próximo: adaptar inicialização e Lockpick à sessão. Conferir entrada, porta e
 corredor com o jogo original; essa comparação visual ainda não foi realizada.
 
 ## Referência técnica

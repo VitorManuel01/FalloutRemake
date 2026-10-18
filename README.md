@@ -44,6 +44,8 @@ dotnet run --project tools/TempleInspector -- --self-test
 dotnet run --project tools/TempleInspector -- --data-dir 'D:\Games\fallout2\Fallout 2 English'
 dotnet run --project tools/TempleInspector -- --data-dir 'D:\Games\fallout2\Fallout 2 English' --export-local
 dotnet run --project tools/TempleInspector -- --data-dir 'D:\Games\fallout2\Fallout 2 English' --navigation
+
+dotnet run --project tools/TempleInspector -- --data-dir 'D:\Games\fallout2\Fallout 2 English' --script scripts/doorl100.int
 ```
 
 O último caminho foi confirmado no manifesto local da Epic em 16/10/2026. Em outra
@@ -74,10 +76,17 @@ intermediária em `.local/arcaves.v2.json`, incluindo os bytes de origem e prot�
 esse arquivo é privado, regenerável e ignorado pelo Git. Execute esse modo na raiz.
 Não inclua dados originais, exportações ou arte convertida no repositório.
 
+O modo `--script` inspeciona a estrutura de um INT sem executá-lo. Acrescente
+`--instructions` para incluir opcodes e operandos brutos. Os trechos são físicos,
+sem prova automática de fluxo ou comportamento. A análise da segunda porta confirmou
+que o script a tranca na entrada, embora o MAP grave o estado destrancado. Sua
+interação continua indisponível na prévia até existir um adaptador validado.
+
 - [Formatos, limites e próximo incremento](docs/temple-import.md)
 - [Coordenadas e limites da prévia 3D](docs/preview-3d.md)
 - [Navegação: regras e limites](docs/navigation.md)
 - [Portas: comportamento e validação atual](docs/doors-2026-10-17.md)
+- [Segunda porta: condições do script e leitor INT](docs/door-script-2026-10-18.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
