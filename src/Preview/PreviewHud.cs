@@ -8,6 +8,7 @@ public partial class PreviewHud : CanvasLayer
 {
     private readonly ResourceScope _resources = new();
     private readonly Label _status = new();
+    private readonly Label _area = new() { Text = "FALLOUT 2", Modulate = new Color("e4e6df") };
     private readonly Label _selectionTitle = new();
     private readonly RichTextLabel _details = new();
     private readonly Label _counts = new();
@@ -54,7 +55,7 @@ public partial class PreviewHud : CanvasLayer
         var badge = new Label { Text = "F2", VerticalAlignment = VerticalAlignment.Center };
         badge.AddThemeColorOverride("font_color", new Color("c2a66d")); badge.AddThemeFontSizeOverride("font_size", 26); row.AddChild(badge);
         var heading = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill }; row.AddChild(heading);
-        heading.AddChild(new Label { Text = "TEMPLE OF TRIALS", Modulate = new Color("e4e6df") });
+        heading.AddChild(_area);
         _status.Text = "Prévia espacial · carregando os dados…"; _status.AddThemeFontSizeOverride("font_size", 12); _status.Modulate = new Color("8fa69a"); heading.AddChild(_status);
         Button(row, "Abrir dados", () => OpenRequested?.Invoke());
         Button(row, "Entrada  [F]", () => EntryRequested?.Invoke());
@@ -108,6 +109,7 @@ public partial class PreviewHud : CanvasLayer
     }
 
     public void Status(string text) => _status.Text = text;
+    public void Area(string text) => _area.Text = text;
     public void Counts(string text) => _counts.Text = text;
     public void Elevation(int elevation) => _elevation.Select(elevation);
     public void Navigation(bool available, bool walkingMode, string status)

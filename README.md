@@ -38,7 +38,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 Paredes são volumes de referência nos hexes originais. Alturas, dimensões e cores
 são provisórias. O bloqueio usa FID/flags dos objetos, sem depender do piso ou dos
 filtros visuais. Portas fechadas bloqueiam; saídas encerram o percurso e aguardam
-Enter. Passagens internas funcionam; saídas para outro MAP continuam indisponíveis.
+Enter. Passagens internas e saídas entre templo, exterior e vila usam os destinos
+originais; outras áreas continuam indisponíveis. O retorno preserva portas e XP.
 A interação exige proximidade e marcador parado. Apenas o script conferido
 da segunda porta possui adaptador; uma passagem ocupada não pode ser fechada.
 O perfil de teste usa PER/AGI/SOR 5, Arrombamento 20, dificuldade normal e primeiro
@@ -72,7 +73,7 @@ $godotExe = 'D:\Downloads\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mon
 ```
 
 Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
-`LOCKPICK_PREVIEW_OK` e `TRAVEL_PREVIEW_OK` / `IMPORT_SMOKE_OK`,
+`LOCKPICK_PREVIEW_OK`, `TRAVEL_PREVIEW_OK` e `WORLD_PREVIEW_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Para capturar a cena, execute sem `--headless` e acrescente
@@ -80,7 +81,7 @@ Para capturar a cena, execute sem `--headless` e acrescente
 uma captura `.selection.png` da porta selecionada, `.navigation.png` do percurso
 e `.door.png` da primeira passagem aberta, além de `.lockpick.png` da segunda
 porta após arrombar e atravessar. `.exit.png` mostra a passagem interna disponível e
-`.travel.png` a chegada na elevação 1. Todas ficam fora do Git.
+`.travel.png` a chegada na elevação 1; `.outside.png` mostra o exterior. Todas ficam fora do Git.
 
 O leitor abre os dados em modo de leitura e imprime um resumo JSON, com contagens,
 origens, hashes e divergências dos dados originais. Sempre verifica uma reconstrução
@@ -108,6 +109,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Adaptador de arrombamento: regras e validação](docs/door-adapter-2026-10-18.md)
 - [Arrombamento na prévia: perfil e controles](docs/lockpick-preview-2026-10-18.md)
 - [Passagens internas: destinos e estado do personagem](docs/travel-2026-10-18.md)
+- [Áreas externas e retorno: cache e validação](docs/world-2026-10-18.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

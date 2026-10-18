@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using FalloutRemake.Geometry;
 using FalloutRemake.Import;
@@ -7,7 +8,7 @@ using FalloutRemake.Import;
 namespace FalloutRemake.Runtime;
 
 public sealed record ActorLocation(int Map, int Elevation, int Hex, int Rotation);
-public enum ExitStatus { Ready, NoExit, Busy, Invalid, Ambiguous, ExternalMap, ReloadRequired, BlockedDestination }
+public enum ExitStatus { Ready, NoExit, Busy, Invalid, Ambiguous, ExternalMap, ReloadRequired, BlockedDestination, UnavailableMap }
 public sealed record ExitOption(ExitStatus Status, ActorLocation? Destination = null, IReadOnlyList<string>? SourceKeys = null);
 
 /// <summary>Explicit same-MAP elevation travel, separate from the inspection camera and immutable source.</summary>
@@ -25,6 +26,16 @@ public sealed class TempleTravel
     private ActorLocation Entry() => new(_map.Prefix.Header.MapIndex, _map.Prefix.Header.EnteringElevation,
         _map.Prefix.Header.EnteringTile, _map.Prefix.Header.EnteringRotation);
     public void Reset() => Location = Entry();
+    public bool CanArrive(ActorLocation destination) => destination.Map == _map.Prefix.Header.MapIndex
+        && destination.Elevation is >= 0 and <= 2 && destination.Rotation is >= 0 and <= 5
+        && HexNavigation.Valid(destination.Hex) && destination.Hex != 0
+        && _map.Prefix.Layers.Any(l => l.Elevation == destination.Elevation)
+        && _doors.Navigation(destination.Elevation).Walkable(destination.Hex);
+    public void Arrive(ActorLocation destination)
+    {
+        if (!CanArrive(destination)) throw new InvalidDataException("Arrival must target a present, walkable position on this map.");
+        Location = destination;
+    }
     public void MoveTo(int hex)
     {
         if (hex == Location.Hex) return;

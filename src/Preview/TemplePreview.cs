@@ -34,6 +34,8 @@ public partial class TemplePreview : Node3D
 	private string? _capture;
 	private string? _directory;
 	private bool _shuttingDown;
+	private WorldSession? _campaign;
+	private MapCatalog? _mapCatalog;
 	private string SettingsPath => ProjectSettings.GlobalizePath("res://.local/preview-settings.json");
 
 	public override async void _Ready()
@@ -83,6 +85,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckDoors();
 				if (_test) await CheckLockpick();
 				if (_test) await CheckTravel();
+				if (_test) await CheckWorldTravel();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -98,15 +101,20 @@ public partial class TemplePreview : Node3D
 	private void LoadMap(string directory)
 	{
 		var data = new GameData(directory);
-		MapDocument candidate = MapDocument.Read(data.Read("maps/arcaves.map"), data.Read);
-		MapLayoutWriter.Verify(candidate);
-		_map = candidate; _directory = directory;
-		_doors = DoorSession.FromMap(candidate, DoorSession.SupportsTempleDoorAdapter(candidate));
-		_travel = new TempleTravel(candidate, _doors);
+		var catalog = new MapCatalog(data.Read("data/maps.txt"));
+		var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 });
+		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
+		BindCurrentArea();
 		_skills.Reset();
-		_elevation = _map.Prefix.Header.EnteringElevation; _hud.Elevation(_elevation);
+		_elevation = _map!.Prefix.Header.EnteringElevation; _hud.Elevation(_elevation);
 		BuildWorld(); FocusEntry();
-		_hud.Status("ARCAVES · mapa 3 · formas provisórias · selecione um elemento");
+	}
+	private void BindCurrentArea()
+	{
+		WorldArea area = _campaign!.Current;
+		_map = area.Map; _doors = area.Doors; _travel = area.Travel;
+		_hud.Area(_mapCatalog!.Get(_campaign.CurrentMap).Name.ToUpperInvariant());
+		_hud.Status($"{_map.Prefix.Header.Name} · mapa {_campaign.CurrentMap} · formas provisórias");
 	}
 
 	private void BuildWorld()

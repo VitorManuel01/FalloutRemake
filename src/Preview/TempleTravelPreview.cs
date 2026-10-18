@@ -13,12 +13,13 @@ namespace FalloutRemake.Preview;
 public partial class TemplePreview
 {
     private TempleTravel? _travel;
-    private ExitOption CurrentExit() => _walker == null || _travel == null ? new(ExitStatus.NoExit) : _travel.InspectExit(_walker.Moving);
+    private ExitOption CurrentExit() => _walker == null || _campaign == null ? new(ExitStatus.NoExit) : _campaign.InspectExit(_walker.Moving);
     private static string ExitHint(ExitOption option) => option.Status switch
     {
-        ExitStatus.Ready => $"Saída para a elevação {option.Destination!.Elevation} · Enter para passar",
+        ExitStatus.Ready => $"Saída para o mapa {option.Destination!.Map}, elevação {option.Destination.Elevation} · Enter para passar",
         ExitStatus.ExternalMap => $"Saída para o mapa {option.Destination!.Map} · carregamento de outra área ainda indisponível",
         ExitStatus.ReloadRequired => "Saída requer recarregar a área; ainda indisponível",
+        ExitStatus.UnavailableMap => "Área de destino indisponível neste protótipo; sessão preservada",
         ExitStatus.BlockedDestination => "Destino da saída bloqueado ou ausente; passagem recusada",
         ExitStatus.Busy => "Aguarde o personagem terminar de caminhar",
         ExitStatus.NoExit => "Caminhe até uma saída para passar",
@@ -35,13 +36,14 @@ public partial class TemplePreview
         ExitOption option = CurrentExit();
         if (option.Status != ExitStatus.Ready) { NavigationStatus(ExitHint(option)); return; }
         bool walking = _walkMode;
-        option = _travel!.UseExit(_walker!.Moving);
+        option = _campaign!.UseExit(_walker!.Moving);
         if (option.Status != ExitStatus.Ready) { NavigationStatus(ExitHint(option)); return; }
-        ActorLocation destination = _travel.Location;
+        BindCurrentArea();
+        ActorLocation destination = _travel!.Location;
         ChangeElevation(destination.Elevation);
         if (walking) ToggleWalkMode();
         _focus = Point(FalloutGrid.HexCenter(destination.Hex) - _layout!.Origin, 0); _camera.Size = 32; UpdateCamera();
-        NavigationStatus($"Chegou à elevação {destination.Elevation} · hex {destination.Hex} · portas e XP preservados");
+        NavigationStatus($"Chegou ao mapa {destination.Map}, elevação {destination.Elevation} · portas e XP preservados");
     }
 
     private async Task CheckTravel()
@@ -106,9 +108,8 @@ public partial class TemplePreview
             ResetWalker();
             RequestWalk(31306); _walker!.Advance(100); UpdateWalkerPosition();
             ActorLocation externalSource = _travel.Location;
-            UseExit();
-            if (CurrentExit().Status != ExitStatus.ExternalMap || _travel.Location != externalSource)
-                throw new InvalidDataException("External exit unexpectedly changed the scene.");
+            if (CurrentExit() is not { Status: ExitStatus.Ready, Destination.Map: 126 } || _travel.Location != externalSource)
+                throw new InvalidDataException("External destination preparation changed the actor or failed.");
             ChangeElevation(1); ResetWalker();
             if (_travel.Location is not { Elevation: 0, Hex: 28906 } || _walker?.CurrentHex != 28906 || _doors.TempleDoor.Experience != 0)
                 throw new InvalidDataException("Reset from inspection failed.");

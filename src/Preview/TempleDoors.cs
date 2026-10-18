@@ -40,7 +40,7 @@ public partial class TemplePreview
         PrototypeCharacter character = _skills.Character;
         string hint = lockpick == DoorUseStatus.Ready ? "L tenta destrancar ou retrancar usando a perícia de Arrombamento." : DoorHint(lockpick);
         _hud.LockpickAction(lockpick == DoorUseStatus.Ready, door?.IsLocked != false, hint,
-            $"Perfil de teste · PER {character.Perception}  AGI {character.Agility}  SOR {character.Luck} · Arrombamento {character.Lockpick} · XP {_doors?.TempleDoor?.Experience ?? 0} · Personagem na elevação {_travel?.Location.Elevation ?? 0}");
+            $"Perfil de teste · PER {character.Perception}  AGI {character.Agility}  SOR {character.Luck} · Arrombamento {character.Lockpick} · XP {_campaign?.Experience ?? 0} · Personagem na elevação {_travel?.Location.Elevation ?? 0}");
     }
     private void UseSelectedDoor()
     {

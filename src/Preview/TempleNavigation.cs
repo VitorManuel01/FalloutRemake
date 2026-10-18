@@ -92,15 +92,9 @@ public partial class TemplePreview
 
     private void ResetWalker()
     {
-        if (_map == null || _travel == null) return;
-        _doors!.Reset(); _skills.Reset(); _travel.Reset();
-        if (_elevation != _travel.Location.Elevation || _walker == null)
-        { ChangeElevation(_travel.Location.Elevation); FocusEntry(); return; }
-        _navigation = _doors.Navigation(_elevation);
-        _walker = new HexWalker(_navigation, _map.Prefix.Header.EnteringTile);
-        _routeVisual!.Mesh = null; _routeVisual.Visible = false;
-        RefreshReachability(); UpdateWalkerPosition(); FocusEntry();
-        ApplyDoorVisuals(); if (_selected != null) SelectObject(_selected); RefreshDoorAction();
+        if (_campaign == null) return;
+        _campaign.Reset(); _skills.Reset(); BindCurrentArea();
+        ChangeElevation(_travel!.Location.Elevation); FocusEntry();
         NavigationStatus($"Marcador reiniciado · {_reachable!.Count} hexes alcançáveis");
     }
 
