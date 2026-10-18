@@ -57,6 +57,7 @@ public partial class TemplePreview : Node3D
 			_hud.FilterChanged = (_, _) => ApplyFilters(); _hud.CycleRequested = CycleSelection;
 			_hud.WalkModeRequested = ToggleWalkMode; _hud.ResetWalkerRequested = ResetWalker;
 			_hud.DoorUseRequested = UseSelectedDoor;
+			_hud.LockpickRequested = UseSelectedLockpick;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -79,6 +80,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckPreview();
 				if (_test) await CheckNavigation();
 				if (_test) await CheckDoors();
+				if (_test) await CheckLockpick();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -97,7 +99,8 @@ public partial class TemplePreview : Node3D
 		MapDocument candidate = MapDocument.Read(data.Read("maps/arcaves.map"), data.Read);
 		MapLayoutWriter.Verify(candidate);
 		_map = candidate; _directory = directory;
-		_doors = DoorSession.FromMap(candidate);
+		_doors = DoorSession.FromMap(candidate, DoorSession.SupportsTempleDoorAdapter(candidate));
+		_skills.Reset();
 		_elevation = _map.Prefix.Header.EnteringElevation; _hud.Elevation(_elevation);
 		BuildWorld(); FocusEntry();
 		_hud.Status("ARCAVES · mapa 3 · formas provisórias · selecione um elemento");
@@ -225,6 +228,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.E) _yaw += Mathf.Pi / 6;
 			if (key.PhysicalKeycode == Key.M) ToggleWalkMode();
 			if (key.PhysicalKeycode == Key.U) UseSelectedDoor();
+			if (key.PhysicalKeycode == Key.L) UseSelectedLockpick();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;

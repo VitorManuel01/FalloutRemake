@@ -91,7 +91,7 @@ public partial class TemplePreview
     private void ResetWalker()
     {
         if (_map == null || _navigation == null || _walker == null) return;
-        _doors!.Reset(); _navigation = _doors.Navigation(0);
+        _doors!.Reset(); _skills.Reset(); _navigation = _doors.Navigation(0);
         _walker = new HexWalker(_navigation, _map.Prefix.Header.EnteringTile);
         _routeVisual!.Mesh = null; _routeVisual.Visible = false;
         RefreshReachability(); UpdateWalkerPosition(); FocusEntry();
@@ -177,7 +177,7 @@ public partial class TemplePreview
         bool blocks = _navigation.BlockersAt(obj.Source.Header.Tile).Any(b => b.Key == obj.Source.Key);
         string text = $"\n\nBloqueio por este objeto: {(blocks ? "sim" : "não")}\nTipo FID: {(obj.Source.Header.Fid >> 24) & 15}";
         if (obj.Kind == PreviewKind.Door && _doors?.Get(obj.Source.Key) is { } door)
-            text = $"\n\nPorta na prévia: {(door.IsOpen ? "aberta" : "fechada")}\nTrancada: {(door.IsLocked ? "sim" : "não")}\n{DoorHint(DoorStatus(obj.Source.Key))}\nFonte preservada: {((obj.Source.State["openFlags"] & 1) != 0 ? "aberta" : "fechada")}" + text;
+            text = $"\n\nPorta na prévia: {(door.IsOpen ? "aberta" : "fechada")}\nTrancada: {(door.IsLocked ? "sim" : "não")} · Emperrada: {(door.IsJammed ? "sim" : "não")}\n{DoorHint(DoorStatus(obj.Source.Key))}\nFonte preservada: {((obj.Source.State["openFlags"] & 1) != 0 ? "aberta" : "fechada")}" + text;
         return text;
     }
 

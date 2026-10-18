@@ -27,6 +27,7 @@ public sealed class DoorSession
     private long _revision;
     private bool _resolving;
     public TempleDoorSnapshot? TempleDoor => _temple?.Snapshot;
+    public static bool SupportsTempleDoorAdapter(MapDocument map) => TempleDoorAdapter.Match(map) != null;
     public static DoorSession FromMap(MapDocument map, bool enableTempleDoorAdapter = false)
     {
         var session = new DoorSession(map.ObjectLayers.SelectMany(l => l.Objects),
@@ -66,6 +67,8 @@ public sealed class DoorSession
 
     public DoorUseStatus CanToggle(string key, int actorHex, int elevation, bool moving)
         => CanInteract(key, actorHex, elevation, moving, false);
+    public DoorUseStatus CanLockpick(string key, int actorHex, int elevation, bool moving)
+        => CanInteract(key, actorHex, elevation, moving, true);
 
     private DoorUseStatus CanInteract(string key, int actorHex, int elevation, bool moving, bool lockpick)
     {

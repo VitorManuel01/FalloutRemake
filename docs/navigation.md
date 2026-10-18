@@ -10,7 +10,8 @@ portas. F apenas reenquadra a entrada na mesma elevação.
 
 `HexNavigation` é C# sem Godot. A consulta é equivalente à regra de ocupação de
 `_obj_blocking_at` do CE para um marcador de **um hex**, usando os objetos raiz
-serializados. Não executa a preparação do mapa nem seus scripts.
+serializados e os flags de sessão. A preparação está limitada ao adaptador conferido
+da segunda porta; não executa INT nem os demais scripts do mapa.
 
 | Dado | Efeito |
 | --- | --- |
@@ -57,14 +58,15 @@ no hex 24508 exige 23 passos; a saída 31306 exige 12. A porta ID 102, hex 11108
 além do trecho alcançável com a primeira porta fechada.
 
 Abrir a primeira porta aumenta o alcance a **2184 hexes**. Não há IA, combate,
-destrancamento, armadilhas ativas, execução de scripts, EDG, personagem
+armadilhas ativas, execução geral de scripts, EDG, personagem
 multihex ou comparação visual lado a lado com o jogo original. O resultado descreve
 os dados serializados, não uma simulação completa do estado após executar os scripts.
 
 Foi confirmado que a primeira porta não tem script. A segunda está associada a
 `doorl100.int`; suas [condições já foram mapeadas](door-script-2026-10-18.md).
 O [adaptador de sessão](door-adapter-2026-10-18.md) já valida inicialização e Lockpick
-em um cenário determinístico separado. A prévia ainda usa o perfil sem esse adaptador.
+em um cenário determinístico separado. A [prévia já usa esse adaptador](lockpick-preview-2026-10-18.md)
+com um perfil de personagem de teste; após abrir ambas as portas, o alcance é 2189.
 
 Referência local [Fallout 2 CE](https://github.com/alexbatalov/fallout2-ce/tree/e97087b9582f37075db347a89898887320753f8b):
 `object.cc` (`_obj_blocking_at`), `obj_types.h` (FID/flags), `proto_instance.cc`

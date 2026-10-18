@@ -128,6 +128,7 @@ internal static class SelfTests
             DoorTests.Run(Check);
             IntTests.Run(Check);
             TempleAdapterTests.Run(Check);
+            CharacterSkillTests.Run(Check);
             Console.WriteLine($"{passed} synthetic test groups passed.");
             return 0;
         }

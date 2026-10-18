@@ -72,6 +72,10 @@ Não há dados originais, programas extraídos ou capturas novos no Git.
 
 ## Limite e próximo passo
 
+A [integração na prévia](lockpick-preview-2026-10-18.md) foi entregue no oitavo
+marco, com perfil de teste explícito e rolagem. O texto abaixo registra o limite
+ao concluir este sétimo marco.
+
 A interface da prévia mantém a segunda porta indisponível. O adaptador está pronto
 e testável pelo cenário; a integração jogável depende de definir o perfil mínimo
 do personagem e a resolução de perícia. XP aqui representa recompensa acumulada

@@ -59,7 +59,8 @@ arte FRM, execução de scripts ou personagem com regras completas de jogo.
 A [camada de navegação](navigation.md) agora classifica bloqueio por FID/flags e move
 um marcador na elevação 0. É independente das formas usadas para seleção e dos
 filtros visuais. A primeira porta já pode ser [aberta e fechada](doors-2026-10-17.md);
-portas com script e transições nas saídas continuam fora do comportamento implementado.
+a segunda possui [arrombamento com perfil de teste](lockpick-preview-2026-10-18.md).
+Scripts desconhecidos e transições nas saídas continuam fora do comportamento implementado.
 
 Referência consultada localmente: [Fallout 2 CE, tile.cc](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/tile.cc),
 commit `e97087b9582f37075db347a89898887320753f8b`; também `object.cc` e `obj_types.h`.

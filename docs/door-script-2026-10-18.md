@@ -95,8 +95,8 @@ os testes sintéticos validam o leitor, não substituem uma comparação jogáve
 ## Próximo incremento
 
 O [adaptador restrito foi implementado](door-adapter-2026-10-18.md) no sétimo marco.
-A integração na prévia continua dependente do perfil de personagem e da comparação
-jogável descritos abaixo.
+A [integração na prévia com perfil de teste](lockpick-preview-2026-10-18.md) foi entregue
+no oitavo. A comparação jogável segue pendente; abaixo fica o plano histórico.
 
 Implementar um adaptador restrito a esta identidade/hash, com oito locais da sessão,
 inicialização e tranca, e uma ação explícita de Lockpick. Separar a resolução da

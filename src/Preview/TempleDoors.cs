@@ -12,6 +12,7 @@ namespace FalloutRemake.Preview;
 public partial class TemplePreview
 {
     private DoorSession? _doors;
+    private readonly PreviewSkillResolver _skills = new(PrototypeCharacter.Neutral);
 
     private DoorUseStatus DoorStatus(string key) => _walker == null || _elevation != 0 ? DoorUseStatus.Unavailable
         : _doors?.CanToggle(key, _walker.CurrentHex, _elevation, _walker.Moving) ?? DoorUseStatus.NoDoor;
@@ -19,7 +20,9 @@ public partial class TemplePreview
     {
         DoorUseStatus.Ready => "Use U ou o botão para abrir/fechar.",
         DoorUseStatus.ScriptRequired => "Esta porta depende de um script ainda não implementado.",
-        DoorUseStatus.Locked => "Porta trancada; destrancar ainda não está disponível.",
+        DoorUseStatus.Locked => "Porta trancada; use Arrombar [L] se disponível.",
+        DoorUseStatus.Jammed => "Fechadura emperrada; reinicie a prévia para restaurar a sessão.",
+        DoorUseStatus.StateChanged => "A sessão mudou durante a tentativa; tente novamente.",
         DoorUseStatus.TooFar => "No modo Caminhar, clique na porta para se aproximar.",
         DoorUseStatus.Busy => "Aguarde o marcador terminar o percurso.",
         DoorUseStatus.Occupied => "Não é possível fechar: há alguém ou um bloqueador na passagem.",
@@ -33,6 +36,11 @@ public partial class TemplePreview
         DoorState? door = _selected == null ? null : _doors?.Get(_selected.Source.Key);
         DoorUseStatus status = door == null ? DoorUseStatus.NoDoor : DoorStatus(door.Source.Key);
         _hud.DoorAction(status == DoorUseStatus.Ready, door?.IsOpen == true, DoorHint(status));
+        DoorUseStatus lockpick = door == null ? DoorUseStatus.NoDoor : LockpickStatus(door.Source.Key);
+        PrototypeCharacter character = _skills.Character;
+        string hint = lockpick == DoorUseStatus.Ready ? "L tenta destrancar ou retrancar usando a perícia de Arrombamento." : DoorHint(lockpick);
+        _hud.LockpickAction(lockpick == DoorUseStatus.Ready, door?.IsLocked != false, hint,
+            $"Perfil de teste · PER {character.Perception}  AGI {character.Agility}  SOR {character.Luck} · Arrombamento {character.Lockpick} · XP {_doors?.TempleDoor?.Experience ?? 0}");
     }
     private void UseSelectedDoor()
     {
@@ -82,6 +90,8 @@ public partial class TemplePreview
         SelectObject(door);
         if (_walker == null || _navigation == null) return;
         DoorUseStatus status = DoorStatus(door.Source.Key);
+        if (status == DoorUseStatus.Locked && LockpickStatus(door.Source.Key) is DoorUseStatus.TooFar or DoorUseStatus.Busy)
+            status = LockpickStatus(door.Source.Key);
         if (status != DoorUseStatus.TooFar) { NavigationStatus(DoorHint(status)); return; }
         HexReachability reached = _navigation.ReachableFrom(_walker.CurrentHex);
         int[] candidates = Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(door.Source.Header.Tile, d))
@@ -133,7 +143,7 @@ public partial class TemplePreview
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "door.png"));
             if (UseDoor(door.Source.Key) != DoorUseStatus.Ready || _navigation.Walkable(24308)
                 || _navigation.ReachableFrom(28906).Count != 540) throw new InvalidDataException("Door closing did not restore the initial boundary.");
-            if (UseDoor(scripted.Source.Key) != DoorUseStatus.ScriptRequired) throw new InvalidDataException("Scripted door was bypassed.");
+            if (UseDoor(scripted.Source.Key) != DoorUseStatus.Locked) throw new InvalidDataException("Adapted locked door was bypassed.");
             // Preserve runtime state across an inspection-layer switch, then explicitly reset it.
             if (UseDoor(door.Source.Key) != DoorUseStatus.Ready) throw new InvalidDataException("Reopening failed.");
             ChangeElevation(1); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
