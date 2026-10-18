@@ -67,6 +67,7 @@ public partial class TemplePreview : Node3D
 			_hud.StopRequested = StopWalking;
 			_hud.RevealActorRequested = SetRevealActor;
 			_hud.InventoryRequested = OpenInventory;
+			_hud.NavigationGridRequested = SetNavigationGrid;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -99,6 +100,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckWallOcclusion();
 				if (_test) await CheckObjectText();
 				if (_test) await CheckInventoryInspector();
+				if (_test) await CheckNavigationGrid();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -276,6 +278,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.Escape) StopWalking();
 			if (key.PhysicalKeycode == Key.V) SetRevealActor(!_revealActor);
 			if (key.PhysicalKeycode == Key.I) OpenInventory();
+			if (key.PhysicalKeycode == Key.G) SetNavigationGrid(!_showNavigationGrid);
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;

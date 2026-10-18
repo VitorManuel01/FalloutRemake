@@ -24,6 +24,7 @@ public partial class PreviewHud : CanvasLayer
     private readonly OptionButton _elevation = new() { CustomMinimumSize = new Vector2(0, 32) };
     private readonly Label _navigationStatus = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Button _stop = new() { Name = "StopWalkingAction", Text = "Parar [Esc]", Disabled = true };
+    private readonly CheckButton _grid = new() { Name = "NavigationGridAction", Text = "Grade [G]", ButtonPressed = true };
     private readonly Button _walkMode = new() { Text = "Caminhar [M]", CustomMinimumSize = new Vector2(0, 30) };
     private readonly Button _resetWalker = new() { Text = "Reiniciar prévia", CustomMinimumSize = new Vector2(0, 30) };
     private readonly Button _doorUse = new() { Text = "Usar porta [U]", Disabled = true, CustomMinimumSize = new Vector2(0, 30) };
@@ -41,6 +42,7 @@ public partial class PreviewHud : CanvasLayer
     public Action? StopRequested;
     public Action<bool>? RevealActorRequested;
     public Action? InventoryRequested;
+    public Action<bool>? NavigationGridRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -110,7 +112,7 @@ public partial class PreviewHud : CanvasLayer
         _inventory.Pressed += () => InventoryRequested?.Invoke(); selectionActions.AddChild(_inventory);
 
         _navigationPanel = new PanelContainer { AnchorTop = 1, AnchorBottom = 1,
-            OffsetLeft = 16, OffsetRight = 864, OffsetTop = -212, OffsetBottom = -64 };
+            OffsetLeft = 16, OffsetRight = 864, OffsetTop = -272, OffsetBottom = -64 };
         _navigationPanel.AddThemeStyleboxOverride("panel", Box("15211ff2", 10)); root.AddChild(_navigationPanel);
         var navigation = new VBoxContainer(); navigation.AddThemeConstantOverride("separation", 6); _navigationPanel.AddChild(navigation);
         var actions = new HBoxContainer(); actions.AddThemeConstantOverride("separation", 12); navigation.AddChild(actions);
@@ -125,7 +127,10 @@ public partial class PreviewHud : CanvasLayer
         _navigationStatus.AddThemeFontSizeOverride("font_size", 12); movement.AddChild(_navigationStatus);
         _stop.Pressed += () => StopRequested?.Invoke(); movement.AddChild(_stop);
         var legend = new Label { Text = "Verde: alcançável  ·  Vermelho: bloqueio  ·  Âmbar: saída", Modulate = new Color("9fb2a8") };
-        legend.AddThemeFontSizeOverride("font_size", 12); navigation.AddChild(legend);
+        var guide = new HBoxContainer(); navigation.AddChild(guide);
+        legend.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        legend.AddThemeFontSizeOverride("font_size", 12); guide.AddChild(legend);
+        _grid.Toggled += enabled => NavigationGridRequested?.Invoke(enabled); guide.AddChild(_grid);
 
         var footer = Panel(root, 16, -52, -16, -12, true);
         footer.AnchorTop = 1; footer.AnchorBottom = 1;
@@ -155,6 +160,8 @@ public partial class PreviewHud : CanvasLayer
     public string SelectionHeading => _selectionTitle.Text;
     public string SelectionDetails => _details.Text;
     public void InventoryAction(bool enabled) => _inventory.Disabled = !enabled;
+    public void NavigationGrid(bool enabled) => _grid.SetPressedNoSignal(enabled);
+    public bool NavigationFits => _navigationPanel != null && _navigationPanel.GetGlobalRect().End.Y <= GetViewport().GetVisibleRect().Size.Y - 56;
     public void DoorAction(bool enabled, bool open, string hint)
     {
         _doorUse.Disabled = !enabled; _doorUse.Text = open ? "Fechar porta [U]" : "Abrir porta [U]";

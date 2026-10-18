@@ -78,7 +78,7 @@ public partial class TemplePreview
             instances.SetInstanceTransform(i, new Transform3D(Basis.Identity, Point(FalloutGrid.HexCenter(cells[i].Hex) - _layout.Origin, .035f)));
             instances.SetInstanceColor(i, cells[i].Color);
         }
-        _navigationOverlay = new MultiMeshInstance3D { Name = "HexPassability", Multimesh = instances, Visible = _walkMode,
+        _navigationOverlay = new MultiMeshInstance3D { Name = "HexPassability", Multimesh = instances, Visible = _walkMode && _showNavigationGrid,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             MaterialOverride = resources.Own(new StandardMaterial3D { VertexColorUseAsAlbedo = true, VertexColorIsSrgb = true, NoDepthTest = true,
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded }) };
@@ -89,7 +89,7 @@ public partial class TemplePreview
     {
         if (_walker == null) return;
         _walkMode = !_walkMode;
-        _navigationOverlay!.Visible = _walkMode;
+        _navigationOverlay!.Visible = _walkMode && _showNavigationGrid;
         if (_routeVisual != null) _routeVisual.Visible = _walkMode && _routeVisual.Mesh != null;
         NavigationStatus(_walkMode ? "Clique no chão para caminhar ou em uma porta para se aproximar" : "Inspeção · clique em um objeto para consultar os dados");
     }

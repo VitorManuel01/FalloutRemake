@@ -42,6 +42,8 @@ public partial class TemplePreview
                 || _map!.DeclaredRootObjects != 567 || _lookup.Count != 567)
                 throw new InvalidDataException("Exterior transition failed to preserve destination, objects or XP.");
             if (_useOriginalFloor) CheckOriginalFloorInstances();
+            if (_navigationOverlay?.Visible != (_walkMode && _showNavigationGrid))
+                throw new InvalidDataException("Exterior navigation overlay ignored the grid preference.");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "outside.png"));
             int back = ClosestExitTo(3);
             RequestWalk(back); _walker!.Advance(1000); UpdateWalkerPosition(); UseExit();
