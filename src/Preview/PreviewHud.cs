@@ -9,8 +9,8 @@ public partial class PreviewHud : CanvasLayer
     private readonly ResourceScope _resources = new();
     private readonly Label _status = new();
     private readonly Label _area = new() { Text = "FALLOUT 2", Modulate = new Color("e4e6df") };
-    private readonly Button _save = new() { Name = "SaveAction", Text = "Salvar [F6]", Disabled = true };
-    private readonly Button _load = new() { Name = "LoadAction", Text = "Carregar [F9]", Disabled = true };
+    private readonly Button _save = new() { Name = "SaveAction", Text = "Salvar [K]", Disabled = true };
+    private readonly Button _load = new() { Name = "LoadAction", Text = "Carregar [R]", Disabled = true };
     private readonly Button _focusCharacter = new() { Name = "CharacterFocusAction", Text = "Personagem [C]" };
     private readonly Button _originalFloor = new() { Name = "OriginalFloorAction", Text = "Piso original [O]", ToggleMode = true,
         TooltipText = "Comparar com o piso da instalação local" };

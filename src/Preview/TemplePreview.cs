@@ -254,8 +254,8 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.U) UseSelectedDoor();
 			if (key.PhysicalKeycode == Key.L) UseSelectedLockpick();
 			if (key.PhysicalKeycode is Key.Enter or Key.KpEnter) UseExit();
-			if (key.PhysicalKeycode == Key.F6) SaveCheckpoint();
-			if (key.PhysicalKeycode == Key.F9) LoadCheckpoint();
+			if (key.PhysicalKeycode == Key.K) SaveCheckpoint();
+			if (key.PhysicalKeycode == Key.R) LoadCheckpoint();
 			if (key.PhysicalKeycode == Key.C) FocusCharacter();
 			if (key.PhysicalKeycode == Key.O) SetOriginalFloor(!_useOriginalFloor);
 			if (key.PhysicalKeycode == Key.Escape) StopWalking();

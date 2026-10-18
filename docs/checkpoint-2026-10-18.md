@@ -2,9 +2,18 @@
 
 Branch `codex/temple-local-checkpoint`, base `ef1e64f`.
 
-**F6 / Salvar** registra a posição parada do personagem, área atual, portas e locais
-do adaptador de cada área carregada. **F9 / Carregar** restaura a sessão, cancela
+**K / Salvar** registra a posição parada do personagem, área atual, portas e locais
+do adaptador de cada área carregada. **R / Carregar** restaura a sessão, cancela
 o percurso atual e reenquadra o personagem. Os botões ficam no cabeçalho.
+
+Atalhos corrigidos em 18/10/2026: substituem F6/F9 para evitar conflito com o
+editor. O usuário confirmou que F9 pausa a execução no Godot. A prévia não usa
+mais essas teclas para checkpoint; não é preciso alterar as preferências do editor.
+Revalidação da correção: compilação sem erros/avisos e testes Godot gráfico e sem
+janela com saída 0. `CHECKPOINT_PREVIEW_OK` confirma K/R, botões e F9 ignorado pela
+prévia. Captura `.local/temple-shortcuts.checkpoint.png` revisada; logs
+`.local/shortcut-*.log`, sem erros no log gráfico. Isso verifica o aplicativo;
+o atalho de pausa do editor permanece sob controle do Godot.
 
 Slot normal: `.local/checkpoints/preview.json`. Não é um SAV original: não grava
 na instalação do Fallout e não contém MAP, PRO, INT, imagens ou bytes de assets.
@@ -29,12 +38,12 @@ Validação:
   sem janela, saída 0. Captura 1440×900 revisada.
 - Salvou no exterior com duas áreas, duas portas do templo abertas e 25 XP;
   reiniciou, carregou e retornou ao templo com o estado preservado.
-- Teclas F6/F9 e sinais dos botões validados. Catálogo incompatível recusado sem
+- Teclas K/R e sinais dos botões validados. Catálogo incompatível recusado sem
   substituir o mundo ativo. Reconstrução das fontes byte a byte continua aprovada.
 - O teste não toca no slot normal. Logs `.local/checkpoint-*.log`; captura
   `.local/temple-checkpoint.checkpoint.png`. Nenhum dado original entrou no Git.
 
 Limites: registra apenas o estado implementado deste protótipo e o perfil fixo,
 sem inventário, combate, relógio global, câmera ou migração de formatos antigos.
-Reiniciar a prévia não apaga o slot; F9 pode recuperar o progresso salvo.
+Reiniciar a prévia não apaga o slot; R pode recuperar o progresso salvo.
 Próximo: reenquadramento e acompanhamento do personagem pela câmera.

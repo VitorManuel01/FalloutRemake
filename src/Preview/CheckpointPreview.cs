@@ -21,7 +21,7 @@ public partial class TemplePreview
         try
         {
             CheckpointFile.Write(CheckpointPath, _campaign.Capture(_mapCatalog.Source.Sha256));
-            NavigationStatus("Checkpoint salvo · F9 para continuar desta posição");
+            NavigationStatus("Checkpoint salvo · R para continuar desta posição");
         }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
         { NavigationStatus("Não foi possível salvar o checkpoint."); GD.Print("CHECKPOINT_SAVE_FAILED: " + error.Message); }
@@ -60,12 +60,18 @@ public partial class TemplePreview
             SelectObject(_layout.Objects.Single(o => o.Source.Key == second)); UseSelectedLockpick(); UseDoor(second);
             RequestWalk(ClosestExitTo(126)); _walker.Advance(1000); UpdateWalkerPosition(); UseExit();
             ActorLocation savedLocation = _campaign!.Location;
-            using var save = new InputEventKey { Pressed = true, PhysicalKeycode = Key.F6 };
-            using var load = new InputEventKey { Pressed = true, PhysicalKeycode = Key.F9 };
+            using var save = new InputEventKey { Pressed = true, PhysicalKeycode = Key.K };
+            using var load = new InputEventKey { Pressed = true, PhysicalKeycode = Key.R };
             _UnhandledInput(save);
             WorldCheckpoint checkpoint = CheckpointFile.Read(CheckpointPath);
             if (checkpoint.CurrentMap != 126 || checkpoint.Areas.Length != 2) throw new InvalidDataException("Checkpoint failed to capture both areas.");
-            ResetWalker(); _UnhandledInput(load);
+            ResetWalker();
+            WorldSession beforeLegacyKey = _campaign;
+            using var legacyLoad = new InputEventKey { Pressed = true, PhysicalKeycode = Key.F9 };
+            _UnhandledInput(legacyLoad);
+            if (!ReferenceEquals(beforeLegacyKey, _campaign) || _campaign.CurrentMap != 3 || _campaign.Experience != 0)
+                throw new InvalidDataException("Reserved editor key still loads a checkpoint.");
+            _UnhandledInput(load);
             await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             if (_campaign!.Location != savedLocation || _campaign.Experience != 25 || _campaign.CurrentMap != 126)
@@ -87,7 +93,7 @@ public partial class TemplePreview
             if (_campaign.Experience != 25 || !_doors!.Get(second)!.IsOpen) throw new InvalidDataException("Checkpoint HUD actions failed.");
             foreach (WorldArea area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
             ResetWalker();
-            GD.Print("CHECKPOINT_PREVIEW_OK: F6/F9 and HUD; exterior actor, 2 areas, doors, XP 25, incompatible-source rejection and byte reconstruction verified; production slot untouched.");
+            GD.Print("CHECKPOINT_PREVIEW_OK: K/R and HUD; F9 ignored by preview; exterior actor, 2 areas, doors, XP 25, incompatible-source rejection and byte reconstruction verified; production slot untouched.");
         }
         finally { _checkingNavigation = false; }
     }

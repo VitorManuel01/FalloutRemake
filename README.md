@@ -34,8 +34,9 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   no painel apenas inspeciona; o personagem e os XP permanecem no lugar.
 - **Enter / Passar:** ao chegar a uma saída interna, atravessa para a elevação de
   destino, preservando portas e XP. Caminhe na elevação onde o personagem está.
-- **F6 / Salvar:** checkpoint local quando estiver parado. **F9 / Carregar:**
+- **K / Salvar:** checkpoint local quando estiver parado. **R / Carregar:**
   recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
+  Os atalhos usam letras para evitar conflito com os controles do editor Godot.
 - **C / Personagem:** reenquadra e acompanha o personagem. WASD ou arrasto retomam
   a câmera livre; recentrar mantém o percurso em andamento.
 - **O / Piso original:** compara o piso com imagens lidas da instalação local.
