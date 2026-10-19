@@ -18,6 +18,7 @@ public partial class ContainerLootWindow : AcceptDialog
         _stack = new() { Name = "TakeStackAction", Text = "Retirar esta pilha", Disabled = true },
         _approach = new() { Name = "ApproachContainerAction", Text = "Aproximar-se", Disabled = true };
     private readonly Dictionary<string, ContainerItem> _lines = new();
+    private readonly QuantityTransfer _quantity = new() { Name = "TakeQuantity", Visible = false };
     private Func<MapObject, PrototypeText?>? _text;
     private Func<string, int, ItemTakeStatus>? _canTake;
     private bool _canApproach;
@@ -39,6 +40,7 @@ public partial class ContainerLootWindow : AcceptDialog
         body.AddChild(_owner); body.AddChild(_items); body.AddChild(_description); body.AddChild(_status);
         var actions = new HBoxContainer(); actions.AddThemeConstantOverride("separation", 12); body.AddChild(actions);
         actions.AddChild(_approach); actions.AddChild(_one); actions.AddChild(_stack); body.AddChild(_bag);
+        actions.AddChild(_quantity); _quantity.Requested = qty => TakeRequested?.Invoke(SelectedKey, qty);
         _items.SetColumnTitle(0, "Item"); _items.SetColumnTitle(1, "Restante"); _items.SetColumnExpand(1, false); _items.SetColumnCustomMinimumWidth(1, 90);
         _items.SetColumnTitle(2, "Peso da pilha"); _items.SetColumnExpand(2, false); _items.SetColumnCustomMinimumWidth(2, 140);
         _items.ItemSelected += ShowSelected;
@@ -59,7 +61,7 @@ public partial class ContainerLootWindow : AcceptDialog
             row.SetText(2, CarryWeightText.Stack(unitWeight(line.Source), line.Quantity));
             if (line.Source.Key == selected || select == null) select = row;
         }
-        SelectedKey = ""; _one.Disabled = _stack.Disabled = _approach.Disabled = true;
+        SelectedKey = ""; _one.Disabled = _stack.Disabled = _approach.Disabled = true; _quantity.Configure(0, "Retirar quantidade", null);
         _description.Text = ""; _status.Text = "Este recipiente não tem itens disponíveis neste perfil.";
         if (select != null) { select.Select(0); ShowSelected(); }
     }
@@ -76,6 +78,7 @@ public partial class ContainerLootWindow : AcceptDialog
         _stack.Disabled = status != ItemTakeStatus.Ready || stackStatus != ItemTakeStatus.Ready;
         _stack.TooltipText = _stack.Disabled ? Hint(stackStatus) : "Retirar toda a quantidade restante desta pilha";
         _approach.Disabled = status != ItemTakeStatus.TooFar || !_canApproach;
+        _quantity.Configure(line.Quantity, "Retirar quantidade", qty => _canTake!(SelectedKey, qty));
     }
     public static string Hint(ItemTakeStatus status) => status switch
     {

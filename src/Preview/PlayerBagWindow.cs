@@ -18,6 +18,7 @@ public partial class PlayerBagWindow : AcceptDialog
         _approach = new() { Name = "BagOriginApproachAction", Text = "Voltar ao recipiente", Disabled = true };
     private readonly RichTextLabel _returnStatus = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(860, 40) };
     private readonly Dictionary<string, CarriedItem> _lines = new();
+    private readonly QuantityTransfer _quantity = new() { Name = "ReturnQuantity", Visible = false };
     private Func<CarriedItem, PrototypeText?>? _text;
     private Func<int, string>? _mapName;
     private Func<CarriedItem, int, ItemTakeStatus>? _canReturn;
@@ -40,6 +41,7 @@ public partial class PlayerBagWindow : AcceptDialog
         body.OffsetLeft = 20; body.OffsetRight = -20; body.OffsetTop = 20; body.OffsetBottom = -60; body.AddThemeConstantOverride("separation", 12); AddChild(body);
         body.AddChild(_summary); body.AddChild(_items); body.AddChild(_detail);
         body.AddChild(_returnStatus); var actions = new HBoxContainer(); body.AddChild(actions); actions.AddChild(_approach); actions.AddChild(_returnOne); actions.AddChild(_returnStack);
+        actions.AddChild(_quantity); _quantity.Requested = qty => { if (SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, qty); };
         _approach.Pressed += () => { if (!_approach.Disabled && SelectedItem != null) ApproachRequested?.Invoke(SelectedItem); };
         _returnOne.Pressed += () => { if (!_returnOne.Disabled && SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, 1); };
         _returnStack.Pressed += () => { if (!_returnStack.Disabled && SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, SelectedItem.Quantity); };
@@ -67,7 +69,7 @@ public partial class PlayerBagWindow : AcceptDialog
             if (key == selected || select == null) select = row;
         }
         SelectedItem = null; _detail.Text = items.Length == 0 ? "Recolha itens de recipientes com J. Itens recolhidos acompanham você ao trocar de área." : "Selecione um item para consultar a descrição.";
-        _returnOne.Disabled = _returnStack.Disabled = _approach.Disabled = true; _returnStatus.Text = "";
+        _returnOne.Disabled = _returnStack.Disabled = _approach.Disabled = true; _returnStatus.Text = ""; _quantity.Configure(0, "Devolver quantidade", null);
         if (select != null) { select.Select(0); ShowSelected(); }
     }
     private static string RowKey(CarriedItem item) => $"{item.Map}:{item.Source.Key}";
@@ -85,5 +87,6 @@ public partial class PlayerBagWindow : AcceptDialog
         _returnStack.Disabled = status != ItemTakeStatus.Ready || _canReturn!(item, item.Quantity) != ItemTakeStatus.Ready;
         _approach.Disabled = status != ItemTakeStatus.TooFar || _canApproach?.Invoke(item) != true;
         if (status == ItemTakeStatus.TooFar && _approach.Disabled) _returnStatus.Text = "Sem caminho até o recipiente com os bloqueios atuais.";
+        _quantity.Configure(item.Quantity, "Devolver quantidade", qty => _canReturn?.Invoke(item, qty) ?? ItemTakeStatus.Unsupported);
     }
 }

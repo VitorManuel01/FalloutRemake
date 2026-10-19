@@ -119,6 +119,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckContainerRouteHover();
 				if (_test) await CheckBagOrigin();
 				if (_test) await CheckCarryWeightViews();
+				if (_test) await CheckQuantityTransfer();
 				if (_test) await CheckVisualPreferences();
 				if (_capture != null)
 				{

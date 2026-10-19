@@ -41,6 +41,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   As janelas J/B mostram peso por pilha e carga atual. O perfil usa **Força 5 /
   capacidade 150 lb**. Retiradas que ultrapassam a carga são recusadas; devolver
   libera espaço. Itens com peso ainda indisponível não recebem estimativa.
+  Pilhas maiores que uma unidade também permitem escolher **Qtd.** para retirar
+  ou devolver um número específico, com revalidação no clique.
 - **M / Caminhar:** alternar para caminhada na elevação 0; clique no chão para mover
   o marcador azul. Pontos verdes indicam alcance, vermelhos bloqueios e âmbar saídas.
 - **Portas:** no modo Caminhar, clique na primeira porta para se aproximar; depois
@@ -122,7 +124,7 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `INVENTORY_INSPECTOR_OK`, `NAVIGATION_GRID_OK`, `ROUTE_HOVER_OK`,
 `DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK`, `ROUTE_CAMERA_OK`,
 `ITEM_CHECKPOINT_OK`, `CONTAINER_LOOT_OK`, `PLAYER_BAG_OK`, `ITEM_RETURN_OK`,
-`CONTAINER_ROUTE_OK`, `BAG_ORIGIN_OK`, `CARRY_WEIGHT_UI_OK`,
+`CONTAINER_ROUTE_OK`, `BAG_ORIGIN_OK`, `CARRY_WEIGHT_UI_OK`, `QUANTITY_TRANSFER_OK`,
 `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
@@ -192,6 +194,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Peso base original: layout PRO e validações](docs/item-base-weight-2026-10-19.md)
 - [Carga do perfil de teste: limite, pesos e compatibilidade](docs/carry-profile-2026-10-19.md)
 - [Pesos na interface: pilhas, carga e estados indisponíveis](docs/carry-weight-ui-2026-10-19.md)
+- [Quantidade escolhida: edição, carga e transferência](docs/item-quantity-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
