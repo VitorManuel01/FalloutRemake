@@ -124,6 +124,7 @@ internal static class SelfTests
             });
             StructuralTests.Run(Check);
             GeometryTests.Run(Check);
+            EntityPresentationTests.Run(Check);
             FramingTests.Run(Check);
             VisualPreferencesTests.Run(Check, root);
             ItemTransferTests.Run(Check);

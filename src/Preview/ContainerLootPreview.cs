@@ -49,6 +49,7 @@ public partial class TemplePreview
         ItemTakeStatus status = _campaign.TakeItem(_lootOwner, key, quantity, _walker?.Moving == true);
         NavigationStatus(status == ItemTakeStatus.Ready ? $"Item recolhido · bolsa com {_campaign.CarriedCount} {(_campaign.CarriedCount == 1 ? "unidade" : "unidades")} · K para salvar" : ContainerLootWindow.Hint(status));
         RefreshLootWindow();
+        RefreshContainerVisuals();
     }
     private void ApproachLootContainer()
     {

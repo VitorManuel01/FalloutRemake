@@ -124,6 +124,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckScriptedContainer();
 				if (_test) await CheckInventoryArtUi();
 				if (_test) await CheckPlacedUsePreview();
+				if (_test) await CheckEntityReadability();
 				if (_test) await CheckVisualPreferences();
 				if (_capture != null)
 				{
@@ -165,6 +166,7 @@ public partial class TemplePreview : Node3D
 		CloseLoot(); CloseBag();
 		using var resources = new ResourceScope();
 		_placedUseLayer = null; _placedUseNodes.Clear();
+		_containerVisuals.Clear(); _containerVisualRevision = -1;
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
 		_lookup.Clear(); _bodies.Clear(); _selected = null;
 		_layout = PreviewLayout.Create(_map, _elevation);
@@ -193,11 +195,12 @@ public partial class TemplePreview : Node3D
 			body.AddChild(new MeshInstance3D { Mesh = ObjectMesh(obj.Kind), MaterialOverride = Material(obj.Kind) });
 			if (!_shapes.TryGetValue(obj.Kind, out BoxShape3D? shape)) _shapes[obj.Kind] = shape = _resources.Own(new BoxShape3D { Size = size });
 			body.AddChild(new CollisionShape3D { Shape = shape });
+			ConfigureEntityVisual(obj, body);
 			_world.AddChild(body); _lookup.Add(body.GetInstanceId(), obj); _bodies.Add(obj.Source.Key, body);
 		}
 		_highlight = new MeshInstance3D { Name = "Selection", Mesh = resources.Own(new CylinderMesh { TopRadius = .72f, BottomRadius = .72f, Height = .025f, RadialSegments = 48 }),
 			MaterialOverride = resources.Own(new StandardMaterial3D { AlbedoColor = new Color(.9f, .75f, .36f, .4f), Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-				ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, NoDepthTest = true }), Visible = false };
+				ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, NoDepthTest = false }), Visible = false };
 		_world.AddChild(_highlight);
 		_arrow = new MeshInstance3D { MaterialOverride = resources.Own(new StandardMaterial3D { AlbedoColor = new Color("f1d28d"), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, NoDepthTest = true }) };
 		_world.AddChild(_arrow);
@@ -214,6 +217,7 @@ public partial class TemplePreview : Node3D
 		BuildNavigation();
 		SetOriginalFloor(_useOriginalFloor);
 		RefreshPlacedUses();
+		RefreshContainerVisuals(true);
 	}
 
 	private static Vector3 Dimensions(PreviewKind kind) => kind switch
@@ -270,7 +274,9 @@ public partial class TemplePreview : Node3D
 
 	public override void _Process(double delta)
 	{
-		if (_map == null || InspectorOpen) return;
+		if (_map == null) return;
+		RefreshContainerVisuals();
+		if (InspectorOpen) return;
 		AdvanceWalker(delta);
 		float x = (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
 		float z = (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0);
@@ -407,6 +413,7 @@ public partial class TemplePreview : Node3D
 		line.SurfaceAddVertex(tip); line.SurfaceAddVertex(tip - back - side); line.SurfaceEnd(); _arrow!.Mesh = line; _arrow.Visible = true;
 		string title = obj.Kind switch { PreviewKind.Wall => "Parede", PreviewKind.Door => "Porta", PreviewKind.Exit => "Saída",
 			PreviewKind.Critter => "Criatura", PreviewKind.Item => "Item", PreviewKind.Marker => "Marcador", _ => "Cenário" };
+		title = EntityPresentation.Role(obj.Source) switch { EntityVisualRole.Barrier => "Obstáculo", EntityVisualRole.LightSource => "Fonte de luz", EntityVisualRole.Container => "Recipiente", _ => title };
 		string text = $"ID  {h.Id}\nPID  {h.Pid}  (0x{h.Pid:X8})\nFID  {h.Fid}  (0x{h.Fid:X8})\nHex  {h.Tile}    Elevação  {h.Elevation}\nRotação  {h.Rotation}    SID  {h.Sid}\nScript  {h.ScriptIndex}\nFlags  0x{h.Flags:X8}\nOffset  {obj.Source.Offset}\nInventário  {obj.Source.InventoryCount} registros\nDeslocamento do sprite  {h.X}, {h.Y}";
 		if (obj.Source.State.TryGetValue("destinationMap", out int destination)) text += $"\n\nDestino: {MapDisplayName(destination)} · mapa {destination}";
 		foreach (var (field, label) in new[] { ("destinationTile", "Hex de destino"), ("destinationElevation", "Elevação de destino"), ("destinationRotation", "Rotação de destino") })
@@ -417,6 +424,8 @@ public partial class TemplePreview : Node3D
 		PrototypeText? original = OriginalText(obj.Source);
 		if (original?.Description is { } description) text = description + "\n\n" + text;
 		if (original != null) text += $"\n\nTexto original · {_objectText!.Language}\n{original.Source.Path}\nMensagem  {original.MessageId}";
+		string entityDescription = EntityDescription(obj);
+		if (entityDescription.Length != 0) text = entityDescription + "\n\n" + text;
 		_hud.Select(original?.Name is { } name ? $"{ShortName(name)} · {title} · objeto {h.Id}" : $"{title} · objeto {h.Id}", text);
 		_hud.InventoryAction(CanInspectInventory(obj.Source));
 		RefreshLootAction();

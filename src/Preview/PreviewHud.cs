@@ -95,7 +95,7 @@ public partial class PreviewHud : CanvasLayer
         var side = new PanelContainer { AnchorLeft = 1, AnchorRight = 1, AnchorTop = 0, AnchorBottom = 1,
             OffsetLeft = -300, OffsetRight = -16, OffsetTop = 84, OffsetBottom = -64 };
         side.AddThemeStyleboxOverride("panel", Box("15211ff2", 10)); root.AddChild(side);
-        var column = new VBoxContainer(); column.AddThemeConstantOverride("separation", 12); side.AddChild(column);
+        var column = new VBoxContainer(); column.AddThemeConstantOverride("separation", 8); side.AddChild(column);
         Label overline = new() { Text = "EXPLORAR O CENÁRIO", Modulate = new Color("c2a66d") }; overline.AddThemeFontSizeOverride("font_size", 12); column.AddChild(overline);
         for (int i = 0; i < 3; i++) _elevation.AddItem($"Elevação {i}");
         _elevation.ItemSelected += index => ElevationRequested?.Invoke((int)index); column.AddChild(_elevation);
@@ -110,14 +110,18 @@ public partial class PreviewHud : CanvasLayer
         AddFilter(column, "exit", "Portas e saídas", "65bea9");
         AddFilter(column, "marker", "Marcadores técnicos", "7b87a0");
         AddFilter(column, "hidden", "Incluir objetos ocultos", "8b9690");
+        var entityLegend = new RichTextLabel { Name = "EntityLegend", BbcodeEnabled = true, FitContent = true, ScrollActive = false,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Text = "[color=#e18b88]▰ Obstáculo[/color]   [color=#ffd166]● Luz[/color]\n[color=#45c9b2]▣ Com itens[/color]   [color=#a3b3bf]□ Vazio[/color]\n[color=#b09add]◇ Interação especial[/color]" };
+        entityLegend.AddThemeFontSizeOverride("normal_font_size", 12); column.AddChild(entityLegend);
         column.AddChild(new HSeparator());
         _selectionTitle.Text = "Nenhum elemento selecionado";
         _selectionTitle.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _selectionTitle.AddThemeColorOverride("font_color", new Color("dcc390")); column.AddChild(_selectionTitle);
         _details.BbcodeEnabled = false; _details.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        _details.CustomMinimumSize = new Vector2(0, 90); _details.AddThemeFontSizeOverride("normal_font_size", 13);
+        _details.CustomMinimumSize = new Vector2(0, 70); _details.AddThemeFontSizeOverride("normal_font_size", 13);
         _details.Text = "Clique em um volume para consultar os IDs e a posição do objeto original.\n\nAs formas e alturas são provisórias."; column.AddChild(_details);
-        var selectionActions = new HBoxContainer(); column.AddChild(selectionActions);
+        var selectionActions = new HBoxContainer { Name = "SelectionActions" }; column.AddChild(selectionActions);
         Button(selectionActions, "Próximo", () => CycleRequested?.Invoke()).TooltipText = "Próximo objeto no mesmo hex";
         _inventory.Pressed += () => InventoryRequested?.Invoke(); selectionActions.AddChild(_inventory);
 

@@ -64,6 +64,7 @@ public partial class TemplePreview
         ItemTakeStatus status = _campaign.ReturnItem(item.Map, item.OwnerKey, item.Source.Key, quantity, _walker?.Moving == true);
         NavigationStatus(status == ItemTakeStatus.Ready ? $"Item devolvido ao recipiente · bolsa com {_campaign.CarriedCount} unidades · K para salvar" : ContainerLootWindow.Hint(status));
         RefreshBag();
+        RefreshContainerVisuals();
     }
     private async Task CheckPlayerBag()
     {
