@@ -130,6 +130,7 @@ internal static class SelfTests
             ItemOriginRouteTests.Run(Check);
             InventoryArtTests.Run(Check);
             HexDistanceTests.Run(Check);
+            ExplosiveTimerTests.Run(Check);
             ItemCheckpointTests.Run(Check);
             ItemReturnTests.Run(Check);
             PrototypeWeightTests.Run(Check);
