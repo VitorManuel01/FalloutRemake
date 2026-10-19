@@ -3,7 +3,11 @@ using FalloutRemake.Import;
 
 try
 {
-    if (args.Length == 1 && args[0] == "--self-test") return SelfTests.Run();
+    if (args.Length == 1 && args[0] == "--self-test")
+    {
+        try { return SelfTests.Run(); }
+        catch (Exception error) { Console.Error.WriteLine($"Synthetic tests failed: {error}"); return 1; }
+    }
     if (args.Length < 2 || args[0] != "--data-dir")
     {
         Console.Error.WriteLine("Usage: TempleInspector --self-test | --data-dir <language-folder> [--map maps/arcaves.map] [--export-local] [--navigation] | --data-dir <language-folder> --script scripts/<name>.int [--instructions] | --data-dir <language-folder> <report>");
