@@ -11,6 +11,7 @@ public partial class PreviewHud : CanvasLayer
     private readonly Label _area = new() { Text = "FALLOUT 2", Modulate = new Color("e4e6df") };
     private readonly Button _save = new() { Name = "SaveAction", Text = "Salvar [K]", Disabled = true };
     private readonly Button _load = new() { Name = "LoadAction", Text = "Carregar [R]", Disabled = true };
+    private readonly Button _bag = new() { Name = "BagAction", Text = "Bolsa [B]" };
     private readonly Button _inventory = new() { Name = "InventoryAction", Text = "Inventário [I]", Disabled = true,
         TooltipText = "Consultar o inventário original do objeto selecionado, sem transferir itens" };
     private readonly Button _focusCharacter = new() { Name = "CharacterFocusAction", Text = "Personagem [C]" };
@@ -49,6 +50,7 @@ public partial class PreviewHud : CanvasLayer
     public Action<bool>? NavigationGridRequested;
     public Action? FrameRouteRequested;
     public Action? LootRequested;
+    public Action? BagRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -86,6 +88,7 @@ public partial class PreviewHud : CanvasLayer
         Button(row, "Entrada  [F]", () => EntryRequested?.Invoke());
         Button(row, "Ver tudo  [Home]", () => FrameRequested?.Invoke());
         _focusCharacter.Pressed += () => CharacterFocusRequested?.Invoke(); row.AddChild(_focusCharacter);
+        _bag.Pressed += () => BagRequested?.Invoke(); row.AddChild(_bag);
         _save.Pressed += () => SaveRequested?.Invoke(); row.AddChild(_save);
         _load.Pressed += () => LoadRequested?.Invoke(); row.AddChild(_load);
 

@@ -70,6 +70,7 @@ public partial class TemplePreview : Node3D
 			_hud.NavigationGridRequested = ChangeNavigationGrid;
 			_hud.FrameRouteRequested = FrameRoute;
 			_hud.LootRequested = OpenLoot;
+			_hud.BagRequested = OpenBag;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -113,6 +114,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckRouteCamera();
 				if (_test) await CheckItemCheckpoint();
 				if (_test) await CheckContainerLoot();
+				if (_test) await CheckPlayerBag();
 				if (_test) await CheckVisualPreferences();
 				if (_capture != null)
 				{
@@ -150,7 +152,7 @@ public partial class TemplePreview : Node3D
 	private void BuildWorld()
 	{
 		if (_map == null) return;
-		CloseLoot();
+		CloseLoot(); CloseBag();
 		using var resources = new ResourceScope();
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
 		_lookup.Clear(); _bodies.Clear(); _selected = null;
@@ -279,6 +281,7 @@ public partial class TemplePreview : Node3D
 		{
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.I }) CloseInventory();
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.J }) CloseLoot();
+			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.B }) CloseBag();
 			return;
 		}
 		if (input is InputEventKey { Pressed: true, Echo: false } key)
@@ -301,6 +304,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.G) ChangeNavigationGrid(!_showNavigationGrid);
 			if (key.PhysicalKeycode == Key.T) FrameRoute();
 			if (key.PhysicalKeycode == Key.J) OpenLoot();
+			if (key.PhysicalKeycode == Key.B) OpenBag();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;
