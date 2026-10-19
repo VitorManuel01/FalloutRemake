@@ -56,10 +56,20 @@ internal static class BarrierEffectReport
         if (restoredResult.Status != BarrierEffectStatus.Ready || restoredResult.Plan!.TargetKey != result.Plan.TargetKey
             || restoredResult.Plan.SessionToken == result.Plan.SessionToken || !before.SequenceEqual(CheckpointFile.Encode(restored.Capture(catalog.Source.Sha256))))
             throw new InvalidDataException("Restored due effect proposal was inconsistent.");
+        var projected = TempleBarrierProjection.Create(world, result.Plan, replacement, Guid.NewGuid());
+        if (projected.Status != BarrierProjectionStatus.Ready) throw new InvalidDataException("Barrier scene projection failed.");
+        var projectedReach = projected.Projection!.Navigation.ReachableFrom(29097);
+        int[] projectedExits = map.ObjectLayers.SelectMany(l => l.Objects).Where(o => o.Header.Elevation == 1
+            && o.Header.Pid is >= 0x05000010 and <= 0x05000017 && o.State.GetValueOrDefault("destinationMap", -1) == 3
+            && o.State.GetValueOrDefault("destinationElevation", -1) == 2 && projectedReach.Distance(o.Header.Tile) >= 0)
+            .Select(o => o.Header.Tile).Distinct().OrderBy(t => t).ToArray();
+        if (projectedReach.Count != 1258 || projectedExits.Length != 6 || world.Current.Doors.Navigation(1).Walkable(14322)
+            || !before.SequenceEqual(CheckpointFile.Encode(world.Capture(catalog.Source.Sha256)))) throw new InvalidDataException("Detached projection changed the live world or failed to expose the verified passage.");
         MapLayoutWriter.Verify(map);
         return new { Status = "BARRIER_EFFECT_PROPOSAL_OK", Fixture = "original geometry and real collection; forced successful test lockpick and timer roll; no combat or effects",
             WalkingSteps = steps, Source = new { Map = 3, OwnerId = owner.Header.Id, ItemId = item.Header.Id, item.Key },
             Proposal = result.Plan, Replacement = replacement.Resource, ReachableUnchanged = 1245, world.Location, world.Experience,
+            DetachedProjection = new { projected.Projection.Replacement, Reachable = projectedReach.Count, ExitsToElevation2 = projectedExits, AppliedToWorld = false, Persisted = false },
             Ownership = world.Current.Items.Balance(owner.Key, item.Key), OriginalReconstruction = "verified",
             CheckpointRoundTrip = "verified", MutationDuringProposal = false, RuntimeEffectsEnabled = false };
     }

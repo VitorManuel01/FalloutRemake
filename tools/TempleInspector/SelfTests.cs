@@ -137,6 +137,7 @@ internal static class SelfTests
             ExplosiveCommitTests.Run(Check);
             PendingUseClockTests.Run(Check);
             BarrierEffectTests.Run(Check);
+            BarrierProjectionTests.Run(Check);
             ItemCheckpointTests.Run(Check);
             ItemReturnTests.Run(Check);
             PrototypeWeightTests.Run(Check);
