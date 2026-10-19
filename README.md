@@ -221,6 +221,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Commit de uso: revisão, sessão e revalidação](docs/explosive-use-commit-2026-10-19.md)
 - [Ticks pendentes: prazo, restauração e conclusão explícita](docs/pending-use-clock-2026-10-19.md)
 - [Ordem dos vencimentos: parar no primeiro evento e preservar a sobra](docs/use-deadline-ordering-2026-10-19.md)
+- [Itens posicionados: camada visual, identidade e tempo lógico](docs/placed-use-preview-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

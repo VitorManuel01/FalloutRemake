@@ -123,6 +123,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckQuantityTransfer();
 				if (_test) await CheckScriptedContainer();
 				if (_test) await CheckInventoryArtUi();
+				if (_test) await CheckPlacedUsePreview();
 				if (_test) await CheckVisualPreferences();
 				if (_capture != null)
 				{
@@ -163,6 +164,7 @@ public partial class TemplePreview : Node3D
 		if (_map == null) return;
 		CloseLoot(); CloseBag();
 		using var resources = new ResourceScope();
+		_placedUseLayer = null; _placedUseNodes.Clear();
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
 		_lookup.Clear(); _bodies.Clear(); _selected = null;
 		_layout = PreviewLayout.Create(_map, _elevation);
@@ -211,6 +213,7 @@ public partial class TemplePreview : Node3D
 		ApplyFilters();
 		BuildNavigation();
 		SetOriginalFloor(_useOriginalFloor);
+		RefreshPlacedUses();
 	}
 
 	private static Vector3 Dimensions(PreviewKind kind) => kind switch
@@ -252,6 +255,7 @@ public partial class TemplePreview : Node3D
 	{
 		if (_layout == null || _floor == null) return;
 		ApplyFloorVisibility();
+		ApplyPlacedUseFilter();
 		int visible = 0;
 		foreach (PreviewObject obj in _layout.Objects)
 		{
