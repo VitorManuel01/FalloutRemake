@@ -16,13 +16,13 @@ public partial class PlayerBagWindow : AcceptDialog
     private readonly Button _returnOne = new() { Name = "ReturnOneAction", Text = "Devolver 1", Disabled = true },
         _returnStack = new() { Name = "ReturnStackAction", Text = "Devolver esta pilha", Disabled = true },
         _approach = new() { Name = "BagOriginApproachAction", Text = "Voltar ao recipiente", Disabled = true };
-    private readonly RichTextLabel _returnStatus = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(860, 40) };
+    private readonly RichTextLabel _returnStatus = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(860, 64) };
     private readonly Dictionary<string, CarriedItem> _lines = new();
     private readonly QuantityTransfer _quantity = new() { Name = "ReturnQuantity", Visible = false };
     private Func<CarriedItem, PrototypeText?>? _text;
     private Func<int, string>? _mapName;
     private Func<CarriedItem, int, ItemTakeStatus>? _canReturn;
-    private Func<CarriedItem, bool>? _canApproach;
+    private Func<CarriedItem, ItemOriginPlan?>? _originRoute;
     public Action<CarriedItem, int>? ReturnRequested;
     public Action<CarriedItem>? ApproachRequested;
     public CarriedItem? SelectedItem { get; private set; }
@@ -53,10 +53,10 @@ public partial class PlayerBagWindow : AcceptDialog
         _items.ItemSelected += ShowSelected;
     }
     public void Refresh(CarriedItem[] items, Func<CarriedItem, PrototypeText?> text, Func<int, string> mapName, long? carriedWeight, int capacity,
-        Func<CarriedItem, long?> unitWeight, Func<CarriedItem, int, ItemTakeStatus>? canReturn = null, Func<CarriedItem, bool>? canApproach = null)
+        Func<CarriedItem, long?> unitWeight, Func<CarriedItem, int, ItemTakeStatus>? canReturn = null, Func<CarriedItem, ItemOriginPlan?>? originRoute = null)
     {
         string? selected = SelectedItem == null ? null : RowKey(SelectedItem);
-        _text = text; _mapName = mapName; _canReturn = canReturn; _canApproach = canApproach; _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
+        _text = text; _mapName = mapName; _canReturn = canReturn; _originRoute = originRoute; _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
         TotalQuantity = items.Sum(i => (long)i.Quantity);
         _summary.Text = items.Length == 0 ? "Sua bolsa está vazia." : $"{TotalQuantity} {(TotalQuantity == 1 ? "unidade" : "unidades")} em {items.Length} {(items.Length == 1 ? "pilha" : "pilhas")}";
         _summary.Text += $" · Carga: {CarryWeightText.Load(carriedWeight, capacity)} · Força {CarryWeight.TestStrength} (perfil de teste)";
@@ -85,7 +85,11 @@ public partial class PlayerBagWindow : AcceptDialog
             : status == ItemTakeStatus.Empty ? "Você já não carrega esta pilha." : ContainerLootWindow.Hint(status);
         _returnOne.Disabled = status != ItemTakeStatus.Ready;
         _returnStack.Disabled = status != ItemTakeStatus.Ready || _canReturn!(item, item.Quantity) != ItemTakeStatus.Ready;
-        _approach.Disabled = status != ItemTakeStatus.TooFar || _canApproach?.Invoke(item) != true;
+        ItemOriginPlan? plan = status is ItemTakeStatus.TooFar or ItemTakeStatus.Unavailable or ItemTakeStatus.AtExit ? _originRoute?.Invoke(item) : null;
+        _approach.Disabled = plan == null;
+        _approach.Text = plan?.Legs[0].Destination != null ? (plan.Legs[0].Tiles.Length == 1 ? "Ver passagem" : "Ir à passagem") : "Voltar ao recipiente";
+        if (plan?.Legs[0].Destination is ActorLocation destination)
+            _returnStatus.Text += $"\nRota: {plan.WalkingSteps} passos e {plan.Transitions} {(plan.Transitions == 1 ? "passagem" : "passagens")}. Vá até {_mapName!(destination.Map)} e use Enter. Abra B depois para continuar.";
         if (status == ItemTakeStatus.TooFar && _approach.Disabled) _returnStatus.Text = "Sem caminho até o recipiente com os bloqueios atuais.";
         _quantity.Configure(item.Quantity, "Devolver quantidade", qty => _canReturn?.Invoke(item, qty) ?? ItemTakeStatus.Unsupported);
     }

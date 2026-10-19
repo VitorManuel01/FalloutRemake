@@ -39,21 +39,24 @@ public partial class TemplePreview
     private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName, _campaign.CarriedWeight, _campaign.CarryCapacity,
         item => _campaign.UnitWeight(item.Map, item.Source),
         (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true),
-        item => BagOriginApproach(item).HasValue);
-    private int? BagOriginApproach(CarriedItem item)
-    {
-        if (_campaign == null || _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, 1, _walker?.Moving == true) != ItemTakeStatus.TooFar) return null;
-        var navigation = _doors!.Navigation(_campaign.Location.Elevation);
-        MapObject owner = _campaign.Current.Items.Containers.Single(o => o.Key == item.OwnerKey);
-        return ClosestContainerApproach(owner, navigation.ReachableFrom(_campaign.Location.Hex), navigation);
-    }
+        item => ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true));
     private void ApproachBagOrigin(CarriedItem item)
     {
-        if (!BagOriginApproach(item).HasValue) return;
+        if (_campaign == null) return;
+        ItemOriginPlan? plan = ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true);
+        if (plan == null) { RefreshBag(); return; }
+        ItemOriginLeg leg = plan.Legs[0];
         CloseBag();
-        if (_elevation != _campaign!.Location.Elevation) ChangeElevation(_campaign.Location.Elevation);
+        if (_elevation != _campaign.Location.Elevation) ChangeElevation(_campaign.Location.Elevation);
         if (!_walkMode) ToggleWalkMode();
-        ApproachContainerFromClick(_layout!.Objects.Single(o => o.Source.Key == item.OwnerKey));
+        if (leg.Destination == null) ApproachContainerFromClick(_layout!.Objects.Single(o => o.Source.Key == item.OwnerKey));
+        else
+        {
+            int target = leg.Tiles[^1];
+            SelectObject(_layout!.Objects.Where(o => o.Kind == Geometry.PreviewKind.Exit && o.Source.Header.Tile == target).OrderBy(o => o.Source.Offset).First());
+            if (target == _walker!.CurrentHex) NavigationStatus(ExitHint(CurrentExit()));
+            else { RequestWalk(target); NavigationStatus($"Caminhando até a passagem · Enter ao chegar · abra B depois para continuar"); }
+        }
     }
     private void ReturnFromBag(CarriedItem item, int quantity)
     {
