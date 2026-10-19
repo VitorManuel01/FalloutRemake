@@ -81,7 +81,7 @@ public partial class TemplePreview
             ((Button)_hud.FindChild("BagAction", true, false)).EmitSignal(Button.SignalName.Pressed);
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             Vector2 viewport = GetViewport().GetVisibleRect().Size;
-            if (_bag == null || _bag.RowCount != 1 || _bag.TotalQuantity != 1 || _bag.SelectedItem?.Source.Header.Id != 106
+            if (_bag == null || _bag.RowCount != 1 || _bag.TotalQuantity != 1 || _campaign.CarriedWeight != 1 || _campaign.CarryCapacity != 150 || _bag.SelectedItem?.Source.Header.Id != 106
                 || _bag.SelectedItem.Map != 3 || !_bag.DetailText.Contains(name) || !_bag.DetailText.Contains(MapDisplayName(3))
                 || !_bag.ReadableLayout || _bag.Size.X > viewport.X - 32 || _bag.Size.Y > viewport.Y - 32 || _campaign.Location != before
                 || ((Button)_hud.FindChild("LoadAction", true, false)).GetGlobalRect().End.X > viewport.X - 15)

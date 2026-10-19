@@ -24,8 +24,25 @@ public sealed class WorldSession
     public IReadOnlyList<WorldArea> Areas => _areas.OrderBy(p => p.Key).Select(p => p.Value).ToArray();
     public CarriedItem[] Carried => Areas.SelectMany(a => a.Items.Carried).ToArray();
     public long CarriedCount => Carried.Sum(i => (long)i.Quantity);
-    public ItemTakeStatus TakeItem(string ownerKey, string itemKey, int quantity, bool moving) =>
-        Current.Items.Take(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving);
+    public int CarryCapacity => CarryWeight.TestCapacity;
+    public long? UnitWeight(int sourceMap, MapObject item) => _areas.TryGetValue(sourceMap, out WorldArea? area)
+        && area.Map.Prototypes.FirstOrDefault(p => p.Pid == item.Header.Pid) is Prototype prototype ? CarryWeight.UnitWeight(prototype, item) : null;
+    public long? CarriedWeight => CarryWeight.Total(Carried.Select(item => (UnitWeight(item.Map, item.Source), item.Quantity)));
+    public ItemTakeStatus CanTakeItem(string ownerKey, string itemKey, int quantity, bool moving)
+    {
+        ItemTakeStatus status = Current.Items.CanTake(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving);
+        if (status != ItemTakeStatus.Ready) return status;
+        MapObject source = Current.Items.Contents(ownerKey).Single(i => i.Source.Key == itemKey).Source;
+        long? unit = UnitWeight(CurrentMap, source), carried = CarriedWeight;
+        if (!unit.HasValue || !carried.HasValue) return ItemTakeStatus.WeightUnavailable;
+        // Source quantities/base weights are signed int32; the product fits int64.
+        return carried.Value > CarryCapacity || unit.Value * quantity > CarryCapacity - carried.Value ? ItemTakeStatus.OverCapacity : ItemTakeStatus.Ready;
+    }
+    public ItemTakeStatus TakeItem(string ownerKey, string itemKey, int quantity, bool moving)
+    {
+        ItemTakeStatus status = CanTakeItem(ownerKey, itemKey, quantity, moving);
+        return status == ItemTakeStatus.Ready ? Current.Items.Take(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : status;
+    }
     public ItemTakeStatus CanReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap
         ? Current.Items.CanReturn(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
     public ItemTakeStatus ReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap

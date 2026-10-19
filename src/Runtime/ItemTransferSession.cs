@@ -7,7 +7,7 @@ using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
-public enum ItemTakeStatus { Ready, NoItem, Unsupported, ScriptRequired, Locked, Busy, TooFar, Unavailable, AtExit, InvalidQuantity, Empty }
+public enum ItemTakeStatus { Ready, NoItem, Unsupported, ScriptRequired, Locked, Busy, TooFar, Unavailable, AtExit, InvalidQuantity, Empty, OverCapacity, WeightUnavailable }
 public sealed record TakenItem(string OwnerKey, string ItemKey, int Quantity);
 public sealed record ContainerItem(MapObject Source, int Quantity);
 public sealed record CarriedItem(int Map, string OwnerKey, MapObject Source, int Quantity);

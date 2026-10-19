@@ -187,6 +187,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Recipientes no modo Caminhar: prévia, clique e enquadramento](docs/container-route-2026-10-19.md)
 - [Bolsa: solicitar aproximação ao recipiente de origem](docs/bag-origin-2026-10-19.md)
 - [Peso base original: layout PRO e validações](docs/item-base-weight-2026-10-19.md)
+- [Carga do perfil de teste: limite, pesos e compatibilidade](docs/carry-profile-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

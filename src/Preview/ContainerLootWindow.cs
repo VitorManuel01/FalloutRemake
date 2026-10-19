@@ -80,6 +80,8 @@ public partial class ContainerLootWindow : AcceptDialog
         ItemTakeStatus.ScriptRequired => "Este objeto depende de uma interação ainda não disponível.",
         ItemTakeStatus.AtExit => "Saia da passagem antes de retirar um item.",
         ItemTakeStatus.InvalidQuantity => "Quantidade indisponível.",
+        ItemTakeStatus.OverCapacity => "Esta retirada ultrapassa a capacidade de carga. Devolva itens antes de recolher mais.",
+        ItemTakeStatus.WeightUnavailable => "Peso indisponível para este item ou bolsa. A coleta ainda não está disponível neste caso.",
         ItemTakeStatus.Unavailable => "O personagem deve estar nesta área e elevação, ao alcance do recipiente.",
         _ => "A retirada deste item ainda não está disponível."
     };

@@ -39,8 +39,7 @@ public partial class TemplePreview
         if (_loot == null || _lootOwner == null || _campaign == null) return;
         MapObject owner = _campaign.Current.Items.Containers.Single(o => o.Key == _lootOwner);
         _loot.Refresh(OriginalText(owner)?.Name ?? "Recipiente", _campaign.Current.Items.Contents(_lootOwner), OriginalText,
-            (key, qty) => _campaign.Current.Items.CanTake(_lootOwner, key, qty, _campaign.Location,
-                _doors!.Navigation(_campaign.Location.Elevation), _walker?.Moving == true), _campaign.CarriedCount, ContainerApproach(owner).HasValue);
+            (key, qty) => _campaign.CanTakeItem(_lootOwner, key, qty, _walker?.Moving == true), _campaign.CarriedCount, ContainerApproach(owner).HasValue);
     }
     private void TakeFromContainer(string key, int quantity)
     {
