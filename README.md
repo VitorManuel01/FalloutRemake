@@ -58,8 +58,9 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 - **K / Salvar:** checkpoint local quando estiver parado. **R / Carregar:**
   recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
   Os atalhos usam letras para evitar conflito com os controles do editor Godot.
-  O schema atual é v3; checkpoints v1/v2 continuam carregando. Itens posicionados
-  e consumidos têm estado próprio, ainda sem ação de ativação na interface.
+  O schema atual é v4; checkpoints v1/v2/v3 continuam carregando. Itens posicionados,
+  consumidos e substituições de cenário têm estado próprio; a ativação ainda não
+  possui ação na interface.
 - **C / Personagem:** reenquadra e acompanha o personagem. WASD ou arrasto retomam
   a câmera livre; recentrar mantém o percurso em andamento.
 - **O / Piso original:** compara o piso com imagens lidas da instalação local.
@@ -228,6 +229,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Continuação projetada: chegada e recipientes da elevação 2](docs/projected-temple-continuation-2026-10-19.md)
 - [Retomada: contrato e aceitação do próximo commit de barreira](docs/next-barrier-commit-2026-10-19.md)
 - [Entidades de teste: obstáculos, luzes e recipientes com estados visuais](docs/entity-readability-2026-10-19.md)
+- [Checkpoint v4: substituição de cenário e consumo na mesma operação](docs/barrier-checkpoint-v4-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

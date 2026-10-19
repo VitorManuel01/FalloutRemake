@@ -37,12 +37,12 @@ internal static class ItemUseCheckpointTests
                 Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes(node.ToJsonString())));
             }
         });
-        check("checkpoint v3 restores placed consumed and carried quantities without duplicating their original sources", () =>
+        check("current checkpoint restores placed consumed and carried quantities without duplicating their original sources", () =>
         {
             var world = World(); var items = world.Current.Items; items.Restore(new[] { new TakenItem("owner", "item", 4) });
             items.Place(ItemUseTests.Use()); items.Place(ItemUseTests.Use(2)); items.Consume(ItemUseTests.Use(2).Id);
             var saved = RoundTrip(world.Capture("catalog")); var restored = Restore(saved);
-            Assert(saved.Version == 3 && saved.Profile == "neutral-v3" && restored.CarriedCount == 2 && restored.CarriedWeight == 8 && restored.ItemUses.Length == 2);
+            Assert(saved.Version == 4 && saved.Profile == "neutral-v4" && restored.CarriedCount == 2 && restored.CarriedWeight == 8 && restored.ItemUses.Length == 2);
             Assert(restored.Current.Items.Balance("owner", "item") == new ItemBalance(5, 1, 2, 1, 1));
             Assert(CheckpointFile.Encode(restored.Capture("catalog")).SequenceEqual(CheckpointFile.Encode(saved)));
             var before = world.ItemUses[0]; saved.Areas[0].Uses![0] = saved.Areas[0].Uses![0] with { RemainingTicks = 1 };
@@ -64,13 +64,13 @@ internal static class ItemUseCheckpointTests
             {
                 JsonNode document = JsonNode.Parse(CheckpointFile.Encode(world.Capture("catalog")))!;
                 document["Version"] = version; document["Profile"] = $"neutral-v{version}";
-                var area = document["Areas"]![0]!.AsObject(); area.Remove("Uses"); if (version == 1) area.Remove("Taken");
+                var area = document["Areas"]![0]!.AsObject(); area.Remove("Uses"); area.Remove("Replacements"); if (version == 1) area.Remove("Taken");
                 var legacy = CheckpointFile.Decode(Encoding.UTF8.GetBytes(document.ToJsonString())); var restored = Restore(legacy);
-                Assert(restored.ItemUses.Length == 0 && restored.CarriedCount == (version == 1 ? 0 : 2) && restored.Capture("catalog").Version == 3);
+                Assert(restored.ItemUses.Length == 0 && restored.CarriedCount == (version == 1 ? 0 : 2) && restored.Capture("catalog").Version == 4);
                 Reject(() => Restore(legacy with { Areas = legacy.Areas.Select(a => a with { Uses = Array.Empty<ItemUseAllocation>() }).ToArray() }));
             }
         });
-        check("v3 refuses missing arrays global duplicate use identities and unknown placement maps without replacing the live world", () =>
+        check("current checkpoint refuses missing arrays global duplicate use identities and unknown placement maps without replacing the live world", () =>
         {
             var world = World(); world.Current.Items.Restore(new[] { new TakenItem("owner", "item", 1) }); world.Current.Items.Place(ItemUseTests.Use()); world.UseExit(false);
             world.Current.Items.Restore(new[] { new TakenItem("owner", "item", 1) }); world.Current.Items.Place(ItemUseTests.Use(2));

@@ -6,7 +6,7 @@ using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
-public enum BarrierEffectStatus { Ready, NoUse, NotDue, Consumed, UnsupportedArea, UnsupportedProfile, NoTarget }
+public enum BarrierEffectStatus { Ready, NoUse, NotDue, Consumed, UnsupportedArea, UnsupportedProfile, NoTarget, AlreadyReplaced }
 public sealed record TempleBarrierEffectPlan(Guid UseId, Guid SessionToken, int SourceMap, long SourceRevision,
     ActorLocation Center, string TargetKey, int ReplacementPid, int ReplacementFid, string ReplacementHash, int Distance);
 public sealed record BarrierEffectProposal(BarrierEffectStatus Status, TempleBarrierEffectPlan? Plan = null);
@@ -32,6 +32,7 @@ public static class TempleBarrierEffectProposal
         if (area == null || use.Placement.Map != 3) return new(BarrierEffectStatus.UnsupportedArea);
         MapObject? barrier = Match(area.Map, replacement);
         if (barrier == null) return new(BarrierEffectStatus.UnsupportedProfile);
+        if (area.Scenery.Replaces(barrier.Key)) return new(BarrierEffectStatus.AlreadyReplaced);
         int distance = FalloutGrid.Distance(use.Placement.Hex, barrier.Header.Tile);
         if (use.Placement.Elevation != barrier.Header.Elevation || distance > ExplosiveUseProposal.SceneryRadius)
             return new(BarrierEffectStatus.NoTarget);
@@ -60,6 +61,6 @@ public static class TempleBarrierEffectProposal
     }
     private static bool KnownPrototype(Prototype? prototype, int pid, int fid, string path, string hash, int flags) => prototype != null
         && prototype.Pid == pid && prototype.Type == 2 && prototype.Subtype == 5 && prototype.ScriptId == -1 && prototype.Fid == fid
-        && prototype.Resource.Path == path && prototype.Resource.Sha256 == hash && prototype.Resource.Size == 45 && prototype.RawBytes.Length == 45
+        && prototype.Resource is { Size: 45 } resource && resource.Path == path && resource.Sha256 == hash && prototype.RawBytes is { Length: 45 }
         && BinaryPrimitives.ReadInt32BigEndian(prototype.RawBytes.AsSpan(20, 4)) == flags;
 }

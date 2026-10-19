@@ -25,7 +25,7 @@ internal static class CheckpointTests
         check("checkpoint rejects incompatible schema/profile/catalog and malformed or oversized JSON", () =>
         {
             WorldCheckpoint saved = new WorldSession(Load, Allowed).Capture("catalog");
-            Reject(() => Restore(saved with { Version = 4 })); Reject(() => Restore(saved with { Profile = "other" }));
+            Reject(() => Restore(saved with { Version = 5 })); Reject(() => Restore(saved with { Profile = "other" }));
             Reject(() => Restore(saved with { CatalogHash = "other" }));
             Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes("{")));
             Reject(() => CheckpointFile.Decode(new byte[CheckpointFile.MaxBytes + 1]));

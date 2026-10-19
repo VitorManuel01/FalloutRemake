@@ -32,13 +32,13 @@ internal static class ItemUseCheckpointReport
             throw new InvalidDataException("Partially elapsed logical use failed to complete.");
         var consumed = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 },
             CheckpointFile.Decode(CheckpointFile.Encode(elapsed.Capture(catalog.Source.Sha256))), catalog.Source.Sha256);
-        var legacy = legacySource with { Version = 2, Profile = "neutral-v2", Areas = legacySource.Areas.Select(a => a with { Uses = null }).ToArray() };
+        var legacy = legacySource with { Version = 2, Profile = "neutral-v2", Areas = legacySource.Areas.Select(a => a with { Uses = null, Replacements = null }).ToArray() };
         var upgraded = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 }, CheckpointFile.Decode(CheckpointFile.Encode(legacy)), catalog.Source.Sha256);
         if (upgraded.CarriedCount != 1 || upgraded.ItemUses.Length != 0 || consumed.CarriedCount != 0 || consumed.ItemUses.Single().Allocation.Phase != ItemUsePhase.Consumed)
             throw new InvalidDataException("Legacy or consumed ownership restoration failed.");
         foreach (var area in consumed.Areas) MapLayoutWriter.Verify(area.Map);
         return new { Status = "ITEM_USE_CHECKPOINT_OK", Fixture = "isolated session seeded from original inventory; no gameplay placement, clock or explosion",
-            Version = 3, Profile = "neutral-v3", SourceMap = 3, SourceItem = item.Source.Key, ItemId = item.Source.Header.Id, use.Placement,
+            Version = 4, Profile = "neutral-v4", SourceMap = 3, SourceItem = item.Source.Key, ItemId = item.Source.Header.Id, use.Placement,
             PlacedRoundTrip = "verified", PartialTimerRoundTrip = "verified: 175 elapsed, 425 remaining", ConsumedRoundTrip = "verified", RepeatedCommit = "refused without state change", LegacyV2Carried = upgraded.CarriedCount, UpgradedVersion = upgraded.Capture(catalog.Source.Sha256).Version,
             Balance = consumed.Areas.Single(a => a.Map.Prefix.Header.MapIndex == 3).Items.Balance(owner.Key, item.Source.Key),
             RuntimeActivationEnabled = false, OriginalReconstruction = "verified" };

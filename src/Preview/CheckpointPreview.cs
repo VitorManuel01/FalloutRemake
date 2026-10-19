@@ -34,7 +34,8 @@ public partial class TemplePreview
             WorldCheckpoint saved = CheckpointFile.Read(CheckpointPath);
             var data = new GameData(_directory);
             var catalog = new MapCatalog(data.Read("data/maps.txt"));
-            WorldSession restored = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 }, saved, catalog.Source.Sha256);
+            var runtimePrototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
+            WorldSession restored = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 }, saved, catalog.Source.Sha256, runtimePrototype: runtimePrototypes.Get);
             _campaign = restored; _mapCatalog = catalog; _skills.Reset(); BindCurrentArea();
             ChangeElevation(_travel!.Location.Elevation); ToggleWalkMode();
             _focus = Point(FalloutGrid.HexCenter(_travel.Location.Hex) - _layout!.Origin, 0); _camera.Size = 32; UpdateCamera();

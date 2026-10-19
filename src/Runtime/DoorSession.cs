@@ -29,6 +29,7 @@ public sealed class DoorSession
     private TempleDoorAdapter? _temple;
     private long _revision;
     private bool _resolving;
+    internal Func<string, bool>? IsSceneryReplaced { get; set; }
     public TempleDoorSnapshot? TempleDoor => _temple?.Snapshot;
     public static bool SupportsTempleDoorAdapter(MapDocument map) => TempleDoorAdapter.Match(map) != null;
     public static DoorSession FromMap(MapDocument map, bool enableTempleDoorAdapter = false)
@@ -106,7 +107,8 @@ public sealed class DoorSession
         _doors[_temple.SourceKey] = _temple.EnterMap(_doors[_temple.SourceKey]); _revision++;
     }
     public HexNavigation Navigation(int elevation) => new(_roots, elevation, obj =>
-        _doors.TryGetValue(obj.Key, out DoorState? state) ? new(state.Flags, state.OpenFlags)
+        IsSceneryReplaced?.Invoke(obj.Key) == true ? new(obj.Header.Flags | HexNavigation.Hidden, null)
+            : _doors.TryGetValue(obj.Key, out DoorState? state) ? new(state.Flags, state.OpenFlags)
             : new(obj.Header.Flags, obj.State.TryGetValue("openFlags", out int open) ? open : null));
 
     public DoorUseStatus CanToggle(string key, int actorHex, int elevation, bool moving)
