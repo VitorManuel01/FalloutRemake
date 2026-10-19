@@ -206,6 +206,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Barreira explosiva: condição e objeto de substituição](docs/temple-barrier-2026-10-19.md)
 - [Distância em hexes e referência de alcance da barreira](docs/hex-distance-2026-10-19.md)
 - [Explosivo: temporizador confirmado e questões da referência](docs/explosive-profile-2026-10-19.md)
+- [Consulta I: ícones e inventário original preservado](docs/original-inventory-icons-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

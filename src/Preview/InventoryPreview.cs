@@ -25,7 +25,7 @@ public partial class TemplePreview
         var dialog = new InventoryInspector { Size = new Vector2I(1000, 620), Theme = _hud.GetChild<Control>(0).Theme };
         _inventory = dialog; _hud.AddChild(dialog);
         dialog.Confirmed += CloseInventory; dialog.Canceled += CloseInventory; dialog.CloseRequested += CloseInventory;
-        dialog.Inspect(_selected.Source, OriginalText);
+        dialog.Inspect(_selected.Source, OriginalText, item => InventoryTexture(_campaign!.CurrentMap, item));
         dialog.PopupCentered(new Vector2I(1000, 620));
     }
     private static bool CanInspectInventory(MapObject obj) => obj.Inventory.Length > 0
@@ -45,7 +45,7 @@ public partial class TemplePreview
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         MapObject first = owner.Source.Inventory[0].Object;
         if (!InspectorOpen || _inventory!.ItemRows != MapDocument.Flatten(owner.Source).Count() - 1 || _inventory.SelectedSourceKey != first.Key
-            || !_inventory.DetailText.Contains($"PID  {first.Header.Pid}") || _lookup.Count != roots || _campaign.Location != location)
+            || !_inventory.DetailText.Contains($"PID  {first.Header.Pid}") || _inventory.SelectedArtFid != 0x0700000D || _lookup.Count != roots || _campaign.Location != location)
             throw new InvalidDataException("Inventory inspection lost source identity or spawned its contents into the world.");
         if (_walker.Position != walkingPosition || !_walker.Moving)
             throw new InvalidDataException("Inventory inspection failed to suspend movement without cancelling its route.");

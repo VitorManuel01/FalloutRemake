@@ -56,9 +56,17 @@ public partial class TemplePreview
                 throw new InvalidDataException("Missing art disabled an otherwise supported transfer.");
             CloseLoot(); OpenBag(); if (_bag!.SelectedArtFid != null) throw new InvalidDataException("Empty bag retained an old icon.");
             if (_campaign.Location != location || _campaign.CarriedCount != 0) throw new InvalidDataException("Artwork inspection modified the world.");
+            CloseBag(); ChangeElevation(2);
+            SelectObject(_layout!.Objects.Single(o => o.Source.Inventory.Any(i => i.Object.Header.Pid == 438))); OpenInventory();
+            if (_inventory?.SelectedArtFid != 0x0700012F || !_inventory.DetailText.Contains("Temple Key") || _campaign.Location != location || _campaign.CarriedCount != 0)
+                throw new InvalidDataException("Read-only key artwork altered the actor or inventory.");
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            if (!_inventory.ReadableLayout) throw new InvalidDataException("Original item artwork made the source inspector unreadable.");
+            if (_capture != null) await Capture(Path.ChangeExtension(_capture, "original-key.png"));
+            CloseInventory(); ChangeElevation(0);
             MapLayoutWriter.Verify(_map); CloseBag(); ResetWalker();
-            GD.Print("INVENTORY_ART_UI_OK: original powder FID/dimensions, shared texture identity, unavailable-art fallback, supported action preserved, empty-icon cleanup, inactive-source bag icon and unchanged actor/items/source verified.");
+            GD.Print("INVENTORY_ART_UI_OK: original powder FID/dimensions, shared texture identity, unavailable-art fallback, supported action preserved, empty-icon cleanup, inactive-source bag icon, read-only Temple Key inspection without transfer/teleport and unchanged actor/items/source verified.");
         }
-        finally { _inventoryArt = original; _unavailableItemArt.Clear(); CloseLoot(); CloseBag(); _checkingNavigation = false; }
+        finally { _inventoryArt = original; _unavailableItemArt.Clear(); CloseInventory(); CloseLoot(); CloseBag(); _checkingNavigation = false; }
     }
 }

@@ -95,7 +95,10 @@ public partial class TemplePreview
             if (_campaign.CarriedCount != 1 || _campaign.Location != location || _lookup.Count != roots || !_doors.Capture().Doors.SequenceEqual(doors.Doors))
                 throw new InvalidDataException("Repeated or modal collection changed unrelated world state.");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "loot.png"));
-            _loot.EmitSignal(AcceptDialog.SignalName.Confirmed); SaveCheckpoint(); ResetWalker(); LoadCheckpoint();
+            _loot.EmitSignal(AcceptDialog.SignalName.Confirmed); OpenInventory();
+            if (_inventory?.ItemRows != 1 || _inventory.SelectedArtFid != 0x070000AA || _campaign.CarriedCount != 1)
+                throw new InvalidDataException("Original inventory artwork changed after collecting its runtime contents.");
+            CloseInventory(); SaveCheckpoint(); ResetWalker(); LoadCheckpoint();
             SelectObject(_layout!.Objects.Single(o => o.Source.Offset == 206348)); _UnhandledInput(key);
             if (_loot!.Remaining != 0 || _campaign.CarriedCount != 1) throw new InvalidDataException("Reopened container duplicated checkpoint contents.");
             CloseLoot(); MapLayoutWriter.Verify(_map!); ResetWalker();
