@@ -22,6 +22,7 @@ public partial class TemplePreview
     private void BuildNavigation()
     {
         using var resources = new ResourceScope();
+        _committedRoute = Array.Empty<int>();
         ClearRouteHover(); _hoverLine = null; _hoverTarget = null;
         _walker = null; _navigation = null; _reachable = null; _walkerNode = null;
         _navigationOverlay = null; _routeVisual = null; _walkMode = false;
@@ -58,6 +59,7 @@ public partial class TemplePreview
         _hud.Navigation(_walker != null, _walkMode, text);
         _hud.StopAction(_walker?.Moving == true, _walker?.StopRequested == true);
         RefreshTravelAction(); RefreshCheckpointActions();
+        RefreshFrameRouteAction();
     }
 
     private void RefreshReachability()
@@ -145,8 +147,10 @@ public partial class TemplePreview
     private void DrawRoute(int[] tiles)
     {
         if (_layout == null || _routeVisual == null) return;
+        _committedRoute = (int[])tiles.Clone();
         using var mesh = CreateRouteMesh(tiles, .16f);
         _routeVisual.Mesh = mesh; _routeVisual.Visible = _walkMode;
+        RefreshFrameRouteAction();
     }
     private ImmediateMesh CreateRouteMesh(int[] tiles, float height)
     {

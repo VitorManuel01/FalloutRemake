@@ -51,6 +51,9 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   A opção é visual; os bloqueios e a seleção dos objetos permanecem.
 - **G / Grade:** mostra ou oculta os hexágonos de navegação. Caminhada e traçado
   continuam ativos sem a grade; combine com O para ver o piso original.
+- **T / Ver percurso:** enquadra o trajeto apontado ou em andamento no espaço
+  livre dos painéis. Também inclui a porta de destino quando houver aproximação.
+  A caminhada continua; **C** retoma o acompanhamento do personagem.
 - **Apontar para o chão no modo Caminhar:** mostra o percurso e os passos antes
   do clique. A prévia não move o personagem e também funciona sem a grade.
   Ao apontar para uma porta, mostra a aproximação alcançável ou sua condição.
@@ -99,17 +102,18 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `CHECKPOINT_PREVIEW_OK`, `CHARACTER_CAMERA_OK`, `FLOOR_ART_PREVIEW_OK`,
 `STOP_WALKING_OK`, `WALL_OCCLUSION_OK`, `OBJECT_TEXT_OK`,
 `INVENTORY_INSPECTOR_OK`, `NAVIGATION_GRID_OK`, `ROUTE_HOVER_OK`,
-`DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK` / `IMPORT_SMOKE_OK`,
+`DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK`, `ROUTE_CAMERA_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo
 `tools/Run-QuietGodot.ps1`, com caminhos explícitos. Esse runner usa um desktop
 isolado do Windows; `--headless` continua sendo a opção sem renderização.
-Para capturar a cena, execute sem `--headless` e acrescente
-`--capture .local/temple-preview.png` após `--`. Com `--preview-test`, também é gerada
+Informe `-CapturePath "$PWD\.local\temple-preview.png"` ao runner isolado para
+capturar a cena. Ele já executa `--preview-test`, que também gera
 uma captura `.selection.png` da porta selecionada, `.navigation.png` do percurso
 e `.door.png` da primeira passagem aberta, além de `.lockpick.png` da segunda
-porta após arrombar e atravessar. `.exit.png` mostra a passagem interna disponível e
+porta após arrombar e atravessar. `.route-frame.png` mostra o percurso enquadrado.
+`.exit.png` mostra a passagem interna disponível e
 `.travel.png` a chegada na elevação 1; `.outside.png` mostra o exterior. Todas ficam fora do Git.
 
 O leitor abre os dados em modo de leitura e imprime um resumo JSON, com contagens,
@@ -151,6 +155,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Prévia da porta: aproximação e estado](docs/door-route-hover-2026-10-18.md)
 - [Prévia da saída: destino e carregamento](docs/exit-route-hover-2026-10-18.md)
 - [Validação isolada: executar sem abrir janelas no desktop ativo](docs/quiet-validation-2026-10-18.md)
+- [Enquadrar percurso: câmera, espaço livre e validação](docs/route-camera-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

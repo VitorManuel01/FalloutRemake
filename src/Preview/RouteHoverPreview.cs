@@ -28,12 +28,15 @@ public partial class TemplePreview
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         _world.AddChild(_hoverLine); _world.AddChild(_hoverTarget);
     }
-    private void ClearRouteHover()
+    private void ClearRouteHover(bool keepFramePlan = false)
     {
+        if (!keepFramePlan) _framePreview = null;
+        _pinnedHoverScreen = null;
         _hoverHex = null; _hoverPath = Array.Empty<int>(); _hoverStatus = null; _hoverDoorKey = null;
         if (_hoverLine != null) { _hoverLine.Visible = false; _hoverLine.Mesh = null; }
         if (_hoverTarget != null) _hoverTarget.Visible = false;
         _hud.RouteHint(null);
+        RefreshFrameRouteAction();
     }
     private int? GroundHexAtScreen(Vector2 screen)
     {
@@ -47,8 +50,11 @@ public partial class TemplePreview
     }
     private void RouteHoverAtScreen(Vector2 screen)
     {
-        if (!_walkMode || _walker?.Moving != false || InspectorOpen || _hud.MouseOverPanelAt(screen)
-            || !GetViewport().GetVisibleRect().HasPoint(screen)) { ClearRouteHover(); return; }
+        if (!_walkMode || _walker?.Moving != false || InspectorOpen) { ClearRouteHover(); return; }
+        if (_pinnedHoverScreen.HasValue)
+        { if (_pinnedHoverScreen.Value.DistanceSquaredTo(screen) <= 16) return; _pinnedHoverScreen = null; }
+        if (_hud.MouseOverPanelAt(screen)) { ClearRouteHover(true); return; }
+        if (!GetViewport().GetVisibleRect().HasPoint(screen)) { ClearRouteHover(); return; }
         if (TryPickDoor(screen) is PreviewObject door) { PreviewDoorRoute(door); return; }
         PreviewGroundRoute(GroundHexAtScreen(screen) ?? -1);
     }
@@ -80,6 +86,7 @@ public partial class TemplePreview
             _ => "Sem caminho com as portas e bloqueadores atuais"
         };
         _hud.RouteHint(exit ? ExitRouteHint(target, _hoverStatus.Value, _hoverPath.Length - 1) : hint);
+        RememberFramePreview();
     }
     private async Task CheckRouteHover()
     {

@@ -56,7 +56,7 @@ public partial class TemplePreview
         if (status != DoorUseStatus.Ready) return status;
         int current = _walker.CurrentHex;
         _navigation = _doors.Navigation(_elevation); _walker = new HexWalker(_navigation, current);
-        _routeVisual!.Mesh = null; _routeVisual.Visible = false;
+        ClearRouteVisual();
         ApplyDoorVisuals(); RefreshReachability(); UpdateWalkerPosition();
         if (_selected != null) SelectObject(_selected);
         RefreshDoorAction();

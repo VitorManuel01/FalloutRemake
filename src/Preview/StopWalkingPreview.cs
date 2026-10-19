@@ -10,7 +10,11 @@ namespace FalloutRemake.Preview;
 public partial class TemplePreview
 {
     private void ClearRouteVisual()
-    { if (_routeVisual != null) { _routeVisual.Visible = false; _routeVisual.Mesh = null; } }
+    {
+        _committedRoute = System.Array.Empty<int>();
+        if (_routeVisual != null) { _routeVisual.Visible = false; _routeVisual.Mesh = null; }
+        RefreshFrameRouteAction();
+    }
 
     private void StopWalking()
     {

@@ -43,6 +43,7 @@ public partial class TemplePreview
             _hud.RouteHint($"{name} · {(status == DoorUseStatus.TooFar ? "Sem caminho até o lado desta porta" : DoorHint(status))}");
         }
         _hoverDoorKey = door.Source.Key;
+        RememberFramePreview();
     }
     private async Task CheckDoorRouteHover()
     {
