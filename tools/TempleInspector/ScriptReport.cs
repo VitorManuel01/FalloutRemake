@@ -14,6 +14,7 @@ internal static class ScriptReport
             Profile = "Classic 42-byte bootstrap, 24-byte procedure records; string heap retained opaque",
             program.Source, program.IdentifiersOffset, program.StaticStringsOffset, program.CodeOffset,
             InstructionCount = program.Instructions.Count,
+            ExternalReferencePatterns = IntExternalReferences.Inspect(program),
             Procedures = program.Procedures.Select(p => new
             {
                 Procedure = p,

@@ -6,7 +6,7 @@ try
     if (args.Length == 1 && args[0] == "--self-test") return SelfTests.Run();
     if (args.Length < 2 || args[0] != "--data-dir")
     {
-        Console.Error.WriteLine("Usage: TempleInspector --self-test | --data-dir <language-folder> [--map maps/arcaves.map] [--export-local] [--navigation] | --data-dir <language-folder> --script scripts/<name>.int [--instructions] | --data-dir <language-folder> --door-adapter-test | --data-dir <language-folder> --item-transfer-report");
+        Console.Error.WriteLine("Usage: TempleInspector --self-test | --data-dir <language-folder> [--map maps/arcaves.map] [--export-local] [--navigation] | --data-dir <language-folder> --script scripts/<name>.int [--instructions] | --data-dir <language-folder> --door-adapter-test | --data-dir <language-folder> --item-transfer-report | --data-dir <language-folder> --temple-chest-report");
         return 2;
     }
     if (args.Length == 3 && args[2] == "--door-adapter-test")
@@ -19,6 +19,11 @@ try
     if (args.Length == 3 && args[2] == "--item-transfer-report")
     {
         Console.WriteLine(JsonSerializer.Serialize(ItemTransferReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--temple-chest-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(TempleChestReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
     if (args.Length >= 3 && args[2] == "--script")

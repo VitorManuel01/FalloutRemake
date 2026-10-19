@@ -25,6 +25,14 @@ public sealed class IntProgram
     public IReadOnlyList<IntProcedure> Procedures { get; }
     public IReadOnlyList<IntInstruction> Instructions { get; }
     public byte[] CopySourceBytes() => (byte[])_bytes.Clone();
+    public string IdentifierAt(int offset) => ReadIdentifier(_bytes, IdentifiersOffset, StaticStringsOffset, offset);
+    private static string ReadIdentifier(byte[] bytes, int tableStart, int tableEnd, int offset)
+    {
+        if (offset < 4 || offset >= tableEnd - tableStart) throw new InvalidDataException("INT identifier outside its table.");
+        int start = tableStart + offset, end = Array.IndexOf(bytes, (byte)0, start, tableEnd - start);
+        if (end < 0) throw new InvalidDataException("Unterminated INT identifier.");
+        return Encoding.Latin1.GetString(bytes, start, end - start);
+    }
     public IEnumerable<IntInstruction> ProcedureInstructions(int index)
     {
         if (index < 0 || index >= Procedures.Count) throw new ArgumentOutOfRangeException(nameof(index));
@@ -74,20 +82,12 @@ public sealed class IntProgram
         int code = I32(12);
         if (code < strings + 4 || code >= bytes.Length || (code & 1) != 0)
             throw new InvalidDataException("Invalid INT startup jump target.");
-        string Name(int offset)
-        {
-            if (offset < 4 || offset >= nameBytes + 4)
-                throw new InvalidDataException("INT procedure name outside identifier table.");
-            int start = identifiers + offset, end = Array.IndexOf(bytes, (byte)0, start, strings - start);
-            if (end < 0) throw new InvalidDataException("Unterminated INT procedure name.");
-            return Encoding.Latin1.GetString(bytes, start, end - start);
-        }
         var procedures = new IntProcedure[count];
         for (int index = 0; index < count; index++)
         {
             int offset = 46 + index * 24, name = I32(offset), arguments = I32(offset + 20);
             if (arguments < 0 || arguments > 4096) throw new InvalidDataException("Invalid INT argument count.");
-            procedures[index] = new IntProcedure(index, name, Name(name), I32(offset + 4), I32(offset + 8),
+            procedures[index] = new IntProcedure(index, name, ReadIdentifier(bytes, identifiers, strings, name), I32(offset + 4), I32(offset + 8),
                 I32(offset + 12), I32(offset + 16), arguments);
         }
         var instructions = new List<IntInstruction>();

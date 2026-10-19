@@ -6,6 +6,31 @@ internal static class IntTests
 {
     public static void Run(Action<string, Action> check)
     {
+        check("INT identifier references stay within their own table and preserve exact offsets", () =>
+        {
+            IntProgram p = Read(Fixture()); Assert(p.IdentifierAt(4) == "entry" && p.IdentifierAt(5) == "ntry");
+            foreach (int offset in new[] { -1, 0, 3, 10, int.MaxValue })
+            { bool failed = false; try { p.IdentifierAt(offset); } catch (InvalidDataException) { failed = true; } Assert(failed); }
+        });
+        check("INT external reference patterns resolve identifiers once despite aliased procedures", () =>
+        {
+            foreach ((ushort opcode, string operation) in new[] { ((ushort)0x8014, "fetch"), ((ushort)0x8015, "store"), ((ushort)0x8016, "export") })
+            {
+                byte[] bytes = ExternalFixture(opcode); var p = Read(bytes); var r = IntExternalReferences.Inspect(p).Single();
+                Assert(r.Offset == 120 && r.IdentifierOffset == 4 && r.Identifier == "entry" && r.Operation == operation);
+                Assert(r.ValueSource == (operation == "store" ? "self_obj" : null) && p.CopySourceBytes().SequenceEqual(bytes));
+            }
+        });
+        check("INT reference analysis refuses foreign table offsets and makes no claims for nonadjacent pushes", () =>
+        {
+            var bytes = ExternalFixture(0x8015); I32(bytes, 116, int.MaxValue);
+            bool failed = false; try { IntExternalReferences.Inspect(Read(bytes)); } catch (InvalidDataException) { failed = true; } Assert(failed);
+            bytes = ExternalFixture(0x8015); U16(bytes, 114, 0xA001); Assert(IntExternalReferences.Inspect(Read(bytes)).Length == 0);
+            bytes = ExternalFixture(0x8015); U16(bytes, 112, 0x8000); Assert(IntExternalReferences.Inspect(Read(bytes)).Single().ValueSource == null);
+            var separated = new byte[126]; ExternalFixture(0x8015).AsSpan(0, 120).CopyTo(separated);
+            U16(separated, 120, 0x8000); U16(separated, 122, 0x8015); U16(separated, 124, 0x8000);
+            Assert(IntExternalReferences.Inspect(Read(separated)).Length == 0);
+        });
         check("INT reads aliased procedures and preserves an independent source snapshot", () =>
         {
             byte[] bytes = Fixture(); byte[] expected = (byte[])bytes.Clone();
@@ -75,6 +100,12 @@ internal static class IntTests
         I32(bytes, 94, 6); Encoding.ASCII.GetBytes("entry\0").CopyTo(bytes, 98);
         I32(bytes, 104, -1); I32(bytes, 108, -1);
         U16(bytes, 112, 0xC001); I32(bytes, 114, 42); U16(bytes, 118, 0x8000);
+        return bytes;
+    }
+    private static byte[] ExternalFixture(ushort operation)
+    {
+        var bytes = new byte[124]; Fixture().AsSpan(0, 112).CopyTo(bytes);
+        U16(bytes, 112, 0x80BC); U16(bytes, 114, operation == 0x8016 ? (ushort)0xC001 : (ushort)0x9001); I32(bytes, 116, 4); U16(bytes, 120, operation); U16(bytes, 122, 0x8000);
         return bytes;
     }
     private static void I32(byte[] bytes, int offset, int value) => BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(offset, 4), value);
