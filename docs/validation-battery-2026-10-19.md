@@ -1,7 +1,7 @@
 # Marco 48 — bateria local reproduzível sem janela
 
-`tools/Validate-Temple.ps1` reúne doze etapas: build da prévia, build do inspector,
-testes sintéticos, oito relatórios reais e integração Godot com `--headless`.
+`tools/Validate-Temple.ps1` reúne treze etapas: build da prévia, build do inspector,
+testes sintéticos, nove relatórios reais e integração Godot com `--headless`.
 Os caminhos de Godot e dados são obrigatórios; não procura outras instalações.
 
 ```powershell

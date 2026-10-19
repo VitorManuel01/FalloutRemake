@@ -4,9 +4,10 @@ using FalloutRemake.Runtime;
 
 internal static class BarrierEffectReport
 {
-    public static object Create(GameData data)
+    public static object Create(GameData data, bool apply = false)
     {
-        var catalog = new MapCatalog(data.Read("data/maps.txt")); var world = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 });
+        var catalog = new MapCatalog(data.Read("data/maps.txt")); var prototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
+        var world = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 }, runtimePrototype: prototypes.Get);
         MapDocument map = world.Current.Map; int steps = 0;
         int Approach(MapObject obj)
         {
@@ -67,13 +68,15 @@ internal static class BarrierEffectReport
             || !before.SequenceEqual(CheckpointFile.Encode(world.Capture(catalog.Source.Sha256)))) throw new InvalidDataException("Detached projection changed the live world or failed to expose the verified passage.");
         object continuation = TempleContinuationAudit.Create(world, projected.Projection);
         if (!before.SequenceEqual(CheckpointFile.Encode(world.Capture(catalog.Source.Sha256)))) throw new InvalidDataException("Projected continuation mutated the source session.");
+        object? applied = apply ? AppliedTempleContinuation.Create(world, result.Plan, catalog, data) : null;
         MapLayoutWriter.Verify(map);
-        return new { Status = "BARRIER_EFFECT_PROPOSAL_OK", Fixture = "original geometry and real collection; forced successful test lockpick and timer roll; no combat or effects",
+        return new { Status = apply ? "BARRIER_COMMIT_OK" : "BARRIER_EFFECT_PROPOSAL_OK", Fixture = "original geometry and real collection; forced successful test lockpick and timer roll; restricted scenery effect only when requested; no general combat",
             WalkingSteps = steps, Source = new { Map = 3, OwnerId = owner.Header.Id, ItemId = item.Header.Id, item.Key },
             Proposal = result.Plan, Replacement = replacement.Resource, ReachableUnchanged = 1245, world.Location, world.Experience,
             DetachedProjection = new { projected.Projection.Replacement, Reachable = projectedReach.Count, ExitsToElevation2 = projectedExits, AppliedToWorld = false, Persisted = false },
             ProjectedContinuation = continuation,
+            AppliedContinuation = applied,
             Ownership = world.Current.Items.Balance(owner.Key, item.Key), OriginalReconstruction = "verified",
-            CheckpointRoundTrip = "verified", MutationDuringProposal = false, RuntimeEffectsEnabled = false };
+            CheckpointRoundTrip = "verified", MutationDuringProposal = false, RuntimeEffectsEnabled = apply };
     }
 }
