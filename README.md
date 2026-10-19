@@ -203,6 +203,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Arte do inventário: FID original, FRM e paleta](docs/inventory-art-2026-10-19.md)
 - [Ícones em J/B: apresentação e fallback](docs/inventory-icon-ui-2026-10-19.md)
 - [Coleta nas elevações: percurso validado e barreira pendente](docs/temple-collection-2026-10-19.md)
+- [Barreira explosiva: condição e objeto de substituição](docs/temple-barrier-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
