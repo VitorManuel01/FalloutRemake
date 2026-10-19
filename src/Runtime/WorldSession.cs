@@ -8,7 +8,7 @@ using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
-public sealed record WorldArea(MapDocument Map, DoorSession Doors, TempleTravel Travel);
+public sealed record WorldArea(MapDocument Map, DoorSession Doors, TempleTravel Travel, ItemTransferSession Items);
 
 /// <summary>Cached area sessions with transactional destination validation; no general map scripts.</summary>
 public sealed class WorldSession
@@ -22,6 +22,10 @@ public sealed class WorldSession
     public ActorLocation Location => Current.Travel.Location;
     public int Experience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0);
     public IReadOnlyList<WorldArea> Areas => _areas.OrderBy(p => p.Key).Select(p => p.Value).ToArray();
+    public CarriedItem[] Carried => Areas.SelectMany(a => a.Items.Carried).ToArray();
+    public long CarriedCount => Carried.Sum(i => (long)i.Quantity);
+    public ItemTakeStatus TakeItem(string ownerKey, string itemKey, int quantity, bool moving) =>
+        Current.Items.Take(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving);
     public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3)
     {
         _load = load; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
@@ -35,7 +39,7 @@ public sealed class WorldSession
         MapDocument map = _load(id);
         if (map.Prefix.Header.MapIndex != id) throw new InvalidDataException("Loaded MAP ID does not match the requested destination.");
         DoorSession doors = DoorSession.FromMap(map, DoorSession.SupportsTempleDoorAdapter(map));
-        area = new WorldArea(map, doors, new TempleTravel(map, doors));
+        area = new WorldArea(map, doors, new TempleTravel(map, doors), new ItemTransferSession(map));
         _areas.Add(id, area); return area;
     }
     public ExitOption InspectExit(bool moving)
@@ -75,17 +79,17 @@ public sealed class WorldSession
     }
     public void Reset()
     {
-        foreach (WorldArea area in _areas.Values) { area.Doors.Reset(); area.Travel.Reset(); }
+        foreach (WorldArea area in _areas.Values) { area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
     }
     private static string DependenciesHash(MapDocument map) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
         string.Join("\n", map.Dependencies.OrderBy(d => d.Path, StringComparer.Ordinal).Select(d => $"{d.Path}|{d.Size}|{d.Sha256}")))));
-    public WorldCheckpoint Capture(string catalogHash) => new(1, "neutral-v1", catalogHash, InitialMap, CurrentMap,
+    public WorldCheckpoint Capture(string catalogHash) => new(2, "neutral-v2", catalogHash, InitialMap, CurrentMap,
         Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
-            DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture())).ToArray());
+            DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture())).ToArray());
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3)
     {
-        if (checkpoint == null || checkpoint.Version != 1 || checkpoint.Profile != "neutral-v1" || checkpoint.CatalogHash != catalogHash
+        if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2") || checkpoint.CatalogHash != catalogHash
             || checkpoint.InitialMap != initialMap || checkpoint.Areas is not { Length: > 0 and <= 16 })
             throw new InvalidDataException("Checkpoint version, profile or catalog is incompatible.");
         var allowed = allowedMaps.ToHashSet();
@@ -100,6 +104,9 @@ public sealed class WorldSession
             if (saved.SourceHash != area.Map.Source.Sha256 || saved.DependenciesHash != DependenciesHash(area.Map)
                 || saved.Location == null || saved.Location.Map != saved.Map || saved.Session == null)
                 throw new InvalidDataException("Checkpoint source or dependency fingerprints changed.");
+            if (checkpoint.Version == 1 && saved.Taken != null || checkpoint.Version == 2 && saved.Taken == null)
+                throw new InvalidDataException("Checkpoint item state does not match its schema version.");
+            area.Items.Restore(saved.Taken ?? Array.Empty<TakenItem>());
             area.Doors.Restore(saved.Session); area.Travel.Arrive(saved.Location);
         }
         candidate.CurrentMap = checkpoint.CurrentMap;

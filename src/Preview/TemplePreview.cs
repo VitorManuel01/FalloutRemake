@@ -110,6 +110,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckDoorRouteHover();
 				if (_test) await CheckExitRouteHover();
 				if (_test) await CheckRouteCamera();
+				if (_test) await CheckItemCheckpoint();
 				if (_test) await CheckVisualPreferences();
 				if (_capture != null)
 				{
