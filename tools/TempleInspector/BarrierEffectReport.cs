@@ -65,11 +65,14 @@ internal static class BarrierEffectReport
             .Select(o => o.Header.Tile).Distinct().OrderBy(t => t).ToArray();
         if (projectedReach.Count != 1258 || projectedExits.Length != 6 || world.Current.Doors.Navigation(1).Walkable(14322)
             || !before.SequenceEqual(CheckpointFile.Encode(world.Capture(catalog.Source.Sha256)))) throw new InvalidDataException("Detached projection changed the live world or failed to expose the verified passage.");
+        object continuation = TempleContinuationAudit.Create(world, projected.Projection);
+        if (!before.SequenceEqual(CheckpointFile.Encode(world.Capture(catalog.Source.Sha256)))) throw new InvalidDataException("Projected continuation mutated the source session.");
         MapLayoutWriter.Verify(map);
         return new { Status = "BARRIER_EFFECT_PROPOSAL_OK", Fixture = "original geometry and real collection; forced successful test lockpick and timer roll; no combat or effects",
             WalkingSteps = steps, Source = new { Map = 3, OwnerId = owner.Header.Id, ItemId = item.Header.Id, item.Key },
             Proposal = result.Plan, Replacement = replacement.Resource, ReachableUnchanged = 1245, world.Location, world.Experience,
             DetachedProjection = new { projected.Projection.Replacement, Reachable = projectedReach.Count, ExitsToElevation2 = projectedExits, AppliedToWorld = false, Persisted = false },
+            ProjectedContinuation = continuation,
             Ownership = world.Current.Items.Balance(owner.Key, item.Key), OriginalReconstruction = "verified",
             CheckpointRoundTrip = "verified", MutationDuringProposal = false, RuntimeEffectsEnabled = false };
     }
