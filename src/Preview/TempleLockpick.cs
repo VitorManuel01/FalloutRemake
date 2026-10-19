@@ -21,6 +21,7 @@ public partial class TemplePreview
     }
     private LockpickResult UseLockpick(string key)
     {
+        ClearRouteHover();
         DoorUseStatus status = LockpickStatus(key);
         if (status != DoorUseStatus.Ready)
         { NavigationStatus(DoorHint(status)); RefreshDoorAction(); return new LockpickResult(status); }

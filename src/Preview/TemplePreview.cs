@@ -102,6 +102,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckInventoryInspector();
 				if (_test) await CheckNavigationGrid();
 				if (_test) await CheckRouteHover();
+				if (_test) await CheckDoorRouteHover();
 				if (_capture != null)
 				{
 					FocusEntry();

@@ -49,6 +49,7 @@ public partial class TemplePreview
     }
     private DoorUseStatus UseDoor(string key)
     {
+        ClearRouteHover();
         DoorUseStatus status = DoorStatus(key);
         if (status != DoorUseStatus.Ready) { NavigationStatus(DoorHint(status)); RefreshDoorAction(); return status; }
         status = _doors!.Toggle(key, _walker!.CurrentHex, _elevation, _walker.Moving);
@@ -87,18 +88,15 @@ public partial class TemplePreview
     }
     private void ApproachDoor(PreviewObject door)
     {
+        ClearRouteHover();
         SelectObject(door);
         if (_walker == null || _navigation == null) return;
-        DoorUseStatus status = DoorStatus(door.Source.Key);
-        if (status == DoorUseStatus.Locked && LockpickStatus(door.Source.Key) is DoorUseStatus.TooFar or DoorUseStatus.Busy)
-            status = LockpickStatus(door.Source.Key);
+        DoorUseStatus status = DoorApproachStatus(door);
         if (status != DoorUseStatus.TooFar) { NavigationStatus(DoorHint(status)); return; }
         HexReachability reached = _navigation.ReachableFrom(_walker.CurrentHex);
-        int[] candidates = Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(door.Source.Header.Tile, d))
-            .Where(t => t.HasValue && reached.Distance(t.Value) >= 0 && !_navigation.IsExit(t.Value))
-            .Select(t => t!.Value).OrderBy(reached.Distance).ThenBy(t => t).ToArray();
-        if (candidates.Length == 0) { NavigationStatus("Não há caminho até o lado desta porta."); return; }
-        RequestWalk(candidates[0]);
+        int? candidate = ClosestDoorApproach(door, reached, _navigation);
+        if (!candidate.HasValue) { NavigationStatus("Não há caminho até o lado desta porta."); return; }
+        RequestWalk(candidate.Value);
     }
 
     private async Task CheckDoors()
