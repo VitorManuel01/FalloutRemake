@@ -36,6 +36,11 @@ try
         Console.WriteLine(JsonSerializer.Serialize(InventoryArtReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
+    if (args.Length == 3 && args[2] == "--temple-collection-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(TempleCollectionReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
     if (args.Length >= 3 && args[2] == "--script")
     {
         if (args.Length is not (4 or 5) || args.Length == 5 && args[4] != "--instructions")
