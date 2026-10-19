@@ -18,7 +18,7 @@ internal static class PrototypeWeightTests
             {
                 var source = Item(subtype, 17 + subtype); byte[] before = source.Bytes.ToArray();
                 Prototype p = PrototypeCatalog.Read(source, 49);
-                Assert(p.BaseWeight == 17 + subtype && p.Subtype == subtype && before.SequenceEqual(source.Bytes));
+                Assert(p.BaseWeight == 17 + subtype && p.InventoryFid == 42 && p.Fid == 0 && p.Subtype == subtype && before.SequenceEqual(source.Bytes));
             }
         });
         check("zero and maximum signed base weights remain exact while negative weights are refused", () =>
@@ -30,7 +30,8 @@ internal static class PrototypeWeightTests
         check("non-item PRO records expose no item base weight", () =>
         {
             var raw = new byte[36]; BinaryPrimitives.WriteInt32BigEndian(raw, 0x03000001);
-            Assert(PrototypeCatalog.Read(new("proto/walls/synthetic.pro", "synthetic", raw), 0x03000001).BaseWeight == null);
+            var proto = PrototypeCatalog.Read(new("proto/walls/synthetic.pro", "synthetic", raw), 0x03000001);
+            Assert(proto.BaseWeight == null && proto.InventoryFid == null);
         });
     }
     private static void Assert(bool value) { if (!value) throw new Exception("Base weight assertion failed."); }

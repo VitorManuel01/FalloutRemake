@@ -128,6 +128,7 @@ internal static class SelfTests
             VisualPreferencesTests.Run(Check, root);
             ItemTransferTests.Run(Check);
             ItemOriginRouteTests.Run(Check);
+            InventoryArtTests.Run(Check);
             ItemCheckpointTests.Run(Check);
             ItemReturnTests.Run(Check);
             PrototypeWeightTests.Run(Check);

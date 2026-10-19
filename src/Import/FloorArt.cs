@@ -24,16 +24,7 @@ public sealed record FloorArt(int Id, ResourceIdentity Source, ReadOnlyMemory<by
         for (int direction = 0; direction < 6; direction++)
             if (Half(10 + direction * 2) != 0 || Half(22 + direction * 2) != 0 || Word(34 + direction * 4) != 0)
                 throw new InvalidDataException("Directional floor FRM offsets are outside the static profile.");
-        var rgba = new byte[pixels * 4];
-        for (int i = 0; i < pixels; i++)
-        {
-            int index = bytes[HeaderBytes + FrameBytes + i], p = index * 3, target = i * 4;
-            // CE colorPaletteLoad: unmapped entries become black. svga.cc expands six bits by << 2.
-            bool mapped = colors[p] <= 63 && colors[p + 1] <= 63 && colors[p + 2] <= 63;
-            if (mapped)
-                for (int channel = 0; channel < 3; channel++) rgba[target + channel] = (byte)(colors[p + channel] << 2);
-            rgba[target + 3] = index == 0 ? (byte)0 : (byte)255;
-        }
+        byte[] rgba = IndexedPalette.Decode(bytes[(HeaderBytes + FrameBytes)..], colors);
         return new FloorArt(id, ResourceIdentity.From(source), rgba);
     }
 }

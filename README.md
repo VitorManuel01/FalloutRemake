@@ -199,6 +199,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Recipiente vazio: informar scripts e impedimentos](docs/container-status-2026-10-19.md)
 - [Rota de retorno: áreas visitadas e passagens explícitas](docs/item-origin-route-2026-10-19.md)
 - [Bolsa: orientação de retorno entre áreas](docs/bag-return-route-2026-10-19.md)
+- [Arte do inventário: FID original, FRM e paleta](docs/inventory-art-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

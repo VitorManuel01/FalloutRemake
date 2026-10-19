@@ -12,6 +12,7 @@ public sealed record Prototype(int Pid, int Type, int? Subtype, int Fid, int? Sc
     public int ExtendedFlags => Type is 0 or 2 ? BinaryPrimitives.ReadInt32BigEndian(RawBytes.AsSpan(24, 4)) : 0;
     // Serialized base weight; loaded ammunition and runtime modifiers are separate rules.
     public int? BaseWeight => Type == 0 ? BinaryPrimitives.ReadInt32BigEndian(RawBytes.AsSpan(44, 4)) : null;
+    public int? InventoryFid => Type == 0 ? BinaryPrimitives.ReadInt32BigEndian(RawBytes.AsSpan(52, 4)) : null;
 }
 
 /// <summary>Validates PRO layout/length and reads identity/subtype; stats stay raw.</summary>
