@@ -36,7 +36,8 @@ public partial class TemplePreview
         dialog.ApproachRequested = ApproachBagOrigin;
         RefreshBag(); dialog.PopupCentered(new Vector2I(960, 680));
     }
-    private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName,
+    private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName, _campaign.CarriedWeight, _campaign.CarryCapacity,
+        item => _campaign.UnitWeight(item.Map, item.Source),
         (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true),
         item => BagOriginApproach(item).HasValue);
     private int? BagOriginApproach(CarriedItem item)
@@ -82,7 +83,7 @@ public partial class TemplePreview
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             Vector2 viewport = GetViewport().GetVisibleRect().Size;
             if (_bag == null || _bag.RowCount != 1 || _bag.TotalQuantity != 1 || _campaign.CarriedWeight != 1 || _campaign.CarryCapacity != 150 || _bag.SelectedItem?.Source.Header.Id != 106
-                || _bag.SelectedItem.Map != 3 || !_bag.DetailText.Contains(name) || !_bag.DetailText.Contains(MapDisplayName(3))
+                || _bag.SelectedItem.Map != 3 || !_bag.DetailText.Contains(name) || !_bag.DetailText.Contains(MapDisplayName(3)) || !_bag.SummaryText.Contains("1 / 150 lb") || _bag.SelectedWeightText != "1 lb"
                 || !_bag.ReadableLayout || _bag.Size.X > viewport.X - 32 || _bag.Size.Y > viewport.Y - 32 || _campaign.Location != before
                 || ((Button)_hud.FindChild("LoadAction", true, false)).GetGlobalRect().End.X > viewport.X - 15)
                 throw new InvalidDataException("Bag lost original item identity/name from an inactive area or its readable layout.");

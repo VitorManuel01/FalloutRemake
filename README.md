@@ -38,6 +38,9 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   quando o personagem estiver ao alcance. A devolução também é salva com K.
   **Voltar ao recipiente** solicita a aproximação à origem na área atual.
   Depois de chegar, confirme a devolução; a ação não viaja entre mapas.
+  As janelas J/B mostram peso por pilha e carga atual. O perfil usa **Força 5 /
+  capacidade 150 lb**. Retiradas que ultrapassam a carga são recusadas; devolver
+  libera espaço. Itens com peso ainda indisponível não recebem estimativa.
 - **M / Caminhar:** alternar para caminhada na elevação 0; clique no chão para mover
   o marcador azul. Pontos verdes indicam alcance, vermelhos bloqueios e âmbar saídas.
 - **Portas:** no modo Caminhar, clique na primeira porta para se aproximar; depois
@@ -119,7 +122,7 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `INVENTORY_INSPECTOR_OK`, `NAVIGATION_GRID_OK`, `ROUTE_HOVER_OK`,
 `DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK`, `ROUTE_CAMERA_OK`,
 `ITEM_CHECKPOINT_OK`, `CONTAINER_LOOT_OK`, `PLAYER_BAG_OK`, `ITEM_RETURN_OK`,
-`CONTAINER_ROUTE_OK`, `BAG_ORIGIN_OK`,
+`CONTAINER_ROUTE_OK`, `BAG_ORIGIN_OK`, `CARRY_WEIGHT_UI_OK`,
 `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
@@ -188,6 +191,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Bolsa: solicitar aproximação ao recipiente de origem](docs/bag-origin-2026-10-19.md)
 - [Peso base original: layout PRO e validações](docs/item-base-weight-2026-10-19.md)
 - [Carga do perfil de teste: limite, pesos e compatibilidade](docs/carry-profile-2026-10-19.md)
+- [Pesos na interface: pilhas, carga e estados indisponíveis](docs/carry-weight-ui-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

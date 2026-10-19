@@ -39,7 +39,8 @@ public partial class TemplePreview
         if (_loot == null || _lootOwner == null || _campaign == null) return;
         MapObject owner = _campaign.Current.Items.Containers.Single(o => o.Key == _lootOwner);
         _loot.Refresh(OriginalText(owner)?.Name ?? "Recipiente", _campaign.Current.Items.Contents(_lootOwner), OriginalText,
-            (key, qty) => _campaign.CanTakeItem(_lootOwner, key, qty, _walker?.Moving == true), _campaign.CarriedCount, ContainerApproach(owner).HasValue);
+            (key, qty) => _campaign.CanTakeItem(_lootOwner, key, qty, _walker?.Moving == true), _campaign.CarriedCount, ContainerApproach(owner).HasValue,
+            _campaign.CarriedWeight, _campaign.CarryCapacity, item => _campaign.UnitWeight(_campaign.CurrentMap, item));
     }
     private void TakeFromContainer(string key, int quantity)
     {
@@ -82,11 +83,13 @@ public partial class TemplePreview
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             one = (Button)_loot!.FindChild("TakeOneAction", true, false);
             Vector2 viewport = GetViewport().GetVisibleRect().Size;
-            if (one.Disabled || !_loot.ReadableLayout || _loot.Remaining != 1 || _loot.Size.X > viewport.X - 32 || _loot.Size.Y > viewport.Y - 32)
+            if (one.Disabled || !_loot.ReadableLayout || _loot.Remaining != 1 || _loot.SelectedWeightText != "1 lb" || !_loot.LoadText.Contains("0 / 150 lb")
+                || _loot.Size.X > viewport.X - 32 || _loot.Size.Y > viewport.Y - 32)
                 throw new InvalidDataException($"Nearby original item was not readable or collectable: disabled={one.Disabled}, list={_loot.ListSize}, window={_loot.Size}, remaining={_loot.Remaining}, actor={_campaign.Location.Hex}, moving={_walker.Moving}, status={_loot.StatusText}.");
             one.EmitSignal(Button.SignalName.Pressed);
             if (_campaign.CarriedCount != 1 || _campaign.Carried.Single().Source.Header.Id != 106 || _loot.Remaining != 0
-                || !one.Disabled || !_loot.StatusText.Contains("já foi recolhida")) throw new InvalidDataException("Loot action lost quantity/identity or allowed duplication.");
+                || !one.Disabled || !_loot.StatusText.Contains("já foi recolhida") || _loot.SelectedWeightText != "0 lb" || !_loot.LoadText.Contains("1 / 150 lb"))
+                throw new InvalidDataException("Loot action lost quantity/identity/weight or allowed duplication.");
             one.EmitSignal(Button.SignalName.Pressed);
             if (_campaign.CarriedCount != 1 || _campaign.Location != location || _lookup.Count != roots || !_doors.Capture().Doors.SequenceEqual(doors.Doors))
                 throw new InvalidDataException("Repeated or modal collection changed unrelated world state.");

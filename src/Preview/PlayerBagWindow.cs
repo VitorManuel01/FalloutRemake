@@ -9,7 +9,7 @@ namespace FalloutRemake.Preview;
 
 public partial class PlayerBagWindow : AcceptDialog
 {
-    private readonly Tree _items = new() { Name = "CarriedItems", Columns = 3, HideRoot = true, ColumnTitlesVisible = true,
+    private readonly Tree _items = new() { Name = "CarriedItems", Columns = 4, HideRoot = true, ColumnTitlesVisible = true,
         CustomMinimumSize = new Vector2(860, 240), SizeFlagsVertical = Control.SizeFlags.ExpandFill };
     private readonly RichTextLabel _detail = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(860, 100) };
     private readonly Label _summary = new();
@@ -28,6 +28,8 @@ public partial class PlayerBagWindow : AcceptDialog
     public long TotalQuantity { get; private set; }
     public int RowCount => _lines.Count;
     public string DetailText => _detail.Text;
+    public string SummaryText => _summary.Text;
+    public string SelectedWeightText => _items.GetSelected()?.GetText(2) ?? "";
     public string ReturnStatusText => _returnStatus.Text;
     public bool ReadableLayout => _items.Size.X >= 800 && _items.Size.Y >= 200;
     public override void _Ready()
@@ -42,21 +44,25 @@ public partial class PlayerBagWindow : AcceptDialog
         _returnOne.Pressed += () => { if (!_returnOne.Disabled && SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, 1); };
         _returnStack.Pressed += () => { if (!_returnStack.Disabled && SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, SelectedItem.Quantity); };
         body.AddChild(new Label { Text = "K salva a bolsa junto da posição, portas e XP, depois de fechar esta janela." });
-        _items.SetColumnTitle(0, "Item"); _items.SetColumnTitle(1, "Quantidade"); _items.SetColumnTitle(2, "Encontrado em");
+        _items.SetColumnTitle(0, "Item"); _items.SetColumnTitle(1, "Quantidade"); _items.SetColumnTitle(2, "Peso"); _items.SetColumnTitle(3, "Encontrado em");
         _items.SetColumnExpand(1, false); _items.SetColumnCustomMinimumWidth(1, 100);
-        _items.SetColumnExpand(2, false); _items.SetColumnCustomMinimumWidth(2, 220);
+        _items.SetColumnExpand(2, false); _items.SetColumnCustomMinimumWidth(2, 110);
+        _items.SetColumnExpand(3, false); _items.SetColumnCustomMinimumWidth(3, 220);
         _items.ItemSelected += ShowSelected;
     }
-    public void Refresh(CarriedItem[] items, Func<CarriedItem, PrototypeText?> text, Func<int, string> mapName, Func<CarriedItem, int, ItemTakeStatus>? canReturn = null, Func<CarriedItem, bool>? canApproach = null)
+    public void Refresh(CarriedItem[] items, Func<CarriedItem, PrototypeText?> text, Func<int, string> mapName, long? carriedWeight, int capacity,
+        Func<CarriedItem, long?> unitWeight, Func<CarriedItem, int, ItemTakeStatus>? canReturn = null, Func<CarriedItem, bool>? canApproach = null)
     {
         string? selected = SelectedItem == null ? null : RowKey(SelectedItem);
         _text = text; _mapName = mapName; _canReturn = canReturn; _canApproach = canApproach; _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
         TotalQuantity = items.Sum(i => (long)i.Quantity);
         _summary.Text = items.Length == 0 ? "Sua bolsa está vazia." : $"{TotalQuantity} {(TotalQuantity == 1 ? "unidade" : "unidades")} em {items.Length} {(items.Length == 1 ? "pilha" : "pilhas")}";
+        _summary.Text += $" · Carga: {CarryWeightText.Load(carriedWeight, capacity)} · Força {CarryWeight.TestStrength} (perfil de teste)";
         foreach (CarriedItem item in items)
         {
             string key = RowKey(item); _lines.Add(key, item); TreeItem row = _items.CreateItem(root);
-            row.SetText(0, text(item)?.Name ?? "Item sem nome"); row.SetText(1, item.Quantity.ToString()); row.SetText(2, mapName(item.Map)); row.SetMetadata(0, key);
+            row.SetText(0, text(item)?.Name ?? "Item sem nome"); row.SetText(1, item.Quantity.ToString()); row.SetText(2, CarryWeightText.Stack(unitWeight(item), item.Quantity));
+            row.SetText(3, mapName(item.Map)); row.SetMetadata(0, key);
             row.SetTooltipText(0, $"ID {item.Source.Header.Id} · PID {item.Source.Header.Pid} · {item.Source.Key}");
             if (key == selected || select == null) select = row;
         }

@@ -9,7 +9,7 @@ namespace FalloutRemake.Preview;
 
 public partial class ContainerLootWindow : AcceptDialog
 {
-    private readonly Tree _items = new() { Name = "LootItems", Columns = 2, HideRoot = true, ColumnTitlesVisible = true,
+    private readonly Tree _items = new() { Name = "LootItems", Columns = 3, HideRoot = true, ColumnTitlesVisible = true,
         CustomMinimumSize = new Vector2(800, 180), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
     private readonly Label _owner = new() { ClipText = true }, _bag = new();
     private readonly RichTextLabel _description = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(800, 64) },
@@ -25,6 +25,8 @@ public partial class ContainerLootWindow : AcceptDialog
     public Action? ApproachRequested;
     public string SelectedKey { get; private set; } = "";
     public string StatusText => _status.Text;
+    public string LoadText => _bag.Text;
+    public string SelectedWeightText => _items.GetSelected()?.GetText(2) ?? "";
     public long Remaining => _lines.Values.Sum(l => (long)l.Quantity);
     public Vector2 ListSize => _items.Size;
     public bool ReadableLayout => _items.Size.Y >= 180 && _items.Size.X >= 500;
@@ -38,20 +40,23 @@ public partial class ContainerLootWindow : AcceptDialog
         var actions = new HBoxContainer(); actions.AddThemeConstantOverride("separation", 12); body.AddChild(actions);
         actions.AddChild(_approach); actions.AddChild(_one); actions.AddChild(_stack); body.AddChild(_bag);
         _items.SetColumnTitle(0, "Item"); _items.SetColumnTitle(1, "Restante"); _items.SetColumnExpand(1, false); _items.SetColumnCustomMinimumWidth(1, 90);
+        _items.SetColumnTitle(2, "Peso da pilha"); _items.SetColumnExpand(2, false); _items.SetColumnCustomMinimumWidth(2, 140);
         _items.ItemSelected += ShowSelected;
         _one.Pressed += () => { if (!_one.Disabled) TakeRequested?.Invoke(SelectedKey, 1); };
         _stack.Pressed += () => { if (!_stack.Disabled && _lines.TryGetValue(SelectedKey, out var line)) TakeRequested?.Invoke(SelectedKey, line.Quantity); };
         _approach.Pressed += () => { if (!_approach.Disabled) ApproachRequested?.Invoke(); };
     }
-    public void Refresh(string owner, ContainerItem[] lines, Func<MapObject, PrototypeText?> text, Func<string, int, ItemTakeStatus> canTake, long carried, bool canApproach)
+    public void Refresh(string owner, ContainerItem[] lines, Func<MapObject, PrototypeText?> text, Func<string, int, ItemTakeStatus> canTake, long carried, bool canApproach,
+        long? carriedWeight, int capacity, Func<MapObject, long?> unitWeight)
     {
         _owner.Text = owner; _text = text; _canTake = canTake; _canApproach = canApproach;
-        _bag.Text = $"Bolsa: {carried} {(carried == 1 ? "unidade" : "unidades")} · K para salvar depois de fechar";
+        _bag.Text = $"Bolsa: {carried} {(carried == 1 ? "unidade" : "unidades")} · Carga: {CarryWeightText.Load(carriedWeight, capacity)} · K para salvar";
         string selected = SelectedKey; _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
         foreach (ContainerItem line in lines)
         {
             _lines.Add(line.Source.Key, line); TreeItem row = _items.CreateItem(root);
             row.SetText(0, text(line.Source)?.Name ?? "Item sem nome"); row.SetText(1, line.Quantity.ToString()); row.SetMetadata(0, line.Source.Key);
+            row.SetText(2, CarryWeightText.Stack(unitWeight(line.Source), line.Quantity));
             if (line.Source.Key == selected || select == null) select = row;
         }
         SelectedKey = ""; _one.Disabled = _stack.Disabled = _approach.Disabled = true;
@@ -67,7 +72,9 @@ public partial class ContainerLootWindow : AcceptDialog
         _status.Text = Hint(status);
         if (status == ItemTakeStatus.TooFar && !_canApproach) _status.Text = "Sem caminho até o recipiente com os bloqueios atuais.";
         _one.Disabled = status != ItemTakeStatus.Ready;
-        _stack.Disabled = status != ItemTakeStatus.Ready || _canTake(SelectedKey, line.Quantity) != ItemTakeStatus.Ready;
+        ItemTakeStatus stackStatus = _canTake(SelectedKey, line.Quantity);
+        _stack.Disabled = status != ItemTakeStatus.Ready || stackStatus != ItemTakeStatus.Ready;
+        _stack.TooltipText = _stack.Disabled ? Hint(stackStatus) : "Retirar toda a quantidade restante desta pilha";
         _approach.Disabled = status != ItemTakeStatus.TooFar || !_canApproach;
     }
     public static string Hint(ItemTakeStatus status) => status switch
