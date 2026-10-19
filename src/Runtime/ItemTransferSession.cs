@@ -136,6 +136,17 @@ public sealed class ItemTransferSession
         if (use.Phase != ItemUsePhase.Placed) return ItemUseStatus.Empty;
         _uses[id] = use with { Phase = ItemUsePhase.Consumed, RemainingTicks = 0 }; Revision++; return ItemUseStatus.Ready;
     }
+    internal void AdvanceUseTime(int ticks)
+    {
+        if (ticks < 0) throw new ArgumentOutOfRangeException(nameof(ticks));
+        if (ticks == 0) return;
+        bool changed = false;
+        foreach (ItemUseAllocation use in _uses.Values.Where(u => u.Phase == ItemUsePhase.Placed && u.RemainingTicks > 0).ToArray())
+        {
+            _uses[use.Id] = use with { RemainingTicks = ticks >= use.RemainingTicks ? 0 : use.RemainingTicks - ticks }; changed = true;
+        }
+        if (changed) Revision++;
+    }
     public void Restore(TakenItem[] saved) => Restore(saved, Array.Empty<ItemUseAllocation>());
     public void Restore(TakenItem[] saved, ItemUseAllocation[] uses)
     {

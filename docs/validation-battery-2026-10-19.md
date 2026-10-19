@@ -1,7 +1,7 @@
 # Marco 48 — bateria local reproduzível sem janela
 
-`tools/Validate-Temple.ps1` reúne dez etapas: build da prévia, build do inspector,
-testes sintéticos, seis relatórios reais e integração Godot com `--headless`.
+`tools/Validate-Temple.ps1` reúne onze etapas: build da prévia, build do inspector,
+testes sintéticos, sete relatórios reais e integração Godot com `--headless`.
 Os caminhos de Godot e dados são obrigatórios; não procura outras instalações.
 
 ```powershell
@@ -23,7 +23,7 @@ gráfico. Para capturas, continua valendo o runner de desktop isolado já existe
 Não execute simultaneamente com outra suíte da prévia: os slots de teste são
 compartilhados entre validadores, embora separados dos dados reais do usuário.
 
-Validação desta versão: dez etapas aprovadas, cerca de 24 segundos no total,
+Validação original do marco 48: dez etapas aprovadas, cerca de 24 segundos no total,
 163 grupos sintéticos, todos os seis relatórios reais e integração completa.
 O teste encontrou e corrigiu a necessidade de reter o handle do processo no
 Windows PowerShell para registrar corretamente o código de saída.

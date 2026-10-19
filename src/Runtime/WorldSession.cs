@@ -29,6 +29,7 @@ public sealed class WorldSession
     public IReadOnlyList<WorldArea> Areas => _areas.OrderBy(p => p.Key).Select(p => p.Value).ToArray();
     public CarriedItem[] Carried => Areas.SelectMany(a => a.Items.Carried).ToArray();
     public WorldItemUse[] ItemUses => Areas.SelectMany(a => a.Items.CaptureUses().Select(u => new WorldItemUse(a.Map.Prefix.Header.MapIndex, u))).ToArray();
+    public WorldItemUse[] DueItemUses => ItemUses.Where(u => u.Allocation.Phase == ItemUsePhase.Placed && u.Allocation.RemainingTicks == 0).ToArray();
     public long CarriedCount => Carried.Sum(i => (long)i.Quantity);
     public int CarryCapacity => CarryWeight.TestCapacity;
     public long? UnitWeight(int sourceMap, MapObject item) => _areas.TryGetValue(sourceMap, out WorldArea? area)
@@ -81,6 +82,21 @@ public sealed class WorldSession
             ItemUseStatus.LimitReached => new(ExplosiveCommitStatus.LimitReached),
             _ => new(ExplosiveCommitStatus.InvalidPlan)
         };
+    }
+    // Explicit logical ticks only. Frame time, map departure and damage are not wired to this clock.
+    public WorldItemUse[] AdvanceUseTime(int ticks)
+    {
+        if (ticks < 0) throw new ArgumentOutOfRangeException(nameof(ticks));
+        foreach (WorldArea area in Areas) area.Items.AdvanceUseTime(ticks);
+        return DueItemUses;
+    }
+    internal ItemUseStatus CompleteDueUse(Guid id)
+    {
+        WorldItemUse? use = ItemUses.SingleOrDefault(u => u.Allocation.Id == id);
+        if (use == null) return ItemUseStatus.NoItem;
+        if (use.Allocation.Phase != ItemUsePhase.Placed) return ItemUseStatus.Empty;
+        if (use.Allocation.RemainingTicks != 0) return ItemUseStatus.InvalidState;
+        return _areas[use.SourceMap].Items.Consume(id);
     }
     public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3)
     {
