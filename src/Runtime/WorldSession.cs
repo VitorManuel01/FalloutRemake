@@ -13,6 +13,7 @@ public sealed record WorldArea(MapDocument Map, DoorSession Doors, TempleTravel 
 public sealed record WorldItemUse(int SourceMap, ItemUseAllocation Allocation);
 public enum ExplosiveCommitStatus { Ready, InvalidPlan, StalePlan, Busy, NoItem, Unsupported, Unavailable, AtExit, Duplicate, LimitReached }
 public sealed record ExplosiveCommitResult(ExplosiveCommitStatus Status, WorldItemUse? Use = null);
+public sealed record UseTimeAdvance(int AppliedTicks, int UnusedTicks, WorldItemUse[] Due);
 
 /// <summary>Cached area sessions with transactional destination validation; no general map scripts.</summary>
 public sealed class WorldSession
@@ -84,11 +85,13 @@ public sealed class WorldSession
         };
     }
     // Explicit logical ticks only. Frame time, map departure and damage are not wired to this clock.
-    public WorldItemUse[] AdvanceUseTime(int ticks)
+    public UseTimeAdvance AdvanceUseTime(int ticks)
     {
         if (ticks < 0) throw new ArgumentOutOfRangeException(nameof(ticks));
-        foreach (WorldArea area in Areas) area.Items.AdvanceUseTime(ticks);
-        return DueItemUses;
+        int untilNext = ItemUses.Where(u => u.Allocation.Phase == ItemUsePhase.Placed).Select(u => u.Allocation.RemainingTicks).DefaultIfEmpty(int.MaxValue).Min();
+        int applied = Math.Min(ticks, untilNext);
+        foreach (WorldArea area in Areas) area.Items.AdvanceUseTime(applied);
+        return new(applied, ticks - applied, DueItemUses);
     }
     internal ItemUseStatus CompleteDueUse(Guid id)
     {

@@ -28,7 +28,7 @@ internal static class ItemUseCheckpointReport
         restored.AdvanceUseTime(175);
         var elapsed = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 },
             CheckpointFile.Decode(CheckpointFile.Encode(restored.Capture(catalog.Source.Sha256))), catalog.Source.Sha256);
-        if (elapsed.ItemUses.Single().Allocation.RemainingTicks != 425 || elapsed.AdvanceUseTime(425).Length != 1 || elapsed.CompleteDueUse(use.Id) != ItemUseStatus.Ready)
+        if (elapsed.ItemUses.Single().Allocation.RemainingTicks != 425 || elapsed.AdvanceUseTime(425).Due.Length != 1 || elapsed.CompleteDueUse(use.Id) != ItemUseStatus.Ready)
             throw new InvalidDataException("Partially elapsed logical use failed to complete.");
         var consumed = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 },
             CheckpointFile.Decode(CheckpointFile.Encode(elapsed.Capture(catalog.Source.Sha256))), catalog.Source.Sha256);
