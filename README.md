@@ -165,6 +165,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Validação isolada: executar sem abrir janelas no desktop ativo](docs/quiet-validation-2026-10-18.md)
 - [Enquadrar percurso: câmera, espaço livre e validação](docs/route-camera-2026-10-19.md)
 - [Preferências visuais: persistência local e reabertura](docs/visual-preferences-2026-10-19.md)
+- [Fontes dos itens: transferência e conservação de quantidades](docs/item-transfer-domain-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

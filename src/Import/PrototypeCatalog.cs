@@ -9,6 +9,7 @@ public sealed record Prototype(int Pid, int Type, int? Subtype, int Fid, int? Sc
     ResourceIdentity Resource, byte[] RawBytes)
 {
     public int MessageId => BinaryPrimitives.ReadInt32BigEndian(RawBytes.AsSpan(4, 4));
+    public int ExtendedFlags => Type is 0 or 2 ? BinaryPrimitives.ReadInt32BigEndian(RawBytes.AsSpan(24, 4)) : 0;
 }
 
 /// <summary>Validates PRO layout/length and reads identity/subtype; stats stay raw.</summary>
