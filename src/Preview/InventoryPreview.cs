@@ -20,6 +20,7 @@ public partial class TemplePreview
     {
         if (InspectorOpen) { CloseInventory(); return; }
         if (_selected == null || !CanInspectInventory(_selected.Source)) return;
+        ClearRouteHover();
         GetTree().Root.GuiEmbedSubwindows = true;
         var dialog = new InventoryInspector { Size = new Vector2I(1000, 620), Theme = _hud.GetChild<Control>(0).Theme };
         _inventory = dialog; _hud.AddChild(dialog);

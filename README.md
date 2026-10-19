@@ -51,6 +51,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   A opção é visual; os bloqueios e a seleção dos objetos permanecem.
 - **G / Grade:** mostra ou oculta os hexágonos de navegação. Caminhada e traçado
   continuam ativos sem a grade; combine com O para ver o piso original.
+- **Apontar para o chão no modo Caminhar:** mostra o percurso e os passos antes
+  do clique. A prévia não move o personagem e também funciona sem a grade.
 
 Paredes são volumes de referência nos hexes originais. Alturas, dimensões e cores
 são provisórias. O bloqueio usa FID/flags dos objetos, sem depender do piso ou dos
@@ -93,7 +95,7 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `LOCKPICK_PREVIEW_OK`, `TRAVEL_PREVIEW_OK`, `WORLD_PREVIEW_OK` e
 `CHECKPOINT_PREVIEW_OK`, `CHARACTER_CAMERA_OK`, `FLOOR_ART_PREVIEW_OK`,
 `STOP_WALKING_OK`, `WALL_OCCLUSION_OK`, `OBJECT_TEXT_OK`,
-`INVENTORY_INSPECTOR_OK`, `NAVIGATION_GRID_OK` / `IMPORT_SMOKE_OK`,
+`INVENTORY_INSPECTOR_OK`, `NAVIGATION_GRID_OK`, `ROUTE_HOVER_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Para capturar a cena, execute sem `--headless` e acrescente
@@ -138,6 +140,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Nomes e descrições: mensagens e idioma](docs/object-text-2026-10-18.md)
 - [Inventário original: consulta e limites](docs/inventory-inspector-2026-10-18.md)
 - [Grade de navegação: visualização opcional](docs/navigation-grid-2026-10-18.md)
+- [Prévia do percurso: estados e controles](docs/route-hover-2026-10-18.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

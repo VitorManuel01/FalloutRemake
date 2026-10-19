@@ -23,6 +23,8 @@ public partial class PreviewHud : CanvasLayer
     private readonly Label _counts = new();
     private readonly OptionButton _elevation = new() { CustomMinimumSize = new Vector2(0, 32) };
     private readonly Label _navigationStatus = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private string _navigationMessage = "";
+    private string? _routeHint;
     private readonly Button _stop = new() { Name = "StopWalkingAction", Text = "Parar [Esc]", Disabled = true };
     private readonly CheckButton _grid = new() { Name = "NavigationGridAction", Text = "Grade [G]", ButtonPressed = true };
     private readonly Button _walkMode = new() { Text = "Caminhar [M]", CustomMinimumSize = new Vector2(0, 30) };
@@ -51,9 +53,10 @@ public partial class PreviewHud : CanvasLayer
         ["floor"] = true, ["wall"] = true, ["scenery"] = true, ["critter"] = true,
         ["exit"] = true, ["marker"] = false, ["hidden"] = false
     };
-    public bool MouseOverPanel => GetViewport().GetMousePosition().X > GetViewport().GetVisibleRect().Size.X - 306
-        || GetViewport().GetMousePosition().Y < 78 || GetViewport().GetMousePosition().Y > GetViewport().GetVisibleRect().Size.Y - 56
-        || (_navigationPanel?.GetGlobalRect().HasPoint(GetViewport().GetMousePosition()) ?? false);
+    public bool MouseOverPanel => MouseOverPanelAt(GetViewport().GetMousePosition());
+    public bool MouseOverPanelAt(Vector2 screen) => screen.X > GetViewport().GetVisibleRect().Size.X - 306
+        || screen.Y < 78 || screen.Y > GetViewport().GetVisibleRect().Size.Y - 56
+        || (_navigationPanel?.GetGlobalRect().HasPoint(screen) ?? false);
 
     public override void _Ready()
     {
@@ -154,7 +157,7 @@ public partial class PreviewHud : CanvasLayer
     {
         _walkMode.Disabled = !available; _resetWalker.Disabled = false;
         _walkMode.Text = walkingMode ? "Inspecionar [M]" : "Caminhar [M]";
-        _navigationStatus.Text = status;
+        _navigationMessage = status; _navigationStatus.Text = _routeHint ?? status;
     }
     public void Select(string title, string text) { _selectionTitle.Text = title; _details.Text = text; }
     public string SelectionHeading => _selectionTitle.Text;
@@ -162,6 +165,8 @@ public partial class PreviewHud : CanvasLayer
     public void InventoryAction(bool enabled) => _inventory.Disabled = !enabled;
     public void NavigationGrid(bool enabled) => _grid.SetPressedNoSignal(enabled);
     public bool NavigationFits => _navigationPanel != null && _navigationPanel.GetGlobalRect().End.Y <= GetViewport().GetVisibleRect().Size.Y - 56;
+    public string? RouteHintText => _routeHint;
+    public void RouteHint(string? text) { _routeHint = text; _navigationStatus.Text = text ?? _navigationMessage; }
     public void DoorAction(bool enabled, bool open, string hint)
     {
         _doorUse.Disabled = !enabled; _doorUse.Text = open ? "Fechar porta [U]" : "Abrir porta [U]";

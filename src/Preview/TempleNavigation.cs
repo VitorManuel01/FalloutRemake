@@ -22,6 +22,7 @@ public partial class TemplePreview
     private void BuildNavigation()
     {
         using var resources = new ResourceScope();
+        ClearRouteHover(); _hoverLine = null; _hoverTarget = null;
         _walker = null; _navigation = null; _reachable = null; _walkerNode = null;
         _navigationOverlay = null; _routeVisual = null; _walkMode = false;
         ApplyDoorVisuals();
@@ -46,6 +47,7 @@ public partial class TemplePreview
         _routeVisual = new MeshInstance3D { Name = "PlannedRoute", Visible = false,
             MaterialOverride = resources.Own(new StandardMaterial3D { AlbedoColor = new Color("c47920"), NoDepthTest = true, CullMode = BaseMaterial3D.CullModeEnum.Disabled,
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded }) }; _world.AddChild(_routeVisual);
+        BuildRouteHover(resources);
         RefreshReachability(); UpdateWalkerPosition();
         ApplyDoorVisuals(); RefreshDoorAction();
         NavigationStatus($"Personagem no hex {start} · M para caminhar · {_reachable!.Count} hexes alcançáveis");
@@ -61,6 +63,7 @@ public partial class TemplePreview
     private void RefreshReachability()
     {
         if (_navigation == null || _walker == null || _layout == null) return;
+        ClearRouteHover();
         using var resources = new ResourceScope();
         _reachable = _navigation.ReachableFrom(_walker.CurrentHex);
         if (_navigationOverlay != null) { _world.RemoveChild(_navigationOverlay); _navigationOverlay.QueueFree(); }
@@ -88,6 +91,7 @@ public partial class TemplePreview
     private void ToggleWalkMode()
     {
         if (_walker == null) return;
+        ClearRouteHover();
         _walkMode = !_walkMode;
         _navigationOverlay!.Visible = _walkMode && _showNavigationGrid;
         if (_routeVisual != null) _routeVisual.Visible = _walkMode && _routeVisual.Mesh != null;
@@ -107,16 +111,13 @@ public partial class TemplePreview
     {
         if (_layout == null || _walker == null) return;
         if (TryPickDoor(screen) is PreviewObject door) { ApproachDoor(door); return; }
-        Vector3 origin = _camera.ProjectRayOrigin(screen), direction = _camera.ProjectRayNormal(screen);
-        if (Math.Abs(direction.Y) < .001f) return;
-        Vector3 point = origin + direction * (-origin.Y / direction.Y);
-        int? hex = FalloutGrid.HexAt(new GroundPoint(point.X + _layout.Origin.X, point.Z + _layout.Origin.Z));
-        RequestWalk(hex ?? -1);
+        RequestWalk(GroundHexAtScreen(screen) ?? -1);
     }
 
     private HexRoute RequestWalk(int target)
     {
         if (_walker == null || _navigation == null) return new(RouteStatus.OutsideGrid, Array.Empty<int>());
+        ClearRouteHover();
         HexRoute route = _walker.WalkTo(target);
         string message = route.Status switch
         {
@@ -144,16 +145,21 @@ public partial class TemplePreview
     private void DrawRoute(int[] tiles)
     {
         if (_layout == null || _routeVisual == null) return;
-        using var mesh = new ImmediateMesh(); mesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);
+        using var mesh = CreateRouteMesh(tiles, .16f);
+        _routeVisual.Mesh = mesh; _routeVisual.Visible = _walkMode;
+    }
+    private ImmediateMesh CreateRouteMesh(int[] tiles, float height)
+    {
+        var mesh = new ImmediateMesh(); mesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);
         for (int i = 1; i < tiles.Length; i++)
         {
-            Vector3 start = Point(FalloutGrid.HexCenter(tiles[i - 1]) - _layout.Origin, .16f);
-            Vector3 end = Point(FalloutGrid.HexCenter(tiles[i]) - _layout.Origin, .16f);
+            Vector3 start = Point(FalloutGrid.HexCenter(tiles[i - 1]) - _layout!.Origin, height);
+            Vector3 end = Point(FalloutGrid.HexCenter(tiles[i]) - _layout.Origin, height);
             Vector3 direction = (end - start).Normalized(), side = new Vector3(-direction.Z, 0, direction.X) * .06f;
             mesh.SurfaceAddVertex(start - side); mesh.SurfaceAddVertex(start + side); mesh.SurfaceAddVertex(end + side);
             mesh.SurfaceAddVertex(start - side); mesh.SurfaceAddVertex(end + side); mesh.SurfaceAddVertex(end - side);
         }
-        mesh.SurfaceEnd(); _routeVisual.Mesh = mesh; _routeVisual.Visible = _walkMode;
+        mesh.SurfaceEnd(); return mesh;
     }
 
     private void AdvanceWalker(double delta)

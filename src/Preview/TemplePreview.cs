@@ -101,6 +101,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckObjectText();
 				if (_test) await CheckInventoryInspector();
 				if (_test) await CheckNavigationGrid();
+				if (_test) await CheckRouteHover();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -252,6 +253,11 @@ public partial class TemplePreview : Node3D
 		_focus += (right * x + down * z) * (float)delta * _camera.Size * .55f;
 		UpdateCamera();
 		UpdateWallOcclusion();
+		if (!_checkingNavigation)
+		{
+			if (Input.IsMouseButtonPressed(MouseButton.Right)) ClearRouteHover();
+			else RouteHoverAtScreen(GetViewport().GetMousePosition());
+		}
 	}
 	public override void _UnhandledInput(InputEvent input)
 	{
