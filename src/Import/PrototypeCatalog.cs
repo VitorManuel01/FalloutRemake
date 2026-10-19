@@ -10,6 +10,8 @@ public sealed record Prototype(int Pid, int Type, int? Subtype, int Fid, int? Sc
 {
     public int MessageId => BinaryPrimitives.ReadInt32BigEndian(RawBytes.AsSpan(4, 4));
     public int ExtendedFlags => Type is 0 or 2 ? BinaryPrimitives.ReadInt32BigEndian(RawBytes.AsSpan(24, 4)) : 0;
+    // Serialized base weight; loaded ammunition and runtime modifiers are separate rules.
+    public int? BaseWeight => Type == 0 ? BinaryPrimitives.ReadInt32BigEndian(RawBytes.AsSpan(44, 4)) : null;
 }
 
 /// <summary>Validates PRO layout/length and reads identity/subtype; stats stay raw.</summary>
@@ -78,6 +80,8 @@ public sealed class PrototypeCatalog
         }
         if (resource.Bytes.Length != length)
             throw new InvalidDataException($"PRO length mismatch in {resource.Path}: expected {length}, got {resource.Bytes.Length}.");
+        if (type == 0 && BinaryPrimitives.ReadInt32BigEndian(resource.Bytes.AsSpan(44, 4)) < 0)
+            throw new InvalidDataException($"Negative item base weight in {resource.Path}.");
         return new Prototype(pid, type, subtype, common[2], sid, ResourceIdentity.From(resource), (byte[])resource.Bytes.Clone());
     }
 }

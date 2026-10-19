@@ -42,10 +42,12 @@ internal static class ItemTransferReport
                 return new
                 {
                     owner.Key, owner.Header.Id, owner.Header.Pid, owner.Header.Tile, owner.Header.Elevation, Name = Name(owner),
+                    BaseWeight = map.Prototypes.Single(p => p.Pid == owner.Header.Pid).BaseWeight,
                     InitialApproachSteps = owner.Header.Elevation == 0 ? Distance(owner, reach) : -1,
                     FirstDoorOpenApproachSteps = owner.Header.Elevation == 0 ? Distance(owner, openedReach) : -1,
                     Items = items.Contents(owner.Key).Select(line => new { line.Source.Key, line.Source.Header.Id, line.Source.Header.Pid,
-                        Name = Name(line.Source), line.Quantity, AtReachStatus = items.CanTake(owner.Key, line.Source.Key, line.Quantity, actor, nav, false).ToString() })
+                        Name = Name(line.Source), line.Quantity, BaseWeight = map.Prototypes.Single(p => p.Pid == line.Source.Header.Pid).BaseWeight,
+                        AtReachStatus = items.CanTake(owner.Key, line.Source.Key, line.Quantity, actor, nav, false).ToString() })
                 };
             }).ToArray(), ScriptedContainers = items.Containers.Count(o => o.Header.Sid >= 0 || o.Header.ScriptIndex >= 0),
             RealTransfer = new { OwnerId = pot.Header.Id, ItemId = powder.Source.Header.Id, powder.Source.Header.Pid,
