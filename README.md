@@ -28,6 +28,10 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 - **I / Inventário:** consultar o conteúdo original do objeto selecionado.
   Exibe hierarquia, quantidades e descrições; não transfere itens. A janela
   suspende o avanço da caminhada enquanto está aberta.
+- **J / Recolher:** abre o recipiente selecionado com as quantidades restantes
+  nesta sessão. Use **Aproximar-se**, aguarde chegar e abra novamente para retirar
+  uma unidade ou a pilha. A bolsa é salva com K e restaurada com R; reiniciar
+  a prévia esvazia a bolsa e restaura os recipientes.
 - **M / Caminhar:** alternar para caminhada na elevação 0; clique no chão para mover
   o marcador azul. Pontos verdes indicam alcance, vermelhos bloqueios e âmbar saídas.
 - **Portas:** no modo Caminhar, clique na primeira porta para se aproximar; depois
@@ -106,7 +110,7 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `STOP_WALKING_OK`, `WALL_OCCLUSION_OK`, `OBJECT_TEXT_OK`,
 `INVENTORY_INSPECTOR_OK`, `NAVIGATION_GRID_OK`, `ROUTE_HOVER_OK`,
 `DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK`, `ROUTE_CAMERA_OK`,
-`VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
+`ITEM_CHECKPOINT_OK`, `CONTAINER_LOOT_OK`, `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo
@@ -167,6 +171,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Preferências visuais: persistência local e reabertura](docs/visual-preferences-2026-10-19.md)
 - [Fontes dos itens: transferência e conservação de quantidades](docs/item-transfer-domain-2026-10-19.md)
 - [Itens no mundo: checkpoint v2 e compatibilidade com v1](docs/item-checkpoint-2026-10-19.md)
+- [Coleta: aproximação, quantidades restantes e janela](docs/container-loot-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

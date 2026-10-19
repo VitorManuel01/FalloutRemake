@@ -69,6 +69,7 @@ public partial class TemplePreview : Node3D
 			_hud.InventoryRequested = OpenInventory;
 			_hud.NavigationGridRequested = ChangeNavigationGrid;
 			_hud.FrameRouteRequested = FrameRoute;
+			_hud.LootRequested = OpenLoot;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -111,6 +112,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckExitRouteHover();
 				if (_test) await CheckRouteCamera();
 				if (_test) await CheckItemCheckpoint();
+				if (_test) await CheckContainerLoot();
 				if (_test) await CheckVisualPreferences();
 				if (_capture != null)
 				{
@@ -148,6 +150,7 @@ public partial class TemplePreview : Node3D
 	private void BuildWorld()
 	{
 		if (_map == null) return;
+		CloseLoot();
 		using var resources = new ResourceScope();
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
 		_lookup.Clear(); _bodies.Clear(); _selected = null;
@@ -275,6 +278,7 @@ public partial class TemplePreview : Node3D
 		if (InspectorOpen)
 		{
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.I }) CloseInventory();
+			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.J }) CloseLoot();
 			return;
 		}
 		if (input is InputEventKey { Pressed: true, Echo: false } key)
@@ -296,6 +300,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.I) OpenInventory();
 			if (key.PhysicalKeycode == Key.G) ChangeNavigationGrid(!_showNavigationGrid);
 			if (key.PhysicalKeycode == Key.T) FrameRoute();
+			if (key.PhysicalKeycode == Key.J) OpenLoot();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;
@@ -386,12 +391,14 @@ public partial class TemplePreview : Node3D
 		if (original != null) text += $"\n\nTexto original · {_objectText!.Language}\n{original.Source.Path}\nMensagem  {original.MessageId}";
 		_hud.Select(original?.Name is { } name ? $"{ShortName(name)} · {title} · objeto {h.Id}" : $"{title} · objeto {h.Id}", text);
 		_hud.InventoryAction(CanInspectInventory(obj.Source));
+		RefreshLootAction();
 		RefreshDoorAction();
 	}
 	private void ClearSelection()
 	{
 		_selected = null;
 		_hud.InventoryAction(false);
+		RefreshLootAction();
 		if (_highlight != null) _highlight.Visible = false;
 		if (_arrow != null) _arrow.Visible = false;
 		_hud.Select("Nenhum elemento selecionado", "Clique em um volume para consultar os IDs e a posição do objeto original.\n\nAs formas e alturas são provisórias.");

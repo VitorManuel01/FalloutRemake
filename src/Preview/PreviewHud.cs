@@ -28,6 +28,7 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _stop = new() { Name = "StopWalkingAction", Text = "Parar [Esc]", Disabled = true };
     private readonly CheckButton _grid = new() { Name = "NavigationGridAction", Text = "Grade [G]", ButtonPressed = true };
     private readonly Button _frameRoute = new() { Name = "FrameRouteAction", Text = "Ver percurso [T]", Disabled = true };
+    private readonly Button _loot = new() { Name = "LootAction", Text = "Recolher [J]", Disabled = true };
     private readonly Button _walkMode = new() { Text = "Caminhar [M]", CustomMinimumSize = new Vector2(0, 30) };
     private readonly Button _resetWalker = new() { Text = "Reiniciar prévia", CustomMinimumSize = new Vector2(0, 30) };
     private readonly Button _doorUse = new() { Text = "Usar porta [U]", Disabled = true, CustomMinimumSize = new Vector2(0, 30) };
@@ -47,6 +48,7 @@ public partial class PreviewHud : CanvasLayer
     public Action? InventoryRequested;
     public Action<bool>? NavigationGridRequested;
     public Action? FrameRouteRequested;
+    public Action? LootRequested;
     public Action? OpenRequested, FrameRequested, EntryRequested, CycleRequested;
     public Action<int>? ElevationRequested;
     public Action<string, bool>? FilterChanged;
@@ -137,6 +139,7 @@ public partial class PreviewHud : CanvasLayer
         legend.AddThemeFontSizeOverride("font_size", 12); guide.AddChild(legend);
         _grid.Toggled += enabled => NavigationGridRequested?.Invoke(enabled); guide.AddChild(_grid);
         _frameRoute.Pressed += () => FrameRouteRequested?.Invoke(); guide.AddChild(_frameRoute);
+        _loot.Pressed += () => LootRequested?.Invoke(); guide.AddChild(_loot);
 
         var footer = Panel(root, 16, -52, -16, -12, true);
         footer.AnchorTop = 1; footer.AnchorBottom = 1;
@@ -168,6 +171,7 @@ public partial class PreviewHud : CanvasLayer
     public void InventoryAction(bool enabled) => _inventory.Disabled = !enabled;
     public void NavigationGrid(bool enabled) => _grid.SetPressedNoSignal(enabled);
     public void FrameRouteAction(bool enabled) => _frameRoute.Disabled = !enabled;
+    public void LootAction(bool enabled) => _loot.Disabled = !enabled;
     public Rect2 CameraSafeRect => new(32, 94, Math.Max(0, GetViewport().GetVisibleRect().Size.X - 354),
         Math.Max(0, (_navigationPanel?.GetGlobalRect().Position.Y ?? GetViewport().GetVisibleRect().Size.Y - 272) - 110));
     public bool NavigationFits => _navigationPanel != null && _navigationPanel.GetGlobalRect().End.Y <= GetViewport().GetVisibleRect().Size.Y - 56;
