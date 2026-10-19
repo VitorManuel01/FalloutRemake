@@ -231,6 +231,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Entidades de teste: obstáculos, luzes e recipientes com estados visuais](docs/entity-readability-2026-10-19.md)
 - [Checkpoint v4: substituição de cenário e consumo na mesma operação](docs/barrier-checkpoint-v4-2026-10-19.md)
 - [Efeito aplicado: ida à elevação 2, coleta e retorno com checkpoint](docs/applied-temple-continuation-2026-10-19.md)
+- [Prévia aplicada: passagem aberta, identidade e checkpoints no Godot](docs/applied-barrier-preview-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

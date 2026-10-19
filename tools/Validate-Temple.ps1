@@ -68,7 +68,7 @@ try {
     }
     # No graphical fallback: this command always passes --headless.
     Invoke-ValidationStep 'godot-preview' $godotPath @('--headless', '--path', $projectRoot, '--', '--data-dir', $dataPath, '--preview-test') @(
-        'PREVIEW_TEST_OK', 'ITEM_CHECKPOINT_OK', 'BAG_ORIGIN_OK', 'SCRIPTED_CONTAINER_OK', 'INVENTORY_ART_UI_OK', 'ELEVATION_WALK_GUARD_OK', 'PLACED_USE_PREVIEW_OK', 'TEMPLE_EXPLOSIVE_PREVIEW_AUDIT_OK', 'ENTITY_READABILITY_OK', 'VISUAL_PREFERENCES_OK')
+        'PREVIEW_TEST_OK', 'ITEM_CHECKPOINT_OK', 'BAG_ORIGIN_OK', 'SCRIPTED_CONTAINER_OK', 'INVENTORY_ART_UI_OK', 'ELEVATION_WALK_GUARD_OK', 'PLACED_USE_PREVIEW_OK', 'TEMPLE_EXPLOSIVE_PREVIEW_AUDIT_OK', 'APPLIED_BARRIER_PREVIEW_OK', 'ENTITY_READABILITY_OK', 'VISUAL_PREFERENCES_OK')
     $manifest.Passed = $true
 }
 catch { $manifest.Failure = $_.Exception.Message }

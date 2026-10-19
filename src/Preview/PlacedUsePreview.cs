@@ -123,13 +123,10 @@ public partial class TemplePreview
             SelectObject(_layout!.Objects.Single(o => o.Source.Key == effect.Plan!.TargetKey));
             NavigationStatus("Barreira no alcance · alternativa: 1.258 hexes · nenhum efeito aplicado");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "barrier-proposal.png"));
-            if (_campaign.CompleteDueUse(plan.Id) != ItemUseStatus.Ready) throw new InvalidDataException("Logical fixture resolution failed.");
-            RefreshPlacedUses();
-            if (_placedUseNodes.Count != 0 || _campaign.CarriedCount != 0 || _lookup.Count != roots || _reachable!.Count != reach || _campaign.Location != actor)
-                throw new InvalidDataException("Consumed fixture retained a visual or changed original navigation/actor.");
+            await CheckAppliedBarrierPreview(effect.Plan!, roots, owner.Key, item.Key);
             foreach (WorldArea area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
-            GD.Print("TEMPLE_EXPLOSIVE_PREVIEW_AUDIT_OK: actual walk, known doors, controlled successful lockpick, elevation exit, real pot 358/item 364 collection, placement near barrier, partial timer checkpoint, due effect target and detached 1258-hex projection; original barrier unchanged, no runtime effects.");
-            GD.Print("PLACED_USE_PREVIEW_OK: real collected pot 358/item 364 fixture; runtime GUID/transform, source identity separation, nonblocking geometry, scenery filter, partial timer, checkpoint, elevation isolation, due label and consumed removal verified; no activation UI, real-time clock or damage.");
+            GD.Print("TEMPLE_EXPLOSIVE_PREVIEW_AUDIT_OK: actual walk, controlled lockpick, real explosive collection, partial checkpoint, due target and read-only projection verified before the applied-effect audit; original source records retained, no general combat.");
+            GD.Print("PLACED_USE_PREVIEW_OK: real collected pot 358/item 364; GUID/transform, identity separation, nonblocking geometry, filter, timer, checkpoint, elevation isolation, due label and consumed visual removal through validated barrier effect; no activation UI or real-time clock.");
         }
         finally
         {

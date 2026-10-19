@@ -167,6 +167,7 @@ public partial class TemplePreview : Node3D
 		CloseLoot(); CloseBag();
 		using var resources = new ResourceScope();
 		_placedUseLayer = null; _placedUseNodes.Clear();
+		_replacementNodes.Clear();
 		_containerVisuals.Clear(); _containerVisualRevision = -1;
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
 		_lookup.Clear(); _bodies.Clear(); _selected = null;
@@ -219,6 +220,7 @@ public partial class TemplePreview : Node3D
 		SetOriginalFloor(_useOriginalFloor);
 		RefreshPlacedUses();
 		RefreshContainerVisuals(true);
+		BuildAppliedSceneryVisuals();
 	}
 
 	private static Vector3 Dimensions(PreviewKind kind) => kind switch
@@ -252,6 +254,7 @@ public partial class TemplePreview : Node3D
 	}
 	private bool VisibleObject(PreviewObject obj)
 	{
+		if (_campaign?.Current.Scenery.Replaces(obj.Source.Key) == true) return false;
 		string filter = obj.Kind switch { PreviewKind.Wall => "wall", PreviewKind.Door or PreviewKind.Exit => "exit",
 			PreviewKind.Critter => "critter", PreviewKind.Marker => "marker", _ => "scenery" };
 		return _hud.Filters[filter] && (!obj.Hidden || _hud.Filters["hidden"]);
@@ -261,6 +264,7 @@ public partial class TemplePreview : Node3D
 		if (_layout == null || _floor == null) return;
 		ApplyFloorVisibility();
 		ApplyPlacedUseFilter();
+		ApplySceneryReplacementFilter();
 		int visible = 0;
 		foreach (PreviewObject obj in _layout.Objects)
 		{
