@@ -224,6 +224,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Itens posicionados: camada visual, identidade e tempo lógico](docs/placed-use-preview-2026-10-19.md)
 - [Efeito da barreira: alvo, perfis e proposta sem mutação](docs/barrier-effect-proposal-2026-10-19.md)
 - [Cenário substituído: identidade e projeção isolada da passagem](docs/barrier-scene-projection-2026-10-19.md)
+- [Ensaio 3D: coleta real, posição, prazo e barreira preservada](docs/temple-explosive-preview-audit-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

@@ -20,6 +20,9 @@ Contagens, navegação, ator e reconstrução dos bytes originais são preservad
 Não há botão de uso, relógio em tempo real, explosão ou destruição de cenário.
 A figura é uma representação de teste e não arte original do explosivo.
 
+No marco 58, o ensaio inicial acima foi substituído por caminhada e coleta real
+na elevação 1, preservando as mesmas verificações visuais e de checkpoint.
+
 Validação: build sem avisos/erros e integração headless aprovada. O marcador foi
 acrescentado à bateria unificada. Captura gráfica somente pelo runner isolado.
 
