@@ -61,12 +61,34 @@ public sealed class ItemTransferSession
         int remaining = entry!.Quantity - (_taken.GetValueOrDefault(itemKey)?.Quantity ?? 0);
         if (remaining == 0) return ItemTakeStatus.Empty;
         if (quantity <= 0 || quantity > remaining) return ItemTakeStatus.InvalidQuantity;
-        if (actor.Map != MapId || actor.Elevation != owner!.Header.Elevation || navigation.Elevation != actor.Elevation
+        return InteractionStatus(owner!, actor, navigation, moving);
+    }
+    private ItemTakeStatus InteractionStatus(MapObject owner, ActorLocation actor, HexNavigation navigation, bool moving)
+    {
+        if (actor.Map != MapId || actor.Elevation != owner.Header.Elevation || navigation.Elevation != actor.Elevation
             || !navigation.Walkable(actor.Hex)) return ItemTakeStatus.Unavailable;
         if (moving) return ItemTakeStatus.Busy;
         if (navigation.IsExit(actor.Hex)) return ItemTakeStatus.AtExit;
         return actor.Hex == owner.Header.Tile || Enumerable.Range(0, 6).Any(d => FalloutGrid.Neighbor(actor.Hex, d) == owner.Header.Tile)
             ? ItemTakeStatus.Ready : ItemTakeStatus.TooFar;
+    }
+    public ItemTakeStatus CanReturn(string ownerKey, string itemKey, int quantity, ActorLocation actor, HexNavigation navigation, bool moving)
+    {
+        ItemTakeStatus status = Eligibility(ownerKey, itemKey, out MapObject? owner, out _);
+        if (status != ItemTakeStatus.Ready) return status;
+        int carried = _taken.GetValueOrDefault(itemKey)?.Quantity ?? 0;
+        if (carried == 0) return ItemTakeStatus.Empty;
+        if (quantity <= 0 || quantity > carried) return ItemTakeStatus.InvalidQuantity;
+        return InteractionStatus(owner!, actor, navigation, moving);
+    }
+    public ItemTakeStatus Return(string ownerKey, string itemKey, int quantity, ActorLocation actor, HexNavigation navigation, bool moving)
+    {
+        ItemTakeStatus status = CanReturn(ownerKey, itemKey, quantity, actor, navigation, moving);
+        if (status != ItemTakeStatus.Ready) return status;
+        TakenItem previous = _taken[itemKey];
+        if (previous.Quantity == quantity) _taken.Remove(itemKey);
+        else _taken[itemKey] = previous with { Quantity = previous.Quantity - quantity };
+        return status;
     }
     public ItemTakeStatus Take(string ownerKey, string itemKey, int quantity, ActorLocation actor, HexNavigation navigation, bool moving)
     {

@@ -29,10 +29,20 @@ public partial class TemplePreview
         if (_campaign == null) return;
         CloseInventory(); CloseLoot(); ClearRouteHover();
         GetTree().Root.GuiEmbedSubwindows = true;
-        var dialog = new PlayerBagWindow { Size = new Vector2I(960, 560), Theme = _hud.GetChild<Control>(0).Theme };
+        var dialog = new PlayerBagWindow { Size = new Vector2I(960, 680), Theme = _hud.GetChild<Control>(0).Theme };
         _bag = dialog; _hud.AddChild(dialog);
         dialog.Confirmed += CloseBag; dialog.Canceled += CloseBag; dialog.CloseRequested += CloseBag;
-        dialog.Refresh(_campaign.Carried, CarriedText, MapDisplayName); dialog.PopupCentered(new Vector2I(960, 560));
+        dialog.ReturnRequested = ReturnFromBag;
+        RefreshBag(); dialog.PopupCentered(new Vector2I(960, 680));
+    }
+    private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName,
+        (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true));
+    private void ReturnFromBag(CarriedItem item, int quantity)
+    {
+        if (_campaign == null) return;
+        ItemTakeStatus status = _campaign.ReturnItem(item.Map, item.OwnerKey, item.Source.Key, quantity, _walker?.Moving == true);
+        NavigationStatus(status == ItemTakeStatus.Ready ? $"Item devolvido ao recipiente · bolsa com {_campaign.CarriedCount} unidades · K para salvar" : ContainerLootWindow.Hint(status));
+        RefreshBag();
     }
     private async Task CheckPlayerBag()
     {

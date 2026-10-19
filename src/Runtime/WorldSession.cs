@@ -26,6 +26,10 @@ public sealed class WorldSession
     public long CarriedCount => Carried.Sum(i => (long)i.Quantity);
     public ItemTakeStatus TakeItem(string ownerKey, string itemKey, int quantity, bool moving) =>
         Current.Items.Take(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving);
+    public ItemTakeStatus CanReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap
+        ? Current.Items.CanReturn(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
+    public ItemTakeStatus ReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap
+        ? Current.Items.Return(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
     public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3)
     {
         _load = load; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;

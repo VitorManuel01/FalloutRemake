@@ -34,6 +34,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   a prévia esvazia a bolsa e restaura os recipientes.
 - **B / Bolsa:** consulta os itens recolhidos, nomes, quantidades e área de origem,
   inclusive depois de viajar e carregar checkpoint. B também fecha a janela.
+  **Devolver 1 / Devolver esta pilha** repõem o item no recipiente original
+  quando o personagem estiver ao alcance. A devolução também é salva com K.
 - **M / Caminhar:** alternar para caminhada na elevação 0; clique no chão para mover
   o marcador azul. Pontos verdes indicam alcance, vermelhos bloqueios e âmbar saídas.
 - **Portas:** no modo Caminhar, clique na primeira porta para se aproximar; depois
@@ -112,7 +114,7 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `STOP_WALKING_OK`, `WALL_OCCLUSION_OK`, `OBJECT_TEXT_OK`,
 `INVENTORY_INSPECTOR_OK`, `NAVIGATION_GRID_OK`, `ROUTE_HOVER_OK`,
 `DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK`, `ROUTE_CAMERA_OK`,
-`ITEM_CHECKPOINT_OK`, `CONTAINER_LOOT_OK`, `PLAYER_BAG_OK`,
+`ITEM_CHECKPOINT_OK`, `CONTAINER_LOOT_OK`, `PLAYER_BAG_OK`, `ITEM_RETURN_OK`,
 `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
@@ -176,6 +178,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Itens no mundo: checkpoint v2 e compatibilidade com v1](docs/item-checkpoint-2026-10-19.md)
 - [Coleta: aproximação, quantidades restantes e janela](docs/container-loot-2026-10-19.md)
 - [Bolsa do personagem: consulta e origem dos itens](docs/player-bag-2026-10-19.md)
+- [Devolver itens: origem, proximidade e conservação](docs/item-return-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
