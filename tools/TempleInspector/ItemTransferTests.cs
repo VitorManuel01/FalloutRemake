@@ -20,6 +20,26 @@ internal static class ItemTransferTests
     private static ActorLocation Nearby(MapDocument map) => new(3, 0, FalloutGrid.Neighbor(20500, 0)!.Value, 0);
     public static void Run(Action<string, Action> check)
     {
+        check("empty container status preserves scripts, locks, hidden state and prototype requirements without items", () =>
+        {
+            var map = Map(); MapObject owner = map.ObjectLayers[0].Objects[0] with { Inventory = Array.Empty<InventoryEntry>(), InventoryCount = 0 };
+            var cases = new[] { (owner, ItemTakeStatus.Ready),
+                (owner with { Header = owner.Header with { Sid = 123 } }, ItemTakeStatus.ScriptRequired),
+                (owner with { Header = owner.Header with { ScriptIndex = 758 } }, ItemTakeStatus.ScriptRequired),
+                (owner with { State = new Dictionary<string, int> { ["flags"] = DoorSession.Locked } }, ItemTakeStatus.Locked),
+                (owner with { State = new Dictionary<string, int>() }, ItemTakeStatus.Unsupported),
+                (owner with { Header = owner.Header with { Flags = HexNavigation.Hidden } }, ItemTakeStatus.Unavailable) };
+            foreach (var (source, expected) in cases)
+            {
+                var modified = map with { ObjectLayers = new[] { new ObjectLayer(0, 0, 1, new[] { source }) } };
+                var s = new ItemTransferSession(modified);
+                Assert(s.ContainerStatus("owner") == expected && s.Contents("owner").Length == 0 && s.Capture().Length == 0);
+                Assert(s.ContainerStatus("foreign") == ItemTakeStatus.NoItem && s.Take("owner", "invented", 1, Nearby(map), HexNavigation.FromMap(modified, 0), false) == ItemTakeStatus.NoItem);
+            }
+            var baseMap = map with { ObjectLayers = new[] { new ObjectLayer(0, 0, 1, new[] { owner }) } };
+            Assert(new ItemTransferSession(baseMap with { Prototypes = Array.Empty<Prototype>() }).ContainerStatus("owner") == ItemTakeStatus.Unsupported);
+            Assert(new ItemTransferSession(baseMap with { Prototypes = new[] { map.Prototypes[0] with { ScriptId = 758 } } }).ContainerStatus("owner") == ItemTakeStatus.ScriptRequired);
+        });
         check("container transfer conserves quantities and exact source identities without changing MAP records", () =>
         {
             var map = Map(); var session = new ItemTransferSession(map); var nav = HexNavigation.FromMap(map, 0); ActorLocation actor = Nearby(map);

@@ -40,7 +40,8 @@ public partial class TemplePreview
         MapObject owner = _campaign.Current.Items.Containers.Single(o => o.Key == _lootOwner);
         _loot.Refresh(OriginalText(owner)?.Name ?? "Recipiente", _campaign.Current.Items.Contents(_lootOwner), OriginalText,
             (key, qty) => _campaign.CanTakeItem(_lootOwner, key, qty, _walker?.Moving == true), _campaign.CarriedCount, ContainerApproach(owner).HasValue,
-            _campaign.CarriedWeight, _campaign.CarryCapacity, item => _campaign.UnitWeight(_campaign.CurrentMap, item));
+            _campaign.CarriedWeight, _campaign.CarryCapacity, item => _campaign.UnitWeight(_campaign.CurrentMap, item),
+            _campaign.Current.Items.ContainerStatus(_lootOwner));
     }
     private void TakeFromContainer(string key, int quantity)
     {
@@ -99,6 +100,29 @@ public partial class TemplePreview
             if (_loot!.Remaining != 0 || _campaign.CarriedCount != 1) throw new InvalidDataException("Reopened container duplicated checkpoint contents.");
             CloseLoot(); MapLayoutWriter.Verify(_map!); ResetWalker();
             GD.Print("CONTAINER_LOOT_OK: J/button, blocked/distant approach, paused modal movement, original powder ID 106, exact remaining quantity, repeat refusal, checkpoint/reopen, unchanged location/doors/root objects/source bytes verified.");
+        }
+        finally { CloseLoot(); _checkingNavigation = false; }
+    }
+    private async Task CheckScriptedContainer()
+    {
+        _checkingNavigation = true;
+        try
+        {
+            ResetWalker(); var location = _campaign!.Location; var doors = _doors!.Capture();
+            ChangeElevation(2); SelectObject(_layout!.Objects.Single(o => o.Source.Offset == 465604));
+            OpenLoot(); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            if (_loot == null || _loot.Remaining != 0 || !_loot.StatusText.Contains("interação ainda não disponível")
+                || _campaign.Current.Items.ContainerStatus(_lootOwner!) != ItemTakeStatus.ScriptRequired
+                || !((Button)_loot.FindChild("TakeOneAction", true, false)).Disabled
+                || !((Button)_loot.FindChild("TakeStackAction", true, false)).Disabled
+                || !((Button)_loot.FindChild("ApproachContainerAction", true, false)).Disabled)
+                throw new InvalidDataException("Empty scripted chest concealed its unsupported interaction or enabled an action.");
+            if (_capture != null) await Capture(Path.ChangeExtension(_capture, "scripted-chest.png"));
+            if (_campaign.Location != location || _campaign.CarriedCount != 0 || !_doors.Capture().Doors.SequenceEqual(doors.Doors))
+                throw new InvalidDataException("Inspecting scripted storage changed world state.");
+            MapLayoutWriter.Verify(_map!); CloseLoot(); ResetWalker();
+            GD.Print("SCRIPTED_CONTAINER_OK: original empty chest ID 100, script requirement displayed, actions disabled, unchanged actor/items/doors/source bytes verified.");
         }
         finally { CloseLoot(); _checkingNavigation = false; }
     }

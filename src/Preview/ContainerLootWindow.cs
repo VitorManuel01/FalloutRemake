@@ -49,7 +49,7 @@ public partial class ContainerLootWindow : AcceptDialog
         _approach.Pressed += () => { if (!_approach.Disabled) ApproachRequested?.Invoke(); };
     }
     public void Refresh(string owner, ContainerItem[] lines, Func<MapObject, PrototypeText?> text, Func<string, int, ItemTakeStatus> canTake, long carried, bool canApproach,
-        long? carriedWeight, int capacity, Func<MapObject, long?> unitWeight)
+        long? carriedWeight, int capacity, Func<MapObject, long?> unitWeight, ItemTakeStatus ownerStatus = ItemTakeStatus.Ready)
     {
         _owner.Text = owner; _text = text; _canTake = canTake; _canApproach = canApproach;
         _bag.Text = $"Bolsa: {carried} {(carried == 1 ? "unidade" : "unidades")} · Carga: {CarryWeightText.Load(carriedWeight, capacity)} · K para salvar";
@@ -62,7 +62,7 @@ public partial class ContainerLootWindow : AcceptDialog
             if (line.Source.Key == selected || select == null) select = row;
         }
         SelectedKey = ""; _one.Disabled = _stack.Disabled = _approach.Disabled = true; _quantity.Configure(0, "Retirar quantidade", null);
-        _description.Text = ""; _status.Text = "Este recipiente não tem itens disponíveis neste perfil.";
+        _description.Text = ""; _status.Text = ownerStatus == ItemTakeStatus.Ready ? "Este recipiente está vazio." : Hint(ownerStatus);
         if (select != null) { select.Select(0); ShowSelected(); }
     }
     private void ShowSelected()

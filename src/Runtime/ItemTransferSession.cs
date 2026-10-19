@@ -38,18 +38,27 @@ public sealed class ItemTransferSession
     public void Reset() => _taken.Clear();
     private bool Scripted(MapObject obj) => obj.Header.Sid >= 0 || obj.Header.ScriptIndex >= 0
         || _prototypes.TryGetValue(obj.Header.Pid, out Prototype? p) && p.ScriptId is >= 0;
-    private ItemTakeStatus Eligibility(string ownerKey, string itemKey, out MapObject? owner, out InventoryEntry? entry)
+    public ItemTakeStatus ContainerStatus(string ownerKey)
     {
-        owner = _owners.GetValueOrDefault(ownerKey); entry = owner?.Inventory.SingleOrDefault(e => e.Object.Key == itemKey);
-        if (owner == null || entry == null) return ItemTakeStatus.NoItem;
-        if (Scripted(owner) || Scripted(entry.Object)) return ItemTakeStatus.ScriptRequired;
+        MapObject? owner = _owners.GetValueOrDefault(ownerKey);
+        if (owner == null) return ItemTakeStatus.NoItem;
+        if (Scripted(owner)) return ItemTakeStatus.ScriptRequired;
         if (!HexNavigation.Valid(owner.Header.Tile) || owner.ContainerElevation != owner.Header.Elevation
             || (owner.Header.Flags & HexNavigation.Hidden) != 0) return ItemTakeStatus.Unavailable;
         if (!owner.State.TryGetValue("flags", out int flags) || flags != 0) return (flags & (DoorSession.Locked | DoorSession.Jammed)) != 0
             ? ItemTakeStatus.Locked : ItemTakeStatus.Unsupported;
+        return _prototypes.TryGetValue(owner.Header.Pid, out Prototype? proto) && proto.Type == 0 && proto.Subtype == 1
+            ? ItemTakeStatus.Ready : ItemTakeStatus.Unsupported;
+    }
+    private ItemTakeStatus Eligibility(string ownerKey, string itemKey, out MapObject? owner, out InventoryEntry? entry)
+    {
+        owner = _owners.GetValueOrDefault(ownerKey); entry = owner?.Inventory.SingleOrDefault(e => e.Object.Key == itemKey);
+        if (owner == null || entry == null) return ItemTakeStatus.NoItem;
+        ItemTakeStatus status = ContainerStatus(ownerKey);
+        if (status != ItemTakeStatus.Ready) return status;
+        if (Scripted(entry.Object)) return ItemTakeStatus.ScriptRequired;
         MapObject item = entry.Object;
-        if (!_prototypes.TryGetValue(owner.Header.Pid, out Prototype? ownerProto) || ownerProto.Type != 0 || ownerProto.Subtype != 1
-            || !_prototypes.TryGetValue(item.Header.Pid, out Prototype? proto) || proto.Type != 0 || proto.Subtype != item.Subtype
+        if (!_prototypes.TryGetValue(item.Header.Pid, out Prototype? proto) || proto.Type != 0 || proto.Subtype != item.Subtype
             || item.Subtype is null or 1 || item.Inventory.Length != 0 || (proto.ExtendedFlags & 0x08000000) != 0
             || (item.Header.Flags & 0x07000001) != 0) return ItemTakeStatus.Unsupported;
         return ItemTakeStatus.Ready;
