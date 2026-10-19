@@ -63,11 +63,11 @@ public partial class TemplePreview : Node3D
 			_hud.ExitRequested = UseExit;
 			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
 			_hud.CharacterFocusRequested = FocusCharacter;
-			_hud.OriginalFloorRequested = SetOriginalFloor;
+			_hud.OriginalFloorRequested = ChangeOriginalFloor;
 			_hud.StopRequested = StopWalking;
-			_hud.RevealActorRequested = SetRevealActor;
+			_hud.RevealActorRequested = ChangeRevealActor;
 			_hud.InventoryRequested = OpenInventory;
-			_hud.NavigationGridRequested = SetNavigationGrid;
+			_hud.NavigationGridRequested = ChangeNavigationGrid;
 			_hud.FrameRouteRequested = FrameRoute;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
@@ -75,19 +75,23 @@ public partial class TemplePreview : Node3D
 				if (args[i] == "--data-dir" && i + 1 < args.Length) _directory = args[++i];
 				else if (args[i] == "--capture" && i + 1 < args.Length) _capture = args[++i];
 				else if (args[i] == "--preview-test") _test = true;
+				else if (args[i] == "--visual-preferences-smoke") { _test = true; _preferencesStartupTest = true; }
 				else throw new ArgumentException($"Argumento desconhecido: {args[i]}");
 			}
+			string? preferencesNotice = RestoreVisualPreferences();
 			if (_directory == null && File.Exists(SettingsPath))
 				_directory = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(SettingsPath))?.GetValueOrDefault("GameDataDirectory");
 			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 			if (_shuttingDown) return;
 			if (_directory != null) LoadMap(_directory);
 			else _hud.Status("Escolha a pasta de idioma do Fallout 2 para começar.");
+			if (preferencesNotice != null) NavigationStatus(preferencesNotice);
 			if (_test || _capture != null)
 			{
 				if (_map == null) throw new InvalidDataException("Preview test requires valid game data.");
 				await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+				if (_preferencesStartupTest) { await CheckVisualPreferencesStartup(); await Shutdown(0); return; }
 				if (_test) await CheckPreview();
 				if (_test) await CheckNavigation();
 				if (_test) await CheckDoors();
@@ -106,6 +110,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckDoorRouteHover();
 				if (_test) await CheckExitRouteHover();
 				if (_test) await CheckRouteCamera();
+				if (_test) await CheckVisualPreferences();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -284,11 +289,11 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.K) SaveCheckpoint();
 			if (key.PhysicalKeycode == Key.R) LoadCheckpoint();
 			if (key.PhysicalKeycode == Key.C) FocusCharacter();
-			if (key.PhysicalKeycode == Key.O) SetOriginalFloor(!_useOriginalFloor);
+			if (key.PhysicalKeycode == Key.O) ChangeOriginalFloor(!_useOriginalFloor);
 			if (key.PhysicalKeycode == Key.Escape) StopWalking();
-			if (key.PhysicalKeycode == Key.V) SetRevealActor(!_revealActor);
+			if (key.PhysicalKeycode == Key.V) ChangeRevealActor(!_revealActor);
 			if (key.PhysicalKeycode == Key.I) OpenInventory();
-			if (key.PhysicalKeycode == Key.G) SetNavigationGrid(!_showNavigationGrid);
+			if (key.PhysicalKeycode == Key.G) ChangeNavigationGrid(!_showNavigationGrid);
 			if (key.PhysicalKeycode == Key.T) FrameRoute();
 			UpdateCamera();
 		}

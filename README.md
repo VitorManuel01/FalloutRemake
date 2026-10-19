@@ -54,6 +54,9 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 - **T / Ver percurso:** enquadra o trajeto apontado ou em andamento no espaço
   livre dos painéis. Também inclui a porta de destino quando houver aproximação.
   A caminhada continua; **C** retoma o acompanhamento do personagem.
+- **Preferências visuais:** as escolhas de **G**, **O** e **V**, por tecla ou botão,
+  são salvas automaticamente nesta máquina e restauradas ao abrir a prévia.
+  Reiniciar a prévia e carregar um checkpoint mantêm essas escolhas.
 - **Apontar para o chão no modo Caminhar:** mostra o percurso e os passos antes
   do clique. A prévia não move o personagem e também funciona sem a grade.
   Ao apontar para uma porta, mostra a aproximação alcançável ou sua condição.
@@ -102,12 +105,17 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `CHECKPOINT_PREVIEW_OK`, `CHARACTER_CAMERA_OK`, `FLOOR_ART_PREVIEW_OK`,
 `STOP_WALKING_OK`, `WALL_OCCLUSION_OK`, `OBJECT_TEXT_OK`,
 `INVENTORY_INSPECTOR_OK`, `NAVIGATION_GRID_OK`, `ROUTE_HOVER_OK`,
-`DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK`, `ROUTE_CAMERA_OK` / `IMPORT_SMOKE_OK`,
+`DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK`, `ROUTE_CAMERA_OK`,
+`VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo
 `tools/Run-QuietGodot.ps1`, com caminhos explícitos. Esse runner usa um desktop
 isolado do Windows; `--headless` continua sendo a opção sem renderização.
+Após `--preview-test`, o teste de reabertura pode ser executado sem janela com
+`--visual-preferences-smoke` após `--`. Ele lê apenas o arquivo de preferências
+de teste e deve emitir `VISUAL_PREFERENCES_STARTUP_OK`. Para conferir com imagem,
+o runner aceita `-Check VisualPreferencesStartup`. Ambos preservam as opções reais.
 Informe `-CapturePath "$PWD\.local\temple-preview.png"` ao runner isolado para
 capturar a cena. Ele já executa `--preview-test`, que também gera
 uma captura `.selection.png` da porta selecionada, `.navigation.png` do percurso
@@ -156,6 +164,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Prévia da saída: destino e carregamento](docs/exit-route-hover-2026-10-18.md)
 - [Validação isolada: executar sem abrir janelas no desktop ativo](docs/quiet-validation-2026-10-18.md)
 - [Enquadrar percurso: câmera, espaço livre e validação](docs/route-camera-2026-10-19.md)
+- [Preferências visuais: persistência local e reabertura](docs/visual-preferences-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
