@@ -1,13 +1,15 @@
 using System.Linq;
+using System;
 using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
 public enum ExplosiveProposalStatus { Ready, Canceled, NoItem, Unsupported, Busy, Unavailable, AtExit, InvalidTimer, InvalidRoll }
-public sealed record ExplosiveUsePlan(CarriedItem Source, int Quantity, ActorLocation Placement, int ActivePid, ExplosiveSchedule Schedule, int MinimumDamage, int MaximumDamage, int SceneryRadius);
+public sealed record ExplosiveUsePlan(CarriedItem Source, int Quantity, ActorLocation Placement, int ActivePid, ExplosiveSchedule Schedule, int MinimumDamage, int MaximumDamage, int SceneryRadius,
+    Guid Id, Guid SessionToken, long SourceRevision);
 public sealed record ExplosiveProposal(ExplosiveProposalStatus Status, ExplosiveUsePlan? Plan = null);
 
-/// <summary>Confirmed, source-bound proposal only; committing ownership, time and world changes is a separate future operation.</summary>
+/// <summary>Read-only source-bound proposal; the world revalidates it before reserving ownership.</summary>
 public static class ExplosiveUseProposal
 {
     public const int InactivePid = 85, ActivePid = 209, MinimumDamage = 40, MaximumDamage = 80, SceneryRadius = 3;
@@ -20,7 +22,8 @@ public static class ExplosiveUseProposal
         if (moving) return new(ExplosiveProposalStatus.Busy);
         CarriedItem? item = world.Carried.SingleOrDefault(i => i.Map == requested.Map && i.OwnerKey == requested.OwnerKey && i.Source.Key == requested.Source.Key);
         if (item == null) return new(ExplosiveProposalStatus.NoItem);
-        Prototype? prototype = world.Areas.Single(a => a.Map.Prefix.Header.MapIndex == item.Map).Map.Prototypes.SingleOrDefault(p => p.Pid == item.Source.Header.Pid);
+        WorldArea area = world.Areas.Single(a => a.Map.Prefix.Header.MapIndex == item.Map);
+        Prototype? prototype = area.Map.Prototypes.SingleOrDefault(p => p.Pid == item.Source.Header.Pid);
         if (item.Source.Header.Pid != InactivePid || !ItemUseProfile.Supported(prototype))
             return new(ExplosiveProposalStatus.Unsupported);
         if (!world.Current.Travel.CanArrive(world.Location)) return new(ExplosiveProposalStatus.Unavailable);
@@ -29,6 +32,7 @@ public static class ExplosiveUseProposal
             return new(ExplosiveProposalStatus.InvalidTimer);
         if (!System.Enum.IsDefined(outcome)) return new(ExplosiveProposalStatus.InvalidRoll);
         // Normalize the verified inactive item to its active identity explicitly; do not forward the CE helper's unchecked active-PID lookup.
-        return new(ExplosiveProposalStatus.Ready, new(item, 1, world.Location, ActivePid, ExplosiveTimer.Plan(seconds, outcome, demolitionExpert), MinimumDamage, MaximumDamage, SceneryRadius));
+        return new(ExplosiveProposalStatus.Ready, new(item, 1, world.Location, ActivePid, ExplosiveTimer.Plan(seconds, outcome, demolitionExpert), MinimumDamage, MaximumDamage, SceneryRadius,
+            Guid.NewGuid(), world.SessionToken, area.Items.Revision));
     }
 }

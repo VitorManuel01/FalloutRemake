@@ -11,6 +11,8 @@ namespace FalloutRemake.Runtime;
 
 public sealed record WorldArea(MapDocument Map, DoorSession Doors, TempleTravel Travel, ItemTransferSession Items);
 public sealed record WorldItemUse(int SourceMap, ItemUseAllocation Allocation);
+public enum ExplosiveCommitStatus { Ready, InvalidPlan, StalePlan, Busy, NoItem, Unsupported, Unavailable, AtExit, Duplicate, LimitReached }
+public sealed record ExplosiveCommitResult(ExplosiveCommitStatus Status, WorldItemUse? Use = null);
 
 /// <summary>Cached area sessions with transactional destination validation; no general map scripts.</summary>
 public sealed class WorldSession
@@ -18,6 +20,7 @@ public sealed class WorldSession
     private readonly Func<int, MapDocument> _load;
     private readonly HashSet<int> _allowed;
     private readonly Dictionary<int, WorldArea> _areas = new();
+    public Guid SessionToken { get; } = Guid.NewGuid();
     public int InitialMap { get; }
     public int CurrentMap { get; private set; }
     public WorldArea Current => _areas[CurrentMap];
@@ -50,6 +53,35 @@ public sealed class WorldSession
         ? Current.Items.CanReturn(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
     public ItemTakeStatus ReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap
         ? Current.Items.Return(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
+    public ExplosiveCommitResult CommitExplosiveUse(ExplosiveUsePlan? plan, bool moving)
+    {
+        if (plan == null || plan.Source?.Source == null || plan.Id == Guid.Empty || plan.Quantity != 1 || plan.ActivePid != ExplosiveUseProposal.ActivePid
+            || plan.MinimumDamage != ExplosiveUseProposal.MinimumDamage || plan.MaximumDamage != ExplosiveUseProposal.MaximumDamage
+            || plan.SceneryRadius != ExplosiveUseProposal.SceneryRadius || !ItemUseProfile.ValidSchedule(plan.Schedule))
+            return new(ExplosiveCommitStatus.InvalidPlan);
+        if (plan.SessionToken != SessionToken || plan.Placement != Location) return new(ExplosiveCommitStatus.StalePlan);
+        if (moving) return new(ExplosiveCommitStatus.Busy);
+        if (!_areas.TryGetValue(plan.Source.Map, out WorldArea? source)) return new(ExplosiveCommitStatus.NoItem);
+        if (source.Items.Revision != plan.SourceRevision) return new(ExplosiveCommitStatus.StalePlan);
+        if (ItemUses.Any(u => u.Allocation.Id == plan.Id)) return new(ExplosiveCommitStatus.Duplicate);
+        CarriedItem? item = source.Items.Carried.SingleOrDefault(i => i.OwnerKey == plan.Source.OwnerKey && i.Source.Key == plan.Source.Source.Key);
+        if (item == null) return new(ExplosiveCommitStatus.NoItem);
+        if (item.Quantity != plan.Source.Quantity) return new(ExplosiveCommitStatus.StalePlan);
+        if (!ItemUseProfile.Supported(source.Map.Prototypes.SingleOrDefault(p => p.Pid == item.Source.Header.Pid))) return new(ExplosiveCommitStatus.Unsupported);
+        if (!Current.Travel.CanArrive(Location)) return new(ExplosiveCommitStatus.Unavailable);
+        if (Current.Doors.Navigation(Location.Elevation).IsExit(Location.Hex)) return new(ExplosiveCommitStatus.AtExit);
+        var allocation = new ItemUseAllocation(plan.Id, item.OwnerKey, item.Source.Key, 1, ItemUsePhase.Placed, Location, plan.Schedule, plan.Schedule.DelayTicks);
+        ItemUseStatus result = source.Items.Place(allocation);
+        return result switch
+        {
+            ItemUseStatus.Ready => new(ExplosiveCommitStatus.Ready, new(item.Map, allocation)),
+            ItemUseStatus.Empty or ItemUseStatus.NoItem => new(ExplosiveCommitStatus.NoItem),
+            ItemUseStatus.Unsupported => new(ExplosiveCommitStatus.Unsupported),
+            ItemUseStatus.Duplicate => new(ExplosiveCommitStatus.Duplicate),
+            ItemUseStatus.LimitReached => new(ExplosiveCommitStatus.LimitReached),
+            _ => new(ExplosiveCommitStatus.InvalidPlan)
+        };
+    }
     public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3)
     {
         _load = load; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
