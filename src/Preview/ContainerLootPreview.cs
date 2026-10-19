@@ -17,9 +17,11 @@ public partial class TemplePreview
     private void CloseLoot()
     { if (_loot != null) { _loot.Hide(); _loot.QueueFree(); _loot = null; } _lootOwner = null; }
     private int? ContainerApproach(MapObject owner) => _walker?.Moving == false && owner.Header.Elevation == _elevation && _reachable != null
-        ? Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(owner.Header.Tile, d)).Append(owner.Header.Tile)
-            .Where(t => t.HasValue && _reachable.Distance(t.Value) >= 0 && !_navigation!.IsExit(t.Value))
-            .OrderBy(t => _reachable.Distance(t!.Value)).ThenBy(t => t).FirstOrDefault() : null;
+        ? ClosestContainerApproach(owner, _reachable, _navigation!) : null;
+    private static int? ClosestContainerApproach(MapObject owner, HexReachability reach, HexNavigation navigation) =>
+        Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(owner.Header.Tile, d)).Append(owner.Header.Tile)
+            .Where(t => t.HasValue && reach.Distance(t.Value) >= 0 && !navigation.IsExit(t.Value))
+            .OrderBy(t => reach.Distance(t!.Value)).ThenBy(t => t).FirstOrDefault();
     private void OpenLoot()
     {
         if (_loot?.Visible == true) { CloseLoot(); return; }

@@ -33,10 +33,27 @@ public partial class TemplePreview
         _bag = dialog; _hud.AddChild(dialog);
         dialog.Confirmed += CloseBag; dialog.Canceled += CloseBag; dialog.CloseRequested += CloseBag;
         dialog.ReturnRequested = ReturnFromBag;
+        dialog.ApproachRequested = ApproachBagOrigin;
         RefreshBag(); dialog.PopupCentered(new Vector2I(960, 680));
     }
     private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName,
-        (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true));
+        (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true),
+        item => BagOriginApproach(item).HasValue);
+    private int? BagOriginApproach(CarriedItem item)
+    {
+        if (_campaign == null || _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, 1, _walker?.Moving == true) != ItemTakeStatus.TooFar) return null;
+        var navigation = _doors!.Navigation(_campaign.Location.Elevation);
+        MapObject owner = _campaign.Current.Items.Containers.Single(o => o.Key == item.OwnerKey);
+        return ClosestContainerApproach(owner, navigation.ReachableFrom(_campaign.Location.Hex), navigation);
+    }
+    private void ApproachBagOrigin(CarriedItem item)
+    {
+        if (!BagOriginApproach(item).HasValue) return;
+        CloseBag();
+        if (_elevation != _campaign!.Location.Elevation) ChangeElevation(_campaign.Location.Elevation);
+        if (!_walkMode) ToggleWalkMode();
+        ApproachContainerFromClick(_layout!.Objects.Single(o => o.Source.Key == item.OwnerKey));
+    }
     private void ReturnFromBag(CarriedItem item, int quantity)
     {
         if (_campaign == null) return;

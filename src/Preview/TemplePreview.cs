@@ -117,6 +117,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckPlayerBag();
 				if (_test) await CheckItemReturn();
 				if (_test) await CheckContainerRouteHover();
+				if (_test) await CheckBagOrigin();
 				if (_test) await CheckVisualPreferences();
 				if (_capture != null)
 				{
