@@ -88,6 +88,13 @@ public partial class TemplePreview
                 throw new InvalidDataException("Internal transition lost destination or session state.");
             if (_walkerNode!.Position.DistanceTo(Point(FalloutGrid.HexCenter(29097) - _layout!.Origin, 0)) > .0001f)
                 throw new InvalidDataException("Arriving marker transform mismatch.");
+            int nearby = Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(_walker.CurrentHex, d))
+                .Where(t => t.HasValue && _navigation!.Walkable(t.Value) && !_navigation.IsExit(t.Value)).First()!.Value;
+            RequestWalk(nearby); _walker.Advance(.05); UpdateWalkerPosition(); var progress = _walker.Position;
+            GoToEntry();
+            if (_elevation != 1 || !_walker.Moving || _walker.Position != progress || _campaign!.Location.Hex != 29097)
+                throw new InvalidDataException("Entry focus switched away from a walking actor on another elevation.");
+            _walker.Advance(100); UpdateWalkerPosition(); RefreshReachability();
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "travel.png"));
             ActorLocation arrived = _travel.Location;
             ChangeElevation(2);

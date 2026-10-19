@@ -55,7 +55,7 @@ public partial class TemplePreview : Node3D
 				RotationDegrees = new Vector3(-55, -25, 0), ShadowEnabled = true, DirectionalShadowMaxDistance = 180 };
 			AddChild(sun);
 			_hud.EntryRequested = GoToEntry; _hud.FrameRequested = FrameAll; _hud.OpenRequested = ChooseFolder;
-			_hud.ElevationRequested = ChangeElevation;
+			_hud.ElevationRequested = elevation => TryInspectionElevation(elevation);
 			_hud.FilterChanged = (_, _) => ApplyFilters(); _hud.CycleRequested = CycleSelection;
 			_hud.WalkModeRequested = ToggleWalkMode; _hud.ResetWalkerRequested = ResetWalker;
 			_hud.DoorUseRequested = UseSelectedDoor;
@@ -104,6 +104,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckCharacterCamera();
 				if (_test) await CheckOriginalFloor();
 				if (_test) await CheckStopWalking();
+				if (_test) await CheckElevationWalkGuard();
 				if (_test) await CheckWallOcclusion();
 				if (_test) await CheckObjectText();
 				if (_test) await CheckInventoryInspector();
@@ -345,10 +346,21 @@ public partial class TemplePreview : Node3D
 		_elevation = elevation; _hud.Elevation(elevation);
 		if (_map != null) { BuildWorld(); FrameAll(); }
 	}
+	private bool TryInspectionElevation(int elevation)
+	{
+		if (elevation == _elevation) return true;
+		if (_walker?.Moving == true)
+		{
+			_hud.Elevation(_elevation);
+			NavigationStatus("Termine ou pare a caminhada [Esc] antes de mudar a elevação.");
+			return false;
+		}
+		ChangeElevation(elevation); return true;
+	}
 	private void GoToEntry()
 	{
 		if (_map == null) return;
-		if (_elevation != _map.Prefix.Header.EnteringElevation) ChangeElevation(_map.Prefix.Header.EnteringElevation);
+		if (!TryInspectionElevation(_map.Prefix.Header.EnteringElevation)) return;
 		FocusEntry();
 	}
 	private void FrameAll()

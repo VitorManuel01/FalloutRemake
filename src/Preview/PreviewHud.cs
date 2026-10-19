@@ -22,7 +22,7 @@ public partial class PreviewHud : CanvasLayer
     private readonly Label _selectionTitle = new();
     private readonly RichTextLabel _details = new();
     private readonly Label _counts = new();
-    private readonly OptionButton _elevation = new() { CustomMinimumSize = new Vector2(0, 32) };
+    private readonly OptionButton _elevation = new() { Name = "ElevationSelection", CustomMinimumSize = new Vector2(0, 32) };
     private readonly Label _navigationStatus = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private string _navigationMessage = "";
     private string? _routeHint;

@@ -126,6 +126,7 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `ITEM_CHECKPOINT_OK`, `CONTAINER_LOOT_OK`, `PLAYER_BAG_OK`, `ITEM_RETURN_OK`,
 `CONTAINER_ROUTE_OK`, `BAG_ORIGIN_OK`, `CARRY_WEIGHT_UI_OK`, `QUANTITY_TRANSFER_OK`, `SCRIPTED_CONTAINER_OK`,
 `INVENTORY_ART_UI_OK`,
+`ELEVATION_WALK_GUARD_OK`,
 `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
@@ -207,6 +208,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Distância em hexes e referência de alcance da barreira](docs/hex-distance-2026-10-19.md)
 - [Explosivo: temporizador confirmado e questões da referência](docs/explosive-profile-2026-10-19.md)
 - [Consulta I: ícones e inventário original preservado](docs/original-inventory-icons-2026-10-19.md)
+- [Inspeção de elevação: preservar o passo e o percurso](docs/elevation-walk-guard-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
