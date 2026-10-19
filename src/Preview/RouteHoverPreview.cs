@@ -63,8 +63,8 @@ public partial class TemplePreview
         _hoverStatus = !_navigation.Walkable(target) ? RouteStatus.Blocked : _reachable.Distance(target) < 0 ? RouteStatus.Unreachable
             : target == _walker.CurrentHex ? RouteStatus.AlreadyThere : RouteStatus.Ready;
         bool ready = _hoverStatus is RouteStatus.Ready or RouteStatus.AlreadyThere;
-        bool exit = ready && _navigation.IsExit(target);
-        _hoverTargetMaterial!.AlbedoColor = new Color(exit ? "eacb70bb" : ready ? "64d3a9bb" : "e4766abb");
+        bool exit = _navigation.IsExit(target);
+        _hoverTargetMaterial!.AlbedoColor = new Color(!ready ? "e4766abb" : exit ? "eacb70bb" : "64d3a9bb");
         _hoverTarget.Position = Point(FalloutGrid.HexCenter(target) - _layout!.Origin, .09f); _hoverTarget.Visible = true;
         if (ready) _hoverPath = _reachable.PathTo(target);
         if (_hoverPath.Length > 1)
@@ -79,7 +79,7 @@ public partial class TemplePreview
             RouteStatus.Blocked => $"Bloqueado · {BlockerLabel(target)}",
             _ => "Sem caminho com as portas e bloqueadores atuais"
         };
-        _hud.RouteHint(hint);
+        _hud.RouteHint(exit ? ExitRouteHint(target, _hoverStatus.Value, _hoverPath.Length - 1) : hint);
     }
     private async Task CheckRouteHover()
     {

@@ -14,10 +14,10 @@ public partial class TemplePreview
 {
     private TempleTravel? _travel;
     private ExitOption CurrentExit() => _walker == null || _campaign == null ? new(ExitStatus.NoExit) : _campaign.InspectExit(_walker.Moving);
-    private static string ExitHint(ExitOption option) => option.Status switch
+    private string ExitHint(ExitOption option) => option.Status switch
     {
-        ExitStatus.Ready => $"Saída para o mapa {option.Destination!.Map}, elevação {option.Destination.Elevation} · Enter para passar",
-        ExitStatus.ExternalMap => $"Saída para o mapa {option.Destination!.Map} · carregamento de outra área ainda indisponível",
+        ExitStatus.Ready => $"Saída → {DestinationName(option.Destination!)} · Enter para passar",
+        ExitStatus.ExternalMap => $"Saída → {DestinationName(option.Destination!)} · destino ainda não validado",
         ExitStatus.ReloadRequired => "Saída requer recarregar a área; ainda indisponível",
         ExitStatus.UnavailableMap => "Área de destino indisponível neste protótipo; sessão preservada",
         ExitStatus.BlockedDestination => "Destino da saída bloqueado ou ausente; passagem recusada",
@@ -45,7 +45,7 @@ public partial class TemplePreview
         if (walking) ToggleWalkMode();
         _focus = Point(FalloutGrid.HexCenter(destination.Hex) - _layout!.Origin, 0); _camera.Size = 32; UpdateCamera();
         SetCameraFollow(following);
-        NavigationStatus($"Chegou ao mapa {destination.Map}, elevação {destination.Elevation} · portas e XP preservados");
+        NavigationStatus($"Chegou a {DestinationName(destination)} · portas e XP preservados");
     }
 
     private async Task CheckTravel()

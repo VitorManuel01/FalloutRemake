@@ -134,6 +134,7 @@ internal static class SelfTests
             TempleAdapterTests.Run(Check);
             CharacterSkillTests.Run(Check);
             TravelTests.Run(Check);
+            ExitPreviewTests.Run(Check);
             WorldTests.Run(Check);
             CheckpointTests.Run(Check);
             Console.WriteLine($"{passed} synthetic test groups passed.");

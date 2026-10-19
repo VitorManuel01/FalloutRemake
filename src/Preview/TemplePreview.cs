@@ -103,6 +103,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckNavigationGrid();
 				if (_test) await CheckRouteHover();
 				if (_test) await CheckDoorRouteHover();
+				if (_test) await CheckExitRouteHover();
 				if (_capture != null)
 				{
 					FocusEntry();
@@ -365,7 +366,7 @@ public partial class TemplePreview : Node3D
 		string title = obj.Kind switch { PreviewKind.Wall => "Parede", PreviewKind.Door => "Porta", PreviewKind.Exit => "Saída",
 			PreviewKind.Critter => "Criatura", PreviewKind.Item => "Item", PreviewKind.Marker => "Marcador", _ => "Cenário" };
 		string text = $"ID  {h.Id}\nPID  {h.Pid}  (0x{h.Pid:X8})\nFID  {h.Fid}  (0x{h.Fid:X8})\nHex  {h.Tile}    Elevação  {h.Elevation}\nRotação  {h.Rotation}    SID  {h.Sid}\nScript  {h.ScriptIndex}\nFlags  0x{h.Flags:X8}\nOffset  {obj.Source.Offset}\nInventário  {obj.Source.InventoryCount} registros\nDeslocamento do sprite  {h.X}, {h.Y}";
-		if (obj.Source.State.TryGetValue("destinationMap", out int destination)) text += $"\n\nDestino: mapa {destination}";
+		if (obj.Source.State.TryGetValue("destinationMap", out int destination)) text += $"\n\nDestino: {MapDisplayName(destination)} · mapa {destination}";
 		foreach (var (field, label) in new[] { ("destinationTile", "Hex de destino"), ("destinationElevation", "Elevação de destino"), ("destinationRotation", "Rotação de destino") })
 			if (obj.Source.State.TryGetValue(field, out int value)) text += $"\n{label}: {value}";
 		string navigation = NavigationDetails(obj);

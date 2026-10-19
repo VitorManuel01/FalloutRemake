@@ -48,28 +48,34 @@ public sealed class TempleTravel
     public ExitOption InspectExit(bool moving)
     {
         if (moving) return new(ExitStatus.Busy);
-        MapObject[] exits = _roots.Where(o => o.Header.Elevation == Location.Elevation && o.Header.Tile == Location.Hex
+        return InspectExitAt(Location.Elevation, Location.Hex);
+    }
+    public ExitOption InspectExitAt(int elevation, int hex)
+    {
+        if (elevation is < 0 or > 2 || !HexNavigation.Valid(hex) || !_map.Prefix.Layers.Any(l => l.Elevation == elevation))
+            return new(ExitStatus.Invalid);
+        MapObject[] exits = _roots.Where(o => o.Header.Elevation == elevation && o.Header.Tile == hex
             && o.Header.Pid is >= 0x05000010 and <= 0x05000017 && (o.Header.Flags & HexNavigation.Hidden) == 0).ToArray();
         if (exits.Length == 0) return new(ExitStatus.NoExit);
-        if (!_doors.Navigation(Location.Elevation).Walkable(Location.Hex)) return new(ExitStatus.Invalid);
+        if (!_doors.Navigation(elevation).Walkable(hex)) return new(ExitStatus.Invalid);
         var destinations = new List<ActorLocation>();
         foreach (MapObject exit in exits)
         {
             if (((exit.Header.Fid >> 24) & 15) != 5
                 || !exit.State.TryGetValue("destinationMap", out int map)
-                || !exit.State.TryGetValue("destinationElevation", out int elevation)
-                || !exit.State.TryGetValue("destinationTile", out int hex)
+                || !exit.State.TryGetValue("destinationElevation", out int destinationElevation)
+                || !exit.State.TryGetValue("destinationTile", out int destinationHex)
                 || !exit.State.TryGetValue("destinationRotation", out int rotation)
-                || elevation is < 0 or > 2 || !HexNavigation.Valid(hex) || hex == 0 || rotation is < 0 or > 5)
+                || destinationElevation is < 0 or > 2 || !HexNavigation.Valid(destinationHex) || destinationHex == 0 || rotation is < 0 or > 5)
                 return new(ExitStatus.Invalid);
-            destinations.Add(new ActorLocation(map, elevation, hex, rotation));
+            destinations.Add(new ActorLocation(map, destinationElevation, destinationHex, rotation));
         }
         if (destinations.Distinct().Count() != 1) return new(ExitStatus.Ambiguous);
         ActorLocation destination = destinations[0];
         var keys = Array.AsReadOnly(exits.Select(o => o.Key).ToArray());
-        if (destination.Map != Location.Map) return new(ExitStatus.ExternalMap, destination, keys);
+        if (destination.Map != _map.Prefix.Header.MapIndex) return new(ExitStatus.ExternalMap, destination, keys);
         // CE reloads the MAP for a transition to the same elevation. That lifecycle is outside this subset.
-        if (destination.Elevation == Location.Elevation) return new(ExitStatus.ReloadRequired, destination, keys);
+        if (destination.Elevation == elevation) return new(ExitStatus.ReloadRequired, destination, keys);
         if (!_map.Prefix.Layers.Any(l => l.Elevation == destination.Elevation)
             || !_doors.Navigation(destination.Elevation).Walkable(destination.Hex))
             return new(ExitStatus.BlockedDestination, destination, keys);

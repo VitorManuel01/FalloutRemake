@@ -53,6 +53,16 @@ public sealed class WorldSession
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or KeyNotFoundException or ArgumentException)
         { return option with { Status = ExitStatus.UnavailableMap }; }
     }
+    // Hover inspection never loads another area, enters scripts or changes any actor position.
+    public ExitOption PreviewExitAt(int elevation, int hex)
+    {
+        ExitOption option = Current.Travel.InspectExitAt(elevation, hex);
+        if (option.Status != ExitStatus.ExternalMap) return option;
+        ActorLocation destination = option.Destination!;
+        if (!_allowed.Contains(destination.Map)) return option with { Status = ExitStatus.UnavailableMap };
+        if (!_areas.TryGetValue(destination.Map, out WorldArea? area)) return option;
+        return option with { Status = area.Travel.CanArrive(destination) ? ExitStatus.Ready : ExitStatus.BlockedDestination };
+    }
     public ExitOption UseExit(bool moving)
     {
         ExitOption option = InspectExit(moving);
