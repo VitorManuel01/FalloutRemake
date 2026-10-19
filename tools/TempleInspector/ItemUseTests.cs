@@ -72,11 +72,13 @@ internal static class ItemUseTests
             string before = State(s); Assert(s.Place(Use(2000)) == ItemUseStatus.LimitReached && State(s) == before);
             Reject(() => s.Restore(s.Capture(), uses.Append(Use(2000)).ToArray())); Assert(State(s) == before); Conserved(s);
         });
-        check("checkpoint v2 refuses unrepresentable item-use state instead of restoring it as carried inventory", () =>
+        check("legacy checkpoint schemas cannot accept new use allocations as carried inventory", () =>
         {
             var world = new WorldSession(_ => ExplosiveProposalTests.Fixture(), new[] { 3 }); world.Current.Items.Restore(new[] { new TakenItem("owner", "item", 1) });
-            Assert(world.Current.Items.Place(Use()) == ItemUseStatus.Ready); Reject(() => world.Capture("catalog"));
-            Assert(world.CarriedCount == 0); world.Reset(); Assert(world.Capture("catalog").Version == 2);
+            Assert(world.Current.Items.Place(Use()) == ItemUseStatus.Ready);
+            var saved = world.Capture("catalog");
+            Reject(() => WorldSession.Restore(_ => ExplosiveProposalTests.Fixture(), new[] { 3 }, saved with { Version = 2, Profile = "neutral-v2" }, "catalog"));
+            Assert(world.CarriedCount == 0); world.Reset(); Assert(world.Capture("catalog").Version == 3);
         });
     }
     private static void Assert(bool value) { if (!value) throw new Exception("Item-use ownership assertion failed."); }

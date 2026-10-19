@@ -37,8 +37,16 @@ public partial class TemplePreview
             LoadCheckpoint();
             if (_campaign.CurrentMap != 126 || _campaign.CarriedCount != 1 || _campaign.Carried[0].Map != 3)
                 throw new InvalidDataException("Inactive-area item state failed restoration in the exterior.");
+            WorldCheckpoint saved = _campaign.Capture(_mapCatalog!.Source.Sha256);
+            var legacyV2 = saved with { Version = 2, Profile = "neutral-v2", Areas = saved.Areas.Select(a => a with { Uses = null }).ToArray() };
+            CheckpointFile.Write(CheckpointPath, legacyV2); LoadCheckpoint();
+            if (_campaign.CurrentMap != 126 || _campaign.CarriedCount != 1 || _campaign.ItemUses.Length != 0 || _campaign.Capture(_mapCatalog.Source.Sha256).Version != 3)
+                throw new InvalidDataException("Legacy v2 checkpoint failed to upgrade with the original carried item.");
+            var legacyV1 = legacyV2 with { Version = 1, Profile = "neutral-v1", Areas = legacyV2.Areas.Select(a => a with { Taken = null }).ToArray() };
+            CheckpointFile.Write(CheckpointPath, legacyV1); LoadCheckpoint();
+            if (_campaign.CarriedCount != 0 || _campaign.ItemUses.Length != 0) throw new InvalidDataException("Legacy v1 checkpoint invented carried or used items.");
+            CheckpointFile.Write(CheckpointPath, saved); LoadCheckpoint();
             WorldSession before = _campaign;
-            WorldCheckpoint saved = before.Capture(_mapCatalog!.Source.Sha256);
             SavedArea source = saved.Areas.Single(a => a.Map == 3);
             CheckpointFile.Write(CheckpointPath, saved with { Areas = saved.Areas.Select(a => a.Map == 3
                 ? a with { Taken = new[] { source.Taken!.Single() with { Quantity = 2 } } } : a).ToArray() });
@@ -50,7 +58,7 @@ public partial class TemplePreview
                 throw new InvalidDataException("Returning to the temple duplicated the original item.");
             foreach (WorldArea area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
             ResetWalker(); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-            GD.Print("ITEM_CHECKPOINT_OK: real pot 330/powder 106 PID 273, take/save/reset/load, exterior checkpoint and return, source depletion, repeated take and forged quantities refused atomically, source bytes verified; test slot only.");
+            GD.Print("ITEM_CHECKPOINT_OK: real pot 330/powder 106 PID 273, take/save/reset/load, v3 exterior checkpoint, legacy v1/v2 upgrade, return, source depletion, repeated take and forged quantities refused atomically, source bytes verified; test slot only.");
         }
         finally { _checkingNavigation = false; }
     }

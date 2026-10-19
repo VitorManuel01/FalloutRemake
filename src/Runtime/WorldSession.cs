@@ -4,11 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using FalloutRemake.Geometry;
 using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
 public sealed record WorldArea(MapDocument Map, DoorSession Doors, TempleTravel Travel, ItemTransferSession Items);
+public sealed record WorldItemUse(int SourceMap, ItemUseAllocation Allocation);
 
 /// <summary>Cached area sessions with transactional destination validation; no general map scripts.</summary>
 public sealed class WorldSession
@@ -23,6 +25,7 @@ public sealed class WorldSession
     public int Experience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0);
     public IReadOnlyList<WorldArea> Areas => _areas.OrderBy(p => p.Key).Select(p => p.Value).ToArray();
     public CarriedItem[] Carried => Areas.SelectMany(a => a.Items.Carried).ToArray();
+    public WorldItemUse[] ItemUses => Areas.SelectMany(a => a.Items.CaptureUses().Select(u => new WorldItemUse(a.Map.Prefix.Header.MapIndex, u))).ToArray();
     public long CarriedCount => Carried.Sum(i => (long)i.Quantity);
     public int CarryCapacity => CarryWeight.TestCapacity;
     public long? UnitWeight(int sourceMap, MapObject item) => _areas.TryGetValue(sourceMap, out WorldArea? area)
@@ -107,14 +110,15 @@ public sealed class WorldSession
         string.Join("\n", map.Dependencies.OrderBy(d => d.Path, StringComparer.Ordinal).Select(d => $"{d.Path}|{d.Size}|{d.Sha256}")))));
     public WorldCheckpoint Capture(string catalogHash)
     {
-        if (Areas.Any(a => a.Items.CaptureUses().Length != 0)) throw new InvalidDataException("Item-use state requires a checkpoint schema that preserves its allocations.");
-        return new(2, "neutral-v2", catalogHash, InitialMap, CurrentMap,
+        ValidateUses();
+        return new(3, "neutral-v3", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
-                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture())).ToArray());
+                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses())).ToArray());
     }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3)
     {
-        if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2") || checkpoint.CatalogHash != catalogHash
+        if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2"
+            || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3") || checkpoint.CatalogHash != catalogHash
             || checkpoint.InitialMap != initialMap || checkpoint.Areas is not { Length: > 0 and <= 16 })
             throw new InvalidDataException("Checkpoint version, profile or catalog is incompatible.");
         var allowed = allowedMaps.ToHashSet();
@@ -129,12 +133,32 @@ public sealed class WorldSession
             if (saved.SourceHash != area.Map.Source.Sha256 || saved.DependenciesHash != DependenciesHash(area.Map)
                 || saved.Location == null || saved.Location.Map != saved.Map || saved.Session == null)
                 throw new InvalidDataException("Checkpoint source or dependency fingerprints changed.");
-            if (checkpoint.Version == 1 && saved.Taken != null || checkpoint.Version == 2 && saved.Taken == null)
+            if (checkpoint.Version == 1 && saved.Taken != null || checkpoint.Version >= 2 && saved.Taken == null
+                || checkpoint.Version < 3 && saved.Uses != null || checkpoint.Version == 3 && saved.Uses == null)
                 throw new InvalidDataException("Checkpoint item state does not match its schema version.");
-            area.Items.Restore(saved.Taken ?? Array.Empty<TakenItem>());
+            area.Items.Restore(saved.Taken ?? Array.Empty<TakenItem>(), saved.Uses ?? Array.Empty<ItemUseAllocation>());
             area.Doors.Restore(saved.Session); area.Travel.Arrive(saved.Location);
         }
+        candidate.ValidateUses();
         candidate.CurrentMap = checkpoint.CurrentMap;
         return candidate;
+    }
+    private void ValidateUses()
+    {
+        var ids = new HashSet<Guid>();
+        var navigations = new Dictionary<(int Map, int Elevation), HexNavigation>();
+        foreach (WorldItemUse use in ItemUses)
+        {
+            ActorLocation position = use.Allocation.Placement;
+            if (!ids.Add(use.Allocation.Id) || !_areas.TryGetValue(position.Map, out WorldArea? placementArea)
+                || !placementArea.Map.Prefix.Layers.Any(l => l.Elevation == position.Elevation))
+                throw new InvalidDataException("Item-use identity or placement area is invalid.");
+            var level = (position.Map, position.Elevation);
+            if (!navigations.TryGetValue(level, out HexNavigation? navigation))
+                navigations[level] = navigation = placementArea.Doors.Navigation(position.Elevation);
+            if (navigation.IsExit(position.Hex) || navigation.BlockersAt(position.Hex).Any(b => !b.IsDoor
+                || placementArea.Doors.Get(b.Key) is not DoorState door || door.Scripted && placementArea.Doors.TempleDoor?.SourceKey != b.Key))
+                throw new InvalidDataException("Item-use placement is not valid on the restored geometry.");
+        }
     }
 }

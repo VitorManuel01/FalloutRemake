@@ -1,9 +1,10 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace FalloutRemake.Runtime;
 
 public enum ExplosiveExpiry { Normal, Premature }
-public sealed record ExplosiveSchedule(int SelectedSeconds, int DelayTicks, ExplosiveExpiry Expiry);
+public sealed record ExplosiveSchedule([property: JsonRequired] int SelectedSeconds, [property: JsonRequired] int DelayTicks, [property: JsonRequired] ExplosiveExpiry Expiry);
 
 /// <summary>Confirmed timer/roll branch only. Does not activate, drop, consume or detonate an item.</summary>
 public static class ExplosiveTimer

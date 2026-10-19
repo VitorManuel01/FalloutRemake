@@ -37,13 +37,14 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   **Devolver 1 / Devolver esta pilha** repõem o item no recipiente original
   quando o personagem estiver ao alcance. A devolução também é salva com K.
   **Voltar ao recipiente** solicita a aproximação à origem na área atual.
-  Depois de chegar, confirme a devolução; a ação não viaja entre mapas.
+  Em outra área visitada, **Ir à passagem** guia o primeiro trecho; use Enter
+  e abra B novamente para continuar. Depois de chegar, confirme a devolução.
   As janelas J/B mostram peso por pilha e carga atual. O perfil usa **Força 5 /
   capacidade 150 lb**. Retiradas que ultrapassam a carga são recusadas; devolver
   libera espaço. Itens com peso ainda indisponível não recebem estimativa.
   Pilhas maiores que uma unidade também permitem escolher **Qtd.** para retirar
   ou devolver um número específico, com revalidação no clique.
-- **M / Caminhar:** alternar para caminhada na elevação 0; clique no chão para mover
+- **M / Caminhar:** alternar para caminhada na elevação do personagem; clique no chão para mover
   o marcador azul. Pontos verdes indicam alcance, vermelhos bloqueios e âmbar saídas.
 - **Portas:** no modo Caminhar, clique na primeira porta para se aproximar; depois
   use **U / Abrir porta**. Clique além dela para atravessar. U também permite fechar.
@@ -51,11 +52,14 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   passagem depois. L muda para **Retrancar** quando destrancada; os 25 XP não repetem.
 - **Reiniciar prévia:** voltar à entrada e restaurar as portas. Trocar de elevação
   no painel apenas inspeciona; o personagem e os XP permanecem no lugar.
+  Durante uma caminhada, termine ou use Esc antes de mudar a elevação exibida.
 - **Enter / Passar:** ao chegar a uma saída interna, atravessa para a elevação de
   destino, preservando portas e XP. Caminhe na elevação onde o personagem está.
 - **K / Salvar:** checkpoint local quando estiver parado. **R / Carregar:**
   recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
   Os atalhos usam letras para evitar conflito com os controles do editor Godot.
+  O schema atual é v3; checkpoints v1/v2 continuam carregando. Itens posicionados
+  e consumidos têm estado próprio, ainda sem ação de ativação na interface.
 - **C / Personagem:** reenquadra e acompanha o personagem. WASD ou arrasto retomam
   a câmera livre; recentrar mantém o percurso em andamento.
 - **O / Piso original:** compara o piso com imagens lidas da instalação local.
@@ -213,6 +217,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Explosivo: proposta validada sem ativar ou consumir](docs/explosive-use-proposal-2026-10-19.md)
 - [Retomada: propriedade, conservação e checkpoint do próximo incremento](docs/next-increment-2026-10-19.md)
 - [Propriedade de itens: carregados, posicionados e consumidos](docs/item-use-ownership-2026-10-19.md)
+- [Checkpoint v3: conservação, áreas e compatibilidade](docs/item-use-checkpoint-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

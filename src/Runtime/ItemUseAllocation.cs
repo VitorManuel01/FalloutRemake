@@ -1,12 +1,14 @@
 using System;
+using System.Text.Json.Serialization;
 using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
 public enum ItemUsePhase { Placed, Consumed }
 public enum ItemUseStatus { Ready, NoItem, Empty, Unsupported, InvalidState, Duplicate, LimitReached }
-public sealed record ItemUseAllocation(Guid Id, string OwnerKey, string ItemKey, int Quantity, ItemUsePhase Phase,
-    ActorLocation Placement, ExplosiveSchedule Schedule, int RemainingTicks);
+public sealed record ItemUseAllocation([property: JsonRequired] Guid Id, [property: JsonRequired] string OwnerKey, [property: JsonRequired] string ItemKey,
+    [property: JsonRequired] int Quantity, [property: JsonRequired] ItemUsePhase Phase, [property: JsonRequired] ActorLocation Placement,
+    [property: JsonRequired] ExplosiveSchedule Schedule, [property: JsonRequired] int RemainingTicks);
 public sealed record ItemBalance(int Original, int Remaining, int Carried, int Placed, int Consumed);
 
 internal static class ItemUseProfile

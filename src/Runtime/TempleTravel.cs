@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Serialization;
 using FalloutRemake.Geometry;
 using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
-public sealed record ActorLocation(int Map, int Elevation, int Hex, int Rotation);
+public sealed record ActorLocation([property: JsonRequired] int Map, [property: JsonRequired] int Elevation, [property: JsonRequired] int Hex, [property: JsonRequired] int Rotation);
 public enum ExitStatus { Ready, NoExit, Busy, Invalid, Ambiguous, ExternalMap, ReloadRequired, BlockedDestination, UnavailableMap }
 public sealed record ExitOption(ExitStatus Status, ActorLocation? Destination = null, IReadOnlyList<string>? SourceKeys = null);
 
