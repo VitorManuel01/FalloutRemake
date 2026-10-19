@@ -102,6 +102,9 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
+Durante o uso simultâneo do computador, faça capturas pelo
+`tools/Run-QuietGodot.ps1`, com caminhos explícitos. Esse runner usa um desktop
+isolado do Windows; `--headless` continua sendo a opção sem renderização.
 Para capturar a cena, execute sem `--headless` e acrescente
 `--capture .local/temple-preview.png` após `--`. Com `--preview-test`, também é gerada
 uma captura `.selection.png` da porta selecionada, `.navigation.png` do percurso
@@ -147,6 +150,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Prévia do percurso: estados e controles](docs/route-hover-2026-10-18.md)
 - [Prévia da porta: aproximação e estado](docs/door-route-hover-2026-10-18.md)
 - [Prévia da saída: destino e carregamento](docs/exit-route-hover-2026-10-18.md)
+- [Validação isolada: executar sem abrir janelas no desktop ativo](docs/quiet-validation-2026-10-18.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
