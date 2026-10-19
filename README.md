@@ -70,6 +70,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   Ao apontar para uma porta, mostra a aproximação alcançável ou sua condição.
   Saídas mostram destino e disponibilidade. Apontar não carrega outra área;
   a passagem continua sendo validada ao chegar e usar Enter.
+  Recipientes também mostram a aproximação; clique seleciona e caminha até eles,
+  e **J** permite recolher depois de chegar. **T** inclui o recipiente na vista.
 
 Paredes são volumes de referência nos hexes originais. Alturas, dimensões e cores
 são provisórias. O bloqueio usa FID/flags dos objetos, sem depender do piso ou dos
@@ -114,7 +116,7 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `STOP_WALKING_OK`, `WALL_OCCLUSION_OK`, `OBJECT_TEXT_OK`,
 `INVENTORY_INSPECTOR_OK`, `NAVIGATION_GRID_OK`, `ROUTE_HOVER_OK`,
 `DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK`, `ROUTE_CAMERA_OK`,
-`ITEM_CHECKPOINT_OK`, `CONTAINER_LOOT_OK`, `PLAYER_BAG_OK`, `ITEM_RETURN_OK`,
+`ITEM_CHECKPOINT_OK`, `CONTAINER_LOOT_OK`, `PLAYER_BAG_OK`, `ITEM_RETURN_OK`, `CONTAINER_ROUTE_OK`,
 `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
@@ -179,6 +181,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Coleta: aproximação, quantidades restantes e janela](docs/container-loot-2026-10-19.md)
 - [Bolsa do personagem: consulta e origem dos itens](docs/player-bag-2026-10-19.md)
 - [Devolver itens: origem, proximidade e conservação](docs/item-return-2026-10-19.md)
+- [Recipientes no modo Caminhar: prévia, clique e enquadramento](docs/container-route-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

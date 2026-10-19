@@ -78,14 +78,15 @@ public partial class TemplePreview
         }
     }
 
-    private PreviewObject? TryPickDoor(Vector2 screen)
+    private PreviewObject? WorldObjectAtScreen(Vector2 screen)
     {
         Vector3 origin = _camera.ProjectRayOrigin(screen), end = origin + _camera.ProjectRayNormal(screen) * 700;
         using var query = PhysicsRayQueryParameters3D.Create(origin, end, 1);
         using var hit = GetWorld3D().DirectSpaceState.IntersectRay(query);
         return hit.TryGetValue("collider", out Variant value) && value.AsGodotObject() is StaticBody3D body
-            && _lookup.TryGetValue(body.GetInstanceId(), out PreviewObject? obj) && obj.Kind == PreviewKind.Door ? obj : null;
+            && _lookup.TryGetValue(body.GetInstanceId(), out PreviewObject? obj) ? obj : null;
     }
+    private PreviewObject? TryPickDoor(Vector2 screen) => WorldObjectAtScreen(screen) is { Kind: PreviewKind.Door } door ? door : null;
     private void ApproachDoor(PreviewObject door)
     {
         ClearRouteHover();

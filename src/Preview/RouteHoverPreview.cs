@@ -32,7 +32,7 @@ public partial class TemplePreview
     {
         if (!keepFramePlan) _framePreview = null;
         _pinnedHoverScreen = null;
-        _hoverHex = null; _hoverPath = Array.Empty<int>(); _hoverStatus = null; _hoverDoorKey = null;
+        _hoverHex = null; _hoverPath = Array.Empty<int>(); _hoverStatus = null; _hoverDoorKey = null; _hoverContainerKey = null;
         if (_hoverLine != null) { _hoverLine.Visible = false; _hoverLine.Mesh = null; }
         if (_hoverTarget != null) _hoverTarget.Visible = false;
         _hud.RouteHint(null);
@@ -55,14 +55,16 @@ public partial class TemplePreview
         { if (_pinnedHoverScreen.Value.DistanceSquaredTo(screen) <= 16) return; _pinnedHoverScreen = null; }
         if (_hud.MouseOverPanelAt(screen)) { ClearRouteHover(true); return; }
         if (!GetViewport().GetVisibleRect().HasPoint(screen)) { ClearRouteHover(); return; }
-        if (TryPickDoor(screen) is PreviewObject door) { PreviewDoorRoute(door); return; }
+        PreviewObject? picked = InteractionObjectAtScreen(screen);
+        if (picked is { Kind: PreviewKind.Door } door) { PreviewDoorRoute(door); return; }
+        if (picked != null && IsContainer(picked)) { PreviewContainerRoute(picked); return; }
         PreviewGroundRoute(GroundHexAtScreen(screen) ?? -1);
     }
     private void PreviewGroundRoute(int target)
     {
         if (!_walkMode || _walker?.Moving != false || _navigation == null || _reachable == null || _hoverTarget == null)
         { ClearRouteHover(); return; }
-        if (_hoverDoorKey != null) ClearRouteHover();
+        if (_hoverDoorKey != null || _hoverContainerKey != null) ClearRouteHover();
         if (_hoverHex == target) return;
         ClearRouteHover(); _hoverHex = target;
         if (!HexNavigation.Valid(target)) { _hoverStatus = RouteStatus.OutsideGrid; _hud.RouteHint("Fora da malha do mapa"); return; }

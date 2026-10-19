@@ -112,7 +112,9 @@ public partial class TemplePreview
     private void WalkAtScreen(Vector2 screen)
     {
         if (_layout == null || _walker == null) return;
-        if (TryPickDoor(screen) is PreviewObject door) { ApproachDoor(door); return; }
+        PreviewObject? picked = InteractionObjectAtScreen(screen);
+        if (picked is { Kind: PreviewKind.Door } door) { ApproachDoor(door); return; }
+        if (picked != null && IsContainer(picked)) { ApproachContainerFromClick(picked); return; }
         RequestWalk(GroundHexAtScreen(screen) ?? -1);
     }
 

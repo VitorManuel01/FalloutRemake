@@ -11,7 +11,7 @@ namespace FalloutRemake.Preview;
 
 public partial class TemplePreview
 {
-    private sealed record RouteFramePlan(HexNavigation Navigation, int Start, int[] Tiles, string? DoorKey);
+    private sealed record RouteFramePlan(HexNavigation Navigation, int Start, int[] Tiles, string? TargetKey);
     private RouteFramePlan? _framePreview;
     private int[] _committedRoute = Array.Empty<int>();
     private Vector2? _pinnedHoverScreen;
@@ -22,7 +22,7 @@ public partial class TemplePreview
     private void RememberFramePreview()
     {
         if (_hoverPath.Length > 1)
-            _framePreview = new RouteFramePlan(_navigation!, _walker!.CurrentHex, _hoverPath.ToArray(), _hoverDoorKey);
+            _framePreview = new RouteFramePlan(_navigation!, _walker!.CurrentHex, _hoverPath.ToArray(), _hoverDoorKey ?? _hoverContainerKey);
         RefreshFrameRouteAction();
     }
     private Vector3[] FramingPoints(RouteFramePlan plan)
@@ -34,8 +34,8 @@ public partial class TemplePreview
             points.Add(p); points.Add(p + Vector3.Up * 1.3f);
         }
         if (_walkerNode != null) { points.Add(_walkerNode.Position); points.Add(_walkerNode.Position + Vector3.Up * 1.3f); }
-        PreviewObject? door = plan.DoorKey == null ? null : _layout!.Objects.FirstOrDefault(o => o.Source.Key == plan.DoorKey);
-        if (door != null) { Vector3 p = Point(door.Position, 0); points.Add(p); points.Add(p + Vector3.Up * 1.3f); }
+        PreviewObject? target = plan.TargetKey == null ? null : _layout!.Objects.FirstOrDefault(o => o.Source.Key == plan.TargetKey);
+        if (target != null) { Vector3 p = Point(target.Position, 0); points.Add(p); points.Add(p + Vector3.Up * 1.3f); }
         return points.ToArray();
     }
     private bool FramingPointsVisible(Vector3[] points)
@@ -70,7 +70,11 @@ public partial class TemplePreview
             SetCameraFollow(false);
             if (!moving)
             {
-                if (plan.DoorKey != null) PreviewDoorRoute(_layout!.Objects.Single(o => o.Source.Key == plan.DoorKey));
+                if (plan.TargetKey != null)
+                {
+                    PreviewObject target = _layout!.Objects.Single(o => o.Source.Key == plan.TargetKey);
+                    if (target.Kind == PreviewKind.Door) PreviewDoorRoute(target); else PreviewContainerRoute(target);
+                }
                 else PreviewGroundRoute(plan.Tiles[^1]);
                 _pinnedHoverScreen = GetViewport().GetMousePosition();
             }
@@ -111,7 +115,7 @@ public partial class TemplePreview
             _yaw = yaw; UpdateCamera();
             PreviewObject door = _layout!.Objects.Single(o => o.Source.Offset == 244040);
             PreviewDoorRoute(door); FrameRoute();
-            if (_framePreview?.DoorKey != door.Source.Key || !FramingPointsVisible(FramingPoints(_framePreview)))
+            if (_framePreview?.TargetKey != door.Source.Key || !FramingPointsVisible(FramingPoints(_framePreview)))
                 throw new InvalidDataException("Door framing lost the approach or clipped the target door.");
             RequestWalk(24508); _walker!.Advance(.05); UpdateWalkerPosition();
             var actorPosition = _walker.Position; double progress = _walker.Progress;
