@@ -28,5 +28,11 @@ Validação desta versão: dez etapas aprovadas, cerca de 24 segundos no total,
 O teste encontrou e corrigiu a necessidade de reter o handle do processo no
 Windows PowerShell para registrar corretamente o código de saída.
 
+Na revisão do marco 49, uma execução falhou por acesso a arquivo no teste de
+preferências. O runner registrou saída 1 na terceira etapa e não iniciou o Godot.
+A repetição completa passou com 167 grupos. A causa do acesso negado não foi
+reproduzida; ambos os manifestos foram mantidos. Falhas sintéticas agora preservam
+também o stack trace, facilitando investigar uma recorrência sem mascará-la.
+
 Próximo: revisar os registros desta bateria e resolver as questões documentadas
 do explosivo antes de implementar seu uso. GPT-6.1 Sol, esforço Alto.
