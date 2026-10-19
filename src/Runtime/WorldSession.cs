@@ -105,9 +105,13 @@ public sealed class WorldSession
     }
     private static string DependenciesHash(MapDocument map) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
         string.Join("\n", map.Dependencies.OrderBy(d => d.Path, StringComparer.Ordinal).Select(d => $"{d.Path}|{d.Size}|{d.Sha256}")))));
-    public WorldCheckpoint Capture(string catalogHash) => new(2, "neutral-v2", catalogHash, InitialMap, CurrentMap,
-        Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
-            DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture())).ToArray());
+    public WorldCheckpoint Capture(string catalogHash)
+    {
+        if (Areas.Any(a => a.Items.CaptureUses().Length != 0)) throw new InvalidDataException("Item-use state requires a checkpoint schema that preserves its allocations.");
+        return new(2, "neutral-v2", catalogHash, InitialMap, CurrentMap,
+            Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
+                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture())).ToArray());
+    }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3)
     {
         if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2") || checkpoint.CatalogHash != catalogHash

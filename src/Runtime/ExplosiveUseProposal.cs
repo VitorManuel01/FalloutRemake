@@ -21,8 +21,7 @@ public static class ExplosiveUseProposal
         CarriedItem? item = world.Carried.SingleOrDefault(i => i.Map == requested.Map && i.OwnerKey == requested.OwnerKey && i.Source.Key == requested.Source.Key);
         if (item == null) return new(ExplosiveProposalStatus.NoItem);
         Prototype? prototype = world.Areas.Single(a => a.Map.Prefix.Header.MapIndex == item.Map).Map.Prototypes.SingleOrDefault(p => p.Pid == item.Source.Header.Pid);
-        if (item.Source.Header.Pid != InactivePid || prototype is not { Type: 0, Subtype: 5, ScriptId: -1, BaseWeight: 4 }
-            || prototype.Resource.Size != 69 || prototype.Resource.Sha256 != SourcePrototypeHash)
+        if (item.Source.Header.Pid != InactivePid || !ItemUseProfile.Supported(prototype))
             return new(ExplosiveProposalStatus.Unsupported);
         if (!world.Current.Travel.CanArrive(world.Location)) return new(ExplosiveProposalStatus.Unavailable);
         if (world.Current.Doors.Navigation(world.Location.Elevation).IsExit(world.Location.Hex)) return new(ExplosiveProposalStatus.AtExit);

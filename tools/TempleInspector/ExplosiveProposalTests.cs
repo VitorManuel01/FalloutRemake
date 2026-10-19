@@ -5,7 +5,7 @@ using FalloutRemake.Runtime;
 
 internal static class ExplosiveProposalTests
 {
-    private static MapDocument Fixture()
+    internal static MapDocument Fixture()
     {
         var map = ItemTransferTests.Map(); var owner = map.ObjectLayers[0].Objects[0]; var item = owner.Inventory[0].Object;
         byte[] raw = new byte[69]; BinaryPrimitives.WriteInt32BigEndian(raw.AsSpan(44), 4);

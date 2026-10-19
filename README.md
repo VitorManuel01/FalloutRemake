@@ -212,6 +212,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Bateria local sem janela: um comando e manifesto de resultados](docs/validation-battery-2026-10-19.md)
 - [Explosivo: proposta validada sem ativar ou consumir](docs/explosive-use-proposal-2026-10-19.md)
 - [Retomada: propriedade, conservação e checkpoint do próximo incremento](docs/next-increment-2026-10-19.md)
+- [Propriedade de itens: carregados, posicionados e consumidos](docs/item-use-ownership-2026-10-19.md)
 - [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
 - [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
 - [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)

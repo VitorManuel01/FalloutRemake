@@ -19,6 +19,9 @@ public sealed class ItemTransferSession
     private readonly Dictionary<string, MapObject> _owners;
     private readonly Dictionary<int, Prototype> _prototypes;
     private readonly Dictionary<string, TakenItem> _taken = new(StringComparer.Ordinal);
+    private readonly Dictionary<Guid, ItemUseAllocation> _uses = new();
+    public const int MaxUses = 1024;
+    public long Revision { get; private set; }
     public ItemTransferSession(MapDocument map)
     {
         MapId = map.Prefix.Header.MapIndex;
@@ -33,9 +36,20 @@ public sealed class ItemTransferSession
         ? owner.Inventory.Select(e => new ContainerItem(e.Object, e.Quantity - (_taken.GetValueOrDefault(e.Object.Key)?.Quantity ?? 0))).ToArray()
         : Array.Empty<ContainerItem>();
     public TakenItem[] Capture() => _taken.Values.OrderBy(t => t.ItemKey, StringComparer.Ordinal).ToArray();
+    public ItemUseAllocation[] CaptureUses() => _uses.Values.OrderBy(u => u.Id).ToArray();
+    private int UsedQuantity(string itemKey) => _uses.Values.Where(u => u.ItemKey == itemKey).Sum(u => u.Quantity);
+    private int CarriedQuantity(string itemKey) => (_taken.GetValueOrDefault(itemKey)?.Quantity ?? 0) - UsedQuantity(itemKey);
     public CarriedItem[] Carried => Capture().Select(t => new CarriedItem(MapId, t.OwnerKey,
-        _owners[t.OwnerKey].Inventory.Single(e => e.Object.Key == t.ItemKey).Object, t.Quantity)).ToArray();
-    public void Reset() => _taken.Clear();
+        _owners[t.OwnerKey].Inventory.Single(e => e.Object.Key == t.ItemKey).Object, CarriedQuantity(t.ItemKey))).Where(i => i.Quantity > 0).ToArray();
+    public ItemBalance? Balance(string ownerKey, string itemKey)
+    {
+        InventoryEntry? entry = _owners.GetValueOrDefault(ownerKey)?.Inventory.SingleOrDefault(e => e.Object.Key == itemKey);
+        if (entry == null) return null;
+        return new(entry.Quantity, entry.Quantity - (_taken.GetValueOrDefault(itemKey)?.Quantity ?? 0), CarriedQuantity(itemKey),
+            _uses.Values.Where(u => u.ItemKey == itemKey && u.Phase == ItemUsePhase.Placed).Sum(u => u.Quantity),
+            _uses.Values.Where(u => u.ItemKey == itemKey && u.Phase == ItemUsePhase.Consumed).Sum(u => u.Quantity));
+    }
+    public void Reset() { _taken.Clear(); _uses.Clear(); Revision++; }
     private bool Scripted(MapObject obj) => obj.Header.Sid >= 0 || obj.Header.ScriptIndex >= 0
         || _prototypes.TryGetValue(obj.Header.Pid, out Prototype? p) && p.ScriptId is >= 0;
     public ItemTakeStatus ContainerStatus(string ownerKey)
@@ -85,7 +99,7 @@ public sealed class ItemTransferSession
     {
         ItemTakeStatus status = Eligibility(ownerKey, itemKey, out MapObject? owner, out _);
         if (status != ItemTakeStatus.Ready) return status;
-        int carried = _taken.GetValueOrDefault(itemKey)?.Quantity ?? 0;
+        int carried = CarriedQuantity(itemKey);
         if (carried == 0) return ItemTakeStatus.Empty;
         if (quantity <= 0 || quantity > carried) return ItemTakeStatus.InvalidQuantity;
         return InteractionStatus(owner!, actor, navigation, moving);
@@ -97,17 +111,36 @@ public sealed class ItemTransferSession
         TakenItem previous = _taken[itemKey];
         if (previous.Quantity == quantity) _taken.Remove(itemKey);
         else _taken[itemKey] = previous with { Quantity = previous.Quantity - quantity };
+        Revision++;
         return status;
     }
     public ItemTakeStatus Take(string ownerKey, string itemKey, int quantity, ActorLocation actor, HexNavigation navigation, bool moving)
     {
         ItemTakeStatus status = CanTake(ownerKey, itemKey, quantity, actor, navigation, moving);
-        if (status == ItemTakeStatus.Ready) _taken[itemKey] = new(ownerKey, itemKey, quantity + (_taken.GetValueOrDefault(itemKey)?.Quantity ?? 0));
+        if (status == ItemTakeStatus.Ready) { _taken[itemKey] = new(ownerKey, itemKey, quantity + (_taken.GetValueOrDefault(itemKey)?.Quantity ?? 0)); Revision++; }
         return status;
     }
-    public void Restore(TakenItem[] saved)
+    internal ItemUseStatus Place(ItemUseAllocation use)
+    {
+        if (!ItemUseProfile.Valid(use) || use.Phase != ItemUsePhase.Placed || use.RemainingTicks != use.Schedule.DelayTicks) return ItemUseStatus.InvalidState;
+        if (_uses.ContainsKey(use.Id)) return ItemUseStatus.Duplicate;
+        if (_uses.Count >= MaxUses) return ItemUseStatus.LimitReached;
+        if (Eligibility(use.OwnerKey, use.ItemKey, out _, out InventoryEntry? entry) != ItemTakeStatus.Ready) return ItemUseStatus.NoItem;
+        if (!ItemUseProfile.Supported(_prototypes.GetValueOrDefault(entry!.Object.Header.Pid))) return ItemUseStatus.Unsupported;
+        if (CarriedQuantity(use.ItemKey) < use.Quantity) return ItemUseStatus.Empty;
+        _uses.Add(use.Id, use); Revision++; return ItemUseStatus.Ready;
+    }
+    internal ItemUseStatus Consume(Guid id)
+    {
+        if (!_uses.TryGetValue(id, out ItemUseAllocation? use)) return ItemUseStatus.NoItem;
+        if (use.Phase != ItemUsePhase.Placed) return ItemUseStatus.Empty;
+        _uses[id] = use with { Phase = ItemUsePhase.Consumed, RemainingTicks = 0 }; Revision++; return ItemUseStatus.Ready;
+    }
+    public void Restore(TakenItem[] saved) => Restore(saved, Array.Empty<ItemUseAllocation>());
+    public void Restore(TakenItem[] saved, ItemUseAllocation[] uses)
     {
         if (saved == null || saved.Length > _owners.Values.Sum(o => o.Inventory.Length)) throw new InvalidDataException("Invalid collected item count.");
+        if (uses == null || uses.Length > MaxUses) throw new InvalidDataException("Invalid item-use allocation count.");
         var candidate = new Dictionary<string, TakenItem>(StringComparer.Ordinal);
         foreach (TakenItem row in saved)
         {
@@ -116,6 +149,19 @@ public sealed class ItemTransferSession
                 || row.Quantity > entry!.Quantity || !candidate.TryAdd(row.ItemKey, row))
                 throw new InvalidDataException("Collected item source, eligibility or quantity is invalid.");
         }
+        var allocations = new Dictionary<Guid, ItemUseAllocation>(); var allocated = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (ItemUseAllocation use in uses)
+        {
+            if (!ItemUseProfile.Valid(use) || !candidate.TryGetValue(use.ItemKey, out TakenItem? taken) || taken.OwnerKey != use.OwnerKey
+                || Eligibility(use.OwnerKey, use.ItemKey, out _, out InventoryEntry? entry) != ItemTakeStatus.Ready
+                || !ItemUseProfile.Supported(_prototypes.GetValueOrDefault(entry!.Object.Header.Pid)) || !allocations.TryAdd(use.Id, use))
+                throw new InvalidDataException("Invalid item-use identity, state or source.");
+            int quantity = allocated.GetValueOrDefault(use.ItemKey) + use.Quantity;
+            if (quantity > taken.Quantity) throw new InvalidDataException("Item-use allocations exceed the collected source quantity.");
+            allocated[use.ItemKey] = quantity;
+        }
         _taken.Clear(); foreach (var row in candidate) _taken.Add(row.Key, row.Value);
+        _uses.Clear(); foreach (var row in allocations) _uses.Add(row.Key, row.Value);
+        Revision++;
     }
 }
