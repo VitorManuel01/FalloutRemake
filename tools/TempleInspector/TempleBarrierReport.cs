@@ -27,7 +27,7 @@ internal static class TempleBarrierReport
         if (replacement.Type != 2 || replacement.Subtype != 5 || replacement.ScriptId != -1 || (flags & HexNavigation.NoBlock) == 0)
             throw new InvalidDataException("Replacement profile is not the expected nonblocking scenery.");
         var doors = DoorSession.FromMap(map, true); int entry = 29097;
-        var before = doors.Navigation(1).ReachableFrom(entry);
+        var beforeNavigation = doors.Navigation(1); var before = beforeNavigation.ReachableFrom(entry);
         var after = new HexNavigation(map.ObjectLayers.SelectMany(l => l.Objects), 1, o => o.Key == barrier.Key
             ? new(o.Header.Flags | HexNavigation.Hidden, null)
             : doors.Get(o.Key) is DoorState door ? new(door.Flags, door.OpenFlags) : new(o.Header.Flags, o.State.GetValueOrDefault("openFlags"))).ReachableFrom(entry);
@@ -45,6 +45,9 @@ internal static class TempleBarrierReport
             Replacement = new { replacement.Resource, replacement.Fid, replacement.Subtype, Flags = flags, Nonblocking = true },
             GeometryExperiment = new { Mode = "read-only hypothetical removal; replacement is nonblocking", Entry = entry,
                 BeforeReachable = before.Count, AfterReachable = after.Count, BeforeExitsToElevation2 = beforeExits, AfterExitsToElevation2 = afterExits },
+            ExplosionRangeReference = new { Mode = "CE default unmodified scenery-dispatch radius; no explosive placed or consumed", Radius = 3, ConfigurationOverridesEvaluated = false,
+                ReachablePlacementHexes = Enumerable.Range(0, 40000).Where(t => before.Distance(t) >= 0 && !beforeNavigation.IsExit(t)
+                    && FalloutGrid.Distance(t, barrier.Header.Tile) <= 3).Select(t => new { Hex = t, Distance = FalloutGrid.Distance(t, barrier.Header.Tile), ApproachSteps = before.Distance(t) }).ToArray() },
             AdditionalDependencies = resources.Identities, RuntimeAdapterEnabled = false,
             RequiredBeforeEnabling = new[] { "validated explosion event/radius and damage source", "consumption and ownership of used explosive", "runtime replacement identity and rendering", "source-bound checkpoint and navigation overlay" },
             OriginalReconstruction = "verified" };

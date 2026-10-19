@@ -76,6 +76,17 @@ public static class FalloutGrid
         return x is >= 0 and < 200 && y is >= 0 and < 200 ? y * 200 + x : null;
     }
 
+    // Unobstructed topological distance, independent of screen scale, doors and walking routes.
+    public static int Distance(int from, int to)
+    {
+        if (from is < 0 or >= 40000) throw new ArgumentOutOfRangeException(nameof(from));
+        if (to is < 0 or >= 40000) throw new ArgumentOutOfRangeException(nameof(to));
+        int x1 = from % 200, x2 = to % 200;
+        int r1 = from / 200 - (x1 + (x1 & 1)) / 2, r2 = to / 200 - (x2 + (x2 & 1)) / 2;
+        int dq = x2 - x1, dr = r2 - r1;
+        return Math.Max(Math.Abs(dq), Math.Max(Math.Abs(dr), Math.Abs(dq + dr)));
+    }
+
     // Useful only for reference checks: global CE screen coordinates at tile origin 199.
     public static (double X, double Y) OriginalScreen(GroundPoint point)
     {
