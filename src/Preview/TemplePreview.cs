@@ -121,6 +121,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckCarryWeightViews();
 				if (_test) await CheckQuantityTransfer();
 				if (_test) await CheckScriptedContainer();
+				if (_test) await CheckInventoryArtUi();
 				if (_test) await CheckVisualPreferences();
 				if (_capture != null)
 				{
@@ -141,6 +142,7 @@ public partial class TemplePreview : Node3D
 		var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 });
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
 		_floorArt = new FloorArtCatalog(data.Read);
+		_inventoryArt = new InventoryArtCatalog(data.Read); _unavailableItemArt.Clear();
 		LoadObjectText(data);
 		BindCurrentArea();
 		_skills.Reset();

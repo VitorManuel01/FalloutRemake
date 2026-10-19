@@ -11,7 +11,9 @@ public partial class PlayerBagWindow : AcceptDialog
 {
     private readonly Tree _items = new() { Name = "CarriedItems", Columns = 4, HideRoot = true, ColumnTitlesVisible = true,
         CustomMinimumSize = new Vector2(860, 240), SizeFlagsVertical = Control.SizeFlags.ExpandFill };
-    private readonly RichTextLabel _detail = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(860, 100) };
+    private readonly TextureRect _art = new() { CustomMinimumSize = new Vector2(96, 100), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+        StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = Control.TextureFilterEnum.Nearest, Visible = false, TooltipText = "Imagem original do item" };
+    private readonly RichTextLabel _detail = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(0, 100), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
     private readonly Label _summary = new();
     private readonly Button _returnOne = new() { Name = "ReturnOneAction", Text = "Devolver 1", Disabled = true },
         _returnStack = new() { Name = "ReturnStackAction", Text = "Devolver esta pilha", Disabled = true },
@@ -31,6 +33,7 @@ public partial class PlayerBagWindow : AcceptDialog
     public string DetailText => _detail.Text;
     public string SummaryText => _summary.Text;
     public string SelectedWeightText => _items.GetSelected()?.GetText(2) ?? "";
+    public int? SelectedArtFid => _art.Texture?.GetMeta("inventory_fid").AsInt32();
     public string ReturnStatusText => _returnStatus.Text;
     public bool ReadableLayout => _items.Size.X >= 800 && _items.Size.Y >= 200;
     public override void _Ready()
@@ -39,7 +42,8 @@ public partial class PlayerBagWindow : AcceptDialog
         WindowInput += input => { if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.B }) { SetInputAsHandled(); EmitSignal(SignalName.Canceled); } };
         var body = new VBoxContainer(); body.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         body.OffsetLeft = 20; body.OffsetRight = -20; body.OffsetTop = 20; body.OffsetBottom = -60; body.AddThemeConstantOverride("separation", 12); AddChild(body);
-        body.AddChild(_summary); body.AddChild(_items); body.AddChild(_detail);
+        body.AddChild(_summary); body.AddChild(_items); var detail = new HBoxContainer(); detail.AddThemeConstantOverride("separation", 16);
+        detail.AddChild(_art); detail.AddChild(_detail); body.AddChild(detail);
         body.AddChild(_returnStatus); var actions = new HBoxContainer(); body.AddChild(actions); actions.AddChild(_approach); actions.AddChild(_returnOne); actions.AddChild(_returnStack);
         actions.AddChild(_quantity); _quantity.Requested = qty => { if (SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, qty); };
         _approach.Pressed += () => { if (!_approach.Disabled && SelectedItem != null) ApproachRequested?.Invoke(SelectedItem); };
@@ -53,7 +57,8 @@ public partial class PlayerBagWindow : AcceptDialog
         _items.ItemSelected += ShowSelected;
     }
     public void Refresh(CarriedItem[] items, Func<CarriedItem, PrototypeText?> text, Func<int, string> mapName, long? carriedWeight, int capacity,
-        Func<CarriedItem, long?> unitWeight, Func<CarriedItem, int, ItemTakeStatus>? canReturn = null, Func<CarriedItem, ItemOriginPlan?>? originRoute = null)
+        Func<CarriedItem, long?> unitWeight, Func<CarriedItem, int, ItemTakeStatus>? canReturn = null, Func<CarriedItem, ItemOriginPlan?>? originRoute = null,
+        Func<CarriedItem, Texture2D?>? artwork = null)
     {
         string? selected = SelectedItem == null ? null : RowKey(SelectedItem);
         _text = text; _mapName = mapName; _canReturn = canReturn; _originRoute = originRoute; _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
@@ -66,9 +71,11 @@ public partial class PlayerBagWindow : AcceptDialog
             row.SetText(0, text(item)?.Name ?? "Item sem nome"); row.SetText(1, item.Quantity.ToString()); row.SetText(2, CarryWeightText.Stack(unitWeight(item), item.Quantity));
             row.SetText(3, mapName(item.Map)); row.SetMetadata(0, key);
             row.SetTooltipText(0, $"ID {item.Source.Header.Id} · PID {item.Source.Header.Pid} · {item.Source.Key}");
+            Texture2D? icon = artwork?.Invoke(item); if (icon != null) { row.SetIcon(0, icon); row.SetIconMaxWidth(0, 28); }
             if (key == selected || select == null) select = row;
         }
-        SelectedItem = null; _detail.Text = items.Length == 0 ? "Recolha itens de recipientes com J. Itens recolhidos acompanham você ao trocar de área." : "Selecione um item para consultar a descrição.";
+        SelectedItem = null; _art.Texture = null; _art.Visible = false;
+        _detail.Text = items.Length == 0 ? "Recolha itens de recipientes com J. Itens recolhidos acompanham você ao trocar de área." : "Selecione um item para consultar a descrição.";
         _returnOne.Disabled = _returnStack.Disabled = _approach.Disabled = true; _returnStatus.Text = ""; _quantity.Configure(0, "Devolver quantidade", null);
         if (select != null) { select.Select(0); ShowSelected(); }
     }
@@ -77,6 +84,7 @@ public partial class PlayerBagWindow : AcceptDialog
     {
         TreeItem? selected = _items.GetSelected(); if (selected == null || !_lines.TryGetValue(selected.GetMetadata(0).AsString(), out var item)) return;
         SelectedItem = item; PrototypeText? text = _text!(item);
+        _art.Texture = selected.GetIcon(0); _art.Visible = _art.Texture != null;
         _detail.Text = $"{text?.Name ?? "Item sem nome"}\n\n{text?.Description ?? "Descrição indisponível."}\n\nEncontrado em {_mapName!(item.Map)}.";
         ItemTakeStatus status = _canReturn?.Invoke(item, 1) ?? ItemTakeStatus.Unsupported;
         _returnStatus.Text = status == ItemTakeStatus.Ready ? "Você pode devolver ao recipiente de origem, sem usar o item."

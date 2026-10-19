@@ -41,7 +41,7 @@ public partial class TemplePreview
         _loot.Refresh(OriginalText(owner)?.Name ?? "Recipiente", _campaign.Current.Items.Contents(_lootOwner), OriginalText,
             (key, qty) => _campaign.CanTakeItem(_lootOwner, key, qty, _walker?.Moving == true), _campaign.CarriedCount, ContainerApproach(owner).HasValue,
             _campaign.CarriedWeight, _campaign.CarryCapacity, item => _campaign.UnitWeight(_campaign.CurrentMap, item),
-            _campaign.Current.Items.ContainerStatus(_lootOwner));
+            _campaign.Current.Items.ContainerStatus(_lootOwner), item => InventoryTexture(_campaign.CurrentMap, item));
     }
     private void TakeFromContainer(string key, int quantity)
     {
@@ -84,7 +84,7 @@ public partial class TemplePreview
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             one = (Button)_loot!.FindChild("TakeOneAction", true, false);
             Vector2 viewport = GetViewport().GetVisibleRect().Size;
-            if (one.Disabled || !_loot.ReadableLayout || _loot.Remaining != 1 || _loot.SelectedWeightText != "1 lb" || !_loot.LoadText.Contains("0 / 150 lb")
+            if (one.Disabled || !_loot.ReadableLayout || _loot.Remaining != 1 || _loot.SelectedWeightText != "1 lb" || _loot.SelectedArtFid != 0x070000AA || !_loot.LoadText.Contains("0 / 150 lb")
                 || _loot.Size.X > viewport.X - 32 || _loot.Size.Y > viewport.Y - 32)
                 throw new InvalidDataException($"Nearby original item was not readable or collectable: disabled={one.Disabled}, list={_loot.ListSize}, window={_loot.Size}, remaining={_loot.Remaining}, actor={_campaign.Location.Hex}, moving={_walker.Moving}, status={_loot.StatusText}.");
             one.EmitSignal(Button.SignalName.Pressed);

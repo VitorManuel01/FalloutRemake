@@ -12,7 +12,9 @@ public partial class ContainerLootWindow : AcceptDialog
     private readonly Tree _items = new() { Name = "LootItems", Columns = 3, HideRoot = true, ColumnTitlesVisible = true,
         CustomMinimumSize = new Vector2(800, 180), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
     private readonly Label _owner = new() { ClipText = true }, _bag = new();
-    private readonly RichTextLabel _description = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(800, 64) },
+    private readonly TextureRect _art = new() { CustomMinimumSize = new Vector2(96, 96), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+        StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = Control.TextureFilterEnum.Nearest, Visible = false, TooltipText = "Imagem original do item" };
+    private readonly RichTextLabel _description = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(0, 96), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill },
         _status = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(800, 48) };
     private readonly Button _one = new() { Name = "TakeOneAction", Text = "Retirar 1", Disabled = true },
         _stack = new() { Name = "TakeStackAction", Text = "Retirar esta pilha", Disabled = true },
@@ -28,6 +30,7 @@ public partial class ContainerLootWindow : AcceptDialog
     public string StatusText => _status.Text;
     public string LoadText => _bag.Text;
     public string SelectedWeightText => _items.GetSelected()?.GetText(2) ?? "";
+    public int? SelectedArtFid => _art.Texture?.GetMeta("inventory_fid").AsInt32();
     public long Remaining => _lines.Values.Sum(l => (long)l.Quantity);
     public Vector2 ListSize => _items.Size;
     public bool ReadableLayout => _items.Size.Y >= 180 && _items.Size.X >= 500;
@@ -37,7 +40,8 @@ public partial class ContainerLootWindow : AcceptDialog
         WindowInput += input => { if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.J }) { SetInputAsHandled(); EmitSignal(SignalName.Canceled); } };
         var body = new VBoxContainer(); body.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         body.OffsetLeft = 20; body.OffsetRight = -20; body.OffsetTop = 20; body.OffsetBottom = -60; body.AddThemeConstantOverride("separation", 12); AddChild(body);
-        body.AddChild(_owner); body.AddChild(_items); body.AddChild(_description); body.AddChild(_status);
+        body.AddChild(_owner); body.AddChild(_items); var detail = new HBoxContainer(); detail.AddThemeConstantOverride("separation", 16);
+        detail.AddChild(_art); detail.AddChild(_description); body.AddChild(detail); body.AddChild(_status);
         var actions = new HBoxContainer(); actions.AddThemeConstantOverride("separation", 12); body.AddChild(actions);
         actions.AddChild(_approach); actions.AddChild(_one); actions.AddChild(_stack); body.AddChild(_bag);
         actions.AddChild(_quantity); _quantity.Requested = qty => TakeRequested?.Invoke(SelectedKey, qty);
@@ -49,7 +53,7 @@ public partial class ContainerLootWindow : AcceptDialog
         _approach.Pressed += () => { if (!_approach.Disabled) ApproachRequested?.Invoke(); };
     }
     public void Refresh(string owner, ContainerItem[] lines, Func<MapObject, PrototypeText?> text, Func<string, int, ItemTakeStatus> canTake, long carried, bool canApproach,
-        long? carriedWeight, int capacity, Func<MapObject, long?> unitWeight, ItemTakeStatus ownerStatus = ItemTakeStatus.Ready)
+        long? carriedWeight, int capacity, Func<MapObject, long?> unitWeight, ItemTakeStatus ownerStatus = ItemTakeStatus.Ready, Func<MapObject, Texture2D?>? artwork = null)
     {
         _owner.Text = owner; _text = text; _canTake = canTake; _canApproach = canApproach;
         _bag.Text = $"Bolsa: {carried} {(carried == 1 ? "unidade" : "unidades")} · Carga: {CarryWeightText.Load(carriedWeight, capacity)} · K para salvar";
@@ -59,9 +63,11 @@ public partial class ContainerLootWindow : AcceptDialog
             _lines.Add(line.Source.Key, line); TreeItem row = _items.CreateItem(root);
             row.SetText(0, text(line.Source)?.Name ?? "Item sem nome"); row.SetText(1, line.Quantity.ToString()); row.SetMetadata(0, line.Source.Key);
             row.SetText(2, CarryWeightText.Stack(unitWeight(line.Source), line.Quantity));
+            Texture2D? icon = artwork?.Invoke(line.Source); if (icon != null) { row.SetIcon(0, icon); row.SetIconMaxWidth(0, 28); }
             if (line.Source.Key == selected || select == null) select = row;
         }
         SelectedKey = ""; _one.Disabled = _stack.Disabled = _approach.Disabled = true; _quantity.Configure(0, "Retirar quantidade", null);
+        _art.Texture = null; _art.Visible = false;
         _description.Text = ""; _status.Text = ownerStatus == ItemTakeStatus.Ready ? "Este recipiente está vazio." : Hint(ownerStatus);
         if (select != null) { select.Select(0); ShowSelected(); }
     }
@@ -70,6 +76,7 @@ public partial class ContainerLootWindow : AcceptDialog
         TreeItem? row = _items.GetSelected();
         if (row == null || !_lines.TryGetValue(row.GetMetadata(0).AsString(), out var line)) return;
         SelectedKey = line.Source.Key; _description.Text = _text!(line.Source)?.Description ?? "Descrição indisponível.";
+        _art.Texture = row.GetIcon(0); _art.Visible = _art.Texture != null;
         ItemTakeStatus status = _canTake!(SelectedKey, 1);
         _status.Text = Hint(status);
         if (status == ItemTakeStatus.TooFar && !_canApproach) _status.Text = "Sem caminho até o recipiente com os bloqueios atuais.";
