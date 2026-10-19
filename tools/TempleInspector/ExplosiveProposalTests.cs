@@ -22,7 +22,7 @@ internal static class ExplosiveProposalTests
             var world = World(); string before = JsonSerializer.Serialize(world.Capture("catalog")); var carried = world.Carried.Single();
             var result = ExplosiveUseProposal.Create(world, carried with { Quantity = 999 }, 60, SkillRollOutcome.Success, false);
             Assert(result.Status == ExplosiveProposalStatus.Ready && result.Plan is { ActivePid: 209, MinimumDamage: 40, MaximumDamage: 80, SceneryRadius: 3 });
-            Assert(result.Plan!.Source.Quantity == 2 && result.Plan.Source.Source.Key == "item" && result.Plan.Placement == world.Location && result.Plan.Schedule.DelayTicks == 600);
+            Assert(result.Plan!.Source.Quantity == 2 && result.Plan.Quantity == 1 && result.Plan.Source.Source.Key == "item" && result.Plan.Placement == world.Location && result.Plan.Schedule.DelayTicks == 600);
             Assert(before == JsonSerializer.Serialize(world.Capture("catalog")) && world.CarriedCount == 2 && world.Current.Items.Contents("owner").Single().Quantity == 3);
         });
         check("cancelled, moving, invalid timer and stale source proposals never produce a usable plan", () =>
@@ -44,6 +44,9 @@ internal static class ExplosiveProposalTests
             var exit = WorldTests.Map(3, 126).ObjectLayers[0].Objects[0];
             world = World(map with { ObjectLayers = new[] { new ObjectLayer(0, 0, 2, map.ObjectLayers[0].Objects.Append(exit).ToArray()) } });
             Assert(ExplosiveUseProposal.Create(world, world.Carried.Single(), 60, SkillRollOutcome.Success, false).Status == ExplosiveProposalStatus.AtExit);
+            var obstacle = WorldTests.Map(3, 126, true).ObjectLayers[0].Objects[1];
+            world = World(map with { ObjectLayers = new[] { new ObjectLayer(0, 0, 2, map.ObjectLayers[0].Objects.Append(obstacle).ToArray()) } });
+            Assert(ExplosiveUseProposal.Create(world, world.Carried.Single(), 60, SkillRollOutcome.Success, false).Status == ExplosiveProposalStatus.Unavailable);
         });
         check("explosive proposal preserves premature timing and demolition expert override without detonation", () =>
         {

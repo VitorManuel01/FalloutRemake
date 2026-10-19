@@ -3,9 +3,9 @@
 `ExplosiveUseProposal.Create` valida uma unidade efetivamente carregada e devolve
 um plano, sem executar uso. Aceita o PRO original PID 85 pelo hash/size/subtipo
 confirmados; recusa origem obsoleta, protótipo modificado, caminhada em curso,
-tile de saída, prazo e resultado de rolagem inválidos. Usa os dados atuais da bolsa,
+tile bloqueado/indisponível ou de saída, prazo e resultado de rolagem inválidos. Usa os dados atuais da bolsa,
 sem confiar na quantidade de uma linha antiga da interface. O plano inclui origem,
-local do personagem, PID ativo 209, prazo e perfil CE padrão de dano 40–80/raio 3.
+local do personagem, quantidade explícita de uma unidade, PID ativo 209, prazo e perfil CE padrão de dano 40–80/raio 3.
 
 Decisões de compatibilidade explícitas: cancelar não altera propriedade; o plano
 define o PID armado e seus valores de dano diretamente, sem propagar a consulta

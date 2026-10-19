@@ -3,8 +3,8 @@ using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
-public enum ExplosiveProposalStatus { Ready, Canceled, NoItem, Unsupported, Busy, AtExit, InvalidTimer, InvalidRoll }
-public sealed record ExplosiveUsePlan(CarriedItem Source, ActorLocation Placement, int ActivePid, ExplosiveSchedule Schedule, int MinimumDamage, int MaximumDamage, int SceneryRadius);
+public enum ExplosiveProposalStatus { Ready, Canceled, NoItem, Unsupported, Busy, Unavailable, AtExit, InvalidTimer, InvalidRoll }
+public sealed record ExplosiveUsePlan(CarriedItem Source, int Quantity, ActorLocation Placement, int ActivePid, ExplosiveSchedule Schedule, int MinimumDamage, int MaximumDamage, int SceneryRadius);
 public sealed record ExplosiveProposal(ExplosiveProposalStatus Status, ExplosiveUsePlan? Plan = null);
 
 /// <summary>Confirmed, source-bound proposal only; committing ownership, time and world changes is a separate future operation.</summary>
@@ -24,11 +24,12 @@ public static class ExplosiveUseProposal
         if (item.Source.Header.Pid != InactivePid || prototype is not { Type: 0, Subtype: 5, ScriptId: -1, BaseWeight: 4 }
             || prototype.Resource.Size != 69 || prototype.Resource.Sha256 != SourcePrototypeHash)
             return new(ExplosiveProposalStatus.Unsupported);
+        if (!world.Current.Travel.CanArrive(world.Location)) return new(ExplosiveProposalStatus.Unavailable);
         if (world.Current.Doors.Navigation(world.Location.Elevation).IsExit(world.Location.Hex)) return new(ExplosiveProposalStatus.AtExit);
         if (seconds < ExplosiveTimer.MinimumSeconds || seconds > ExplosiveTimer.MaximumSeconds || seconds % ExplosiveTimer.StepSeconds != 0)
             return new(ExplosiveProposalStatus.InvalidTimer);
         if (!System.Enum.IsDefined(outcome)) return new(ExplosiveProposalStatus.InvalidRoll);
         // Normalize the verified inactive item to its active identity explicitly; do not forward the CE helper's unchecked active-PID lookup.
-        return new(ExplosiveProposalStatus.Ready, new(item, world.Location, ActivePid, ExplosiveTimer.Plan(seconds, outcome, demolitionExpert), MinimumDamage, MaximumDamage, SceneryRadius));
+        return new(ExplosiveProposalStatus.Ready, new(item, 1, world.Location, ActivePid, ExplosiveTimer.Plan(seconds, outcome, demolitionExpert), MinimumDamage, MaximumDamage, SceneryRadius));
     }
 }

@@ -26,7 +26,7 @@ internal static class ExplosiveProfileReport
             Timer = new { Minimum = 10, Maximum = 180, Default = 60, Step = 10, TicksPerSecond = 10, Skill = "Traps, modifier zero; Demolition Expert forces success" },
             DefaultSchedules = Enum.GetValues<SkillRollOutcome>().Select(outcome => new { Outcome = outcome.ToString(), Schedule = ExplosiveTimer.Plan(60, outcome) }),
             ProjectProposal = new { Fixture = "isolated session seeded from original item, not a gameplay collection", Status = proposal.Status.ToString(),
-                proposal.Plan!.Placement, proposal.Plan.ActivePid, proposal.Plan.Schedule, proposal.Plan.MinimumDamage, proposal.Plan.MaximumDamage, proposal.Plan.SceneryRadius,
+                proposal.Plan!.Quantity, proposal.Plan.Placement, proposal.Plan.ActivePid, proposal.Plan.Schedule, proposal.Plan.MinimumDamage, proposal.Plan.MaximumDamage, proposal.Plan.SceneryRadius,
                 Canceled = canceled.Status.ToString(), StateUnchanged = true, CompatibilityDecision = "cancel has no ownership change; active PID and default damage are explicit project values" },
             Ownership = "Confirmed arm path returns 2; _obj_use_item removes one carried unit and connects it at the owner's tile/elevation",
             Expiry = "Explosion uses the current owner position if carried, otherwise the ground position; destroys the object unless actionExplode returns busy (-2), which requeues 50 ticks",
