@@ -15,6 +15,7 @@ internal static class ScriptReport
             program.Source, program.IdentifiersOffset, program.StaticStringsOffset, program.CodeOffset,
             InstructionCount = program.Instructions.Count,
             ExternalReferencePatterns = IntExternalReferences.Inspect(program),
+            DialogueOptionPatterns = IntDialogueOptions.Inspect(program),
             Procedures = program.Procedures.Select(p => new
             {
                 Procedure = p,

@@ -206,7 +206,9 @@ Não inclua dados originais, exportações ou arte convertida no repositório.
 
 O modo `--script` inspeciona a estrutura de um INT sem executá-lo. Acrescente
 `--instructions` para incluir opcodes e operandos brutos. Os trechos são físicos,
-sem prova automática de fluxo ou comportamento. A análise da segunda porta confirmou
+sem prova automática de fluxo ou comportamento. Também lista referências literais
+de opções de diálogo, mantendo requisitos desconhecidos sem estimá-los.
+A análise da segunda porta confirmou
 que o script a tranca na entrada, embora o MAP grave o estado destrancado. Sua
 interação já usa um perfil mínimo de teste na prévia.
 
@@ -220,6 +222,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Navegação: regras e limites](docs/navigation.md)
 - [Portas: comportamento e validação atual](docs/doors-2026-10-17.md)
 - [Segunda porta: condições do script e leitor INT](docs/door-script-2026-10-18.md)
+- [Leitor INT: referências de opções de diálogo e limites](docs/int-dialogue-options-2026-10-20.md)
 - [Adaptador de arrombamento: regras e validação](docs/door-adapter-2026-10-18.md)
 - [Arrombamento na prévia: perfil e controles](docs/lockpick-preview-2026-10-18.md)
 - [Passagens internas: destinos e estado do personagem](docs/travel-2026-10-18.md)

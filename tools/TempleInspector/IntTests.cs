@@ -6,6 +6,32 @@ internal static class IntTests
 {
     public static void Run(Action<string, Action> check)
     {
+        check("INT dialogue options preserve literal messages targets signed IQ and aliased ownership once", () =>
+        {
+            var p = DialogueFixture((0xC001, 3), (0x8046, null), (0xC001, 749), (0xC001, 134), (0xC001, 1), (0xC001, 50), (0x8121, null));
+            var option = IntDialogueOptions.Inspect(p).Single();
+            Assert(option.Intelligence == -3 && option.MessageList == 749 && option.Message == 134 && option.TargetIndex == 1
+                && option.TargetName == "entry" && option.Reaction == 50 && option.OwningProcedures.SequenceEqual(new[] { 0, 1 }));
+            p = DialogueFixture((0xC001, 4), (0xC001, 749), (0xC001, 136), (0xC001, 0), (0xC001, 49), (0x8121, null));
+            Assert(IntDialogueOptions.Inspect(p).Single().Intelligence == 4);
+        });
+        check("INT dialogue analysis leaves unknown IQ and foreign target unresolved without inventing an edge", () =>
+        {
+            var p = DialogueFixture((0x80BF, null), (0xC001, 749), (0xC001, 134), (0xC001, 999), (0xC001, 50), (0x8121, null));
+            byte[] before = p.CopySourceBytes(); var option = IntDialogueOptions.Inspect(p).Single();
+            Assert(option.Intelligence == null && option.TargetIndex == 999 && option.TargetName == null && p.CopySourceBytes().SequenceEqual(before));
+            p = DialogueFixture((0xC001, 4), (0xC001, 749), (0xC001, 134), (0xC001, -1), (0xC001, 50), (0x8121, null));
+            Assert(IntDialogueOptions.Inspect(p).Single().TargetName == null);
+        });
+        check("INT dialogue patterns do not cross procedure spans or infer computed and string arguments", () =>
+        {
+            foreach (ushort tag in new ushort[] { 0x9001, 0xA001 })
+                Assert(IntDialogueOptions.Inspect(DialogueFixture((0xC001, 4), (0xC001, 749), (0xC001, 134), (tag, 1), (0xC001, 50), (0x8121, null))).Length == 0);
+            Assert(IntDialogueOptions.Inspect(DialogueFixture((0xC001, 4), (0xC001, 749), (0xC001, 134), (0xC001, 1), (0xC001, 50), (0x8000, null), (0x8121, null))).Length == 0);
+            var p = DialogueFixture((0xC001, 4), (0xC001, 749), (0xC001, 134), (0xC001, 1), (0xC001, 50), (0x8121, null));
+            byte[] split = p.CopySourceBytes(); I32(split, 86, p.Instructions.Last().Offset);
+            Assert(IntDialogueOptions.Inspect(Read(split)).Length == 0);
+        });
         check("INT identifier references stay within their own table and preserve exact offsets", () =>
         {
             IntProgram p = Read(Fixture()); Assert(p.IdentifierAt(4) == "entry" && p.IdentifierAt(5) == "ntry");
@@ -107,6 +133,18 @@ internal static class IntTests
         var bytes = new byte[124]; Fixture().AsSpan(0, 112).CopyTo(bytes);
         U16(bytes, 112, 0x80BC); U16(bytes, 114, operation == 0x8016 ? (ushort)0xC001 : (ushort)0x9001); I32(bytes, 116, 4); U16(bytes, 120, operation); U16(bytes, 122, 0x8000);
         return bytes;
+    }
+    private static IntProgram DialogueFixture(params (ushort Opcode, int? Operand)[] instructions)
+    {
+        var bytes = new byte[112 + instructions.Sum(i => i.Operand.HasValue ? 6 : 2)];
+        Fixture().AsSpan(0, 112).CopyTo(bytes); int offset = 112;
+        foreach (var instruction in instructions)
+        {
+            U16(bytes, offset, instruction.Opcode);
+            if (instruction.Operand.HasValue) I32(bytes, offset + 2, instruction.Operand.Value);
+            offset += instruction.Operand.HasValue ? 6 : 2;
+        }
+        return Read(bytes);
     }
     private static void I32(byte[] bytes, int offset, int value) => BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(offset, 4), value);
     private static void U16(byte[] bytes, int offset, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(offset, 2), value);
