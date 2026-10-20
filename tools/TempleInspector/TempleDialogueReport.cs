@@ -55,6 +55,10 @@ internal static class TempleDialogueReport
             throw new InvalidDataException("Speech state-write extraction changed.");
         IntProgram gateProgram = IntProgram.Read(data.Read(gateBinding.Program.Path));
         if (gateProgram.Source.Sha256 != gateBinding.Program.Sha256) throw new InvalidDataException("Gate program changed after MAP inspection.");
+        GameResource scriptList = data.Read("scripts/scripts.lst");
+        ScriptListEntry actorMetadata = ScriptListMetadata.Read(scriptList, binding.Index), gateMetadata = ScriptListMetadata.Read(scriptList, gateBinding.Index);
+        if (actorMetadata.ProgramPath != program.Source.Path || gateMetadata.ProgramPath != gateProgram.Source.Path)
+            throw new InvalidDataException("Script metadata index no longer matches the MAP binding.");
         Expect(gateProgram, (5530, 0xC001, 5596), (5536, 0xC001, 3), (5542, 0x80C1, null),
             (5544, 0xC001, 0), (5550, 0x8033, null), (5552, 0x802F, null),
             (5554, 0xC001, 3), (5560, 0xC001, 1), (5566, 0x80C2, null),
@@ -92,6 +96,10 @@ internal static class TempleDialogueReport
                 OnMapVariable20Equals1 = "map_update sets local 0=0, then locks this door",
                 LockRule = "local 0 == 0 locks; otherwise unlocks",
                 Inference = "Under zero initial locals this gate enters unlocked; later map state may lock it. This does not enable or prove the full NPC lifecycle." },
+            LocalVariableMetadata = new { Actor = actorMetadata, Gate = gateMetadata,
+                SourceActorLocalCount = map.ActiveScripts.Single(s => s.Sid == actor.Header.Sid).LocalVariablesCount,
+                SourceGateLocalCount = map.ActiveScripts.Single(s => s.Sid == gate.Header.Sid).LocalVariablesCount,
+                EngineAllocation = "On first local access CE takes the scripts.lst count, allocates map locals and zero-fills them; no execution performed here" },
             RuntimeAdapterEnabled = false,
             RequiredBeforeEnabling = new[] { "actor local-variable initialization and conversation entry conditions", "effective intelligence and tagged-skill profile",
                 "map/global variable ownership and compatible checkpoint", "NPC movement and gate script lifecycle" },

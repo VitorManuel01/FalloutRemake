@@ -153,6 +153,7 @@ internal static class SelfTests
             NavigationTests.Run(Check);
             DoorTests.Run(Check);
             IntTests.Run(Check);
+            ScriptMetadataTests.Run(Check);
             TempleAdapterTests.Run(Check);
             CharacterSkillTests.Run(Check);
             TravelTests.Run(Check);

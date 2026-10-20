@@ -226,6 +226,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Segunda porta: condições do script e leitor INT](docs/door-script-2026-10-18.md)
 - [Leitor INT: referências de opções de diálogo e limites](docs/int-dialogue-options-2026-10-20.md)
 - [Porta final: escritas constantes, entrada e atualização de estado](docs/temple-gate-state-evidence-2026-10-20.md)
+- [Scripts.lst: metadados de locais e alocação inicial](docs/script-local-metadata-2026-10-20.md)
 - [Adaptador de arrombamento: regras e validação](docs/door-adapter-2026-10-18.md)
 - [Arrombamento na prévia: perfil e controles](docs/lockpick-preview-2026-10-18.md)
 - [Passagens internas: destinos e estado do personagem](docs/travel-2026-10-18.md)
