@@ -21,6 +21,9 @@ public partial class PlayerBagWindow : AcceptDialog
     private readonly RichTextLabel _returnStatus = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(860, 64) };
     private readonly Dictionary<string, CarriedItem> _lines = new();
     private readonly QuantityTransfer _quantity = new() { Name = "ReturnQuantity", Visible = false };
+    private readonly Button _prepareExplosive = new() { Name = "PrepareExplosiveAction", Text = "Posicionar · ensaio", Visible = false, Disabled = true };
+    public Action<CarriedItem>? PrepareExplosiveRequested;
+    private Func<CarriedItem, ExplosiveProposalStatus>? _canPrepareExplosive;
     private Func<CarriedItem, PrototypeText?>? _text;
     private Func<int, string>? _mapName;
     private Func<CarriedItem, int, ItemTakeStatus>? _canReturn;
@@ -48,6 +51,8 @@ public partial class PlayerBagWindow : AcceptDialog
         detail.AddChild(_art); detail.AddChild(_detail); body.AddChild(detail);
         body.AddChild(_returnStatus); var actions = new HFlowContainer(); body.AddChild(actions); actions.AddChild(_approach); actions.AddChild(_returnOne); actions.AddChild(_returnStack);
         actions.AddChild(_quantity); _quantity.Requested = qty => { if (SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, qty); };
+        actions.AddChild(_prepareExplosive);
+        _prepareExplosive.Pressed += () => { if (!_prepareExplosive.Disabled && SelectedItem != null) PrepareExplosiveRequested?.Invoke(SelectedItem); };
         _approach.Pressed += () => { if (!_approach.Disabled && SelectedItem != null) ApproachRequested?.Invoke(SelectedItem); };
         _returnOne.Pressed += () => { if (!_returnOne.Disabled && SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, 1); };
         _returnStack.Pressed += () => { if (!_returnStack.Disabled && SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, SelectedItem.Quantity); };
@@ -60,10 +65,11 @@ public partial class PlayerBagWindow : AcceptDialog
     }
     public void Refresh(CarriedItem[] items, Func<CarriedItem, PrototypeText?> text, Func<int, string> mapName, long? carriedWeight, int capacity,
         Func<CarriedItem, long?> unitWeight, Func<CarriedItem, int, ItemTakeStatus>? canReturn = null, Func<CarriedItem, ItemOriginPlan?>? originRoute = null,
-        Func<CarriedItem, Texture2D?>? artwork = null)
+        Func<CarriedItem, Texture2D?>? artwork = null, Func<CarriedItem, ExplosiveProposalStatus>? canPrepareExplosive = null)
     {
         string? selected = SelectedItem == null ? null : RowKey(SelectedItem);
-        _text = text; _mapName = mapName; _canReturn = canReturn; _originRoute = originRoute; _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
+        _text = text; _mapName = mapName; _canReturn = canReturn; _originRoute = originRoute; _canPrepareExplosive = canPrepareExplosive;
+        _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
         TotalQuantity = items.Sum(i => (long)i.Quantity);
         _summary.Text = items.Length == 0 ? "Sua bolsa está vazia." : $"{TotalQuantity} {(TotalQuantity == 1 ? "unidade" : "unidades")} em {items.Length} {(items.Length == 1 ? "pilha" : "pilhas")}";
         _summary.Text += $" · Carga: {CarryWeightText.Load(carriedWeight, capacity)} · Força {CarryWeight.TestStrength} (perfil de teste)";
@@ -79,6 +85,7 @@ public partial class PlayerBagWindow : AcceptDialog
         SelectedItem = null; _art.Texture = null; _art.Visible = false;
         _detail.Text = items.Length == 0 ? "Recolha itens de recipientes com J. Itens recolhidos acompanham você ao trocar de área." : "Selecione um item para consultar a descrição.";
         _returnOne.Disabled = _returnStack.Disabled = _approach.Disabled = true; _returnStatus.Text = ""; _quantity.Configure(0, "Devolver quantidade", null);
+        _prepareExplosive.Visible = false; _prepareExplosive.Disabled = true;
         if (select != null) { select.Select(0); ShowSelected(); }
     }
     private static string RowKey(CarriedItem item) => $"{item.Map}:{item.Source.Key}";
@@ -86,6 +93,10 @@ public partial class PlayerBagWindow : AcceptDialog
     {
         TreeItem? selected = _items.GetSelected(); if (selected == null || !_lines.TryGetValue(selected.GetMetadata(0).AsString(), out var item)) return;
         SelectedItem = item; PrototypeText? text = _text!(item);
+        ExplosiveProposalStatus preparation = _canPrepareExplosive?.Invoke(item) ?? ExplosiveProposalStatus.Unsupported;
+        _prepareExplosive.Visible = item.Source.Header.Pid == ExplosiveUseProposal.InactivePid;
+        _prepareExplosive.Disabled = preparation != ExplosiveProposalStatus.Ready;
+        _prepareExplosive.TooltipText = preparation == ExplosiveProposalStatus.Ready ? "Escolher prazo e posicionar uma unidade em ensaio controlado" : ExplosivePreparationWindow.Hint(preparation);
         _art.Texture = selected.GetIcon(0); _art.Visible = _art.Texture != null;
         _detail.Text = $"{text?.Name ?? "Item sem nome"}\n\n{text?.Description ?? "Descrição indisponível."}\n\nEncontrado em {_mapName!(item.Map)}.";
         ItemTakeStatus status = _canReturn?.Invoke(item, 1) ?? ItemTakeStatus.Unsupported;

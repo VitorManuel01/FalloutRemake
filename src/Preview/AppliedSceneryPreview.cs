@@ -112,7 +112,7 @@ public partial class TemplePreview
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "barrier-upper-bag.png"));
             CloseBag(); TravelTo(1); CheckView(); Walk(14322); SaveCheckpoint(); ResetWalker(); LoadCheckpoint(); CheckView();
             if (_campaign.CarriedCount != 2 || _walker!.CurrentHex != 14322) throw new InvalidDataException("Return checkpoint lost upper items or passage position.");
-            GD.Print("APPLIED_BARRIER_PREVIEW_OK: atomic scenery/consumption, hidden original root 44, separate GUID/nonblocking rubble, filters, rebuilt navigation, save/load on former blocker, original elevation-2 travel and 2-item bag, script refusal, return checkpoint, unchanged XP/source bytes; no activation UI or general combat.");
+            GD.Print("APPLIED_BARRIER_PREVIEW_OK: atomic scenery/consumption, hidden original root 44, separate GUID/nonblocking rubble, filters, rebuilt navigation, save/load on former blocker, original elevation-2 travel and 2-item bag, script refusal, return checkpoint, unchanged XP/source bytes; effect resolution remains an audit without general combat.");
         }
         finally { CloseBag(); _hud.Filters["hidden"] = hidden; SetNavigationGrid(grid); }
     }

@@ -36,7 +36,7 @@ public partial class TemplePreview
             node.SetMeta("active_pid", ExplosiveUseProposal.ActivePid); node.SetMeta("remaining_ticks", use.RemainingTicks);
             node.AddChild(new MeshInstance3D { Mesh = _placedUseMesh, MaterialOverride = _placedUseMaterial });
             int seconds = (use.RemainingTicks + ExplosiveTimer.TicksPerSecond - 1) / ExplosiveTimer.TicksPerSecond;
-            var caption = new Label3D { Name = "UseLabel", Text = use.RemainingTicks == 0 ? "PENDENTE\naguarda resolução" : $"POSICIONADO\n{seconds} s · tempo lógico",
+            var caption = new Label3D { Name = "UseLabel", Text = use.RemainingTicks == 0 ? "PENDENTE\naguarda resolução" : $"POSICIONADO\n{seconds} s · pausado",
                 Position = new Vector3(0, 1.8f, 0), FontSize = 32, PixelSize = .012f, Modulate = new Color("ffd496"),
                 Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, NoDepthTest = true };
             node.AddChild(caption); RegisterWorldLabel(caption);
@@ -54,10 +54,11 @@ public partial class TemplePreview
     {
         _checkingNavigation = true;
         bool scenery = _hud.Filters["scenery"];
+        bool grid = _showNavigationGrid;
         try
         {
             ResetWalker(); ToggleWalkMode();
-            void Walk(int hex) { RequestWalk(hex); _walker!.Advance(1000); UpdateWalkerPosition(); if (_walker.CurrentHex != hex) throw new InvalidDataException("Explosive preview audit walk failed."); }
+            void Walk(int hex) { RequestWalk(hex); CompleteReadabilityWalk(); if (_walker!.CurrentHex != hex) throw new InvalidDataException("Explosive preview audit walk failed."); }
             int Approach(MapObject obj) => Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(obj.Header.Tile, d)).Append(obj.Header.Tile)
                 .Where(t => t.HasValue && _reachable!.Distance(t.Value) >= 0 && !_navigation!.IsExit(t.Value)).Select(t => t!.Value)
                 .OrderBy(t => _reachable!.Distance(t)).ThenBy(t => t).First();
@@ -80,6 +81,8 @@ public partial class TemplePreview
             int placement = Enumerable.Range(1, 39999).Where(t => _reachable!.Distance(t) >= 0 && !_navigation!.IsExit(t) && FalloutGrid.Distance(t, 14322) <= 3)
                 .OrderBy(t => FalloutGrid.Distance(t, 14322)).ThenBy(t => _reachable!.Distance(t)).ThenBy(t => t).First();
             Walk(placement);
+            SetNavigationGrid(false);
+            await CheckExplosivePreparation(owner, item);
             var plan = ExplosiveUseProposal.Create(_campaign, _campaign.Carried.Single(), 60, SkillRollOutcome.Success, false).Plan!;
             int roots = _lookup.Count, reach = _reachable!.Count; ActorLocation actor = _campaign.Location;
             if (_campaign.CommitExplosiveUse(plan, false).Status != ExplosiveCommitStatus.Ready) throw new InvalidDataException("Placed-use fixture commit failed.");
@@ -96,7 +99,7 @@ public partial class TemplePreview
             _hud.Filters["scenery"] = true; ApplyFilters();
             if (!node.Visible) throw new InvalidDataException("Placed-use filter did not restore visibility.");
             _campaign.AdvanceUseTime(175); RefreshPlacedUses();
-            if (_placedUseNodes.Single().Value.GetNode<Label3D>("UseLabel").Text != "POSICIONADO\n43 s · tempo lógico")
+            if (_placedUseNodes.Single().Value.GetNode<Label3D>("UseLabel").Text != "POSICIONADO\n43 s · pausado")
                 throw new InvalidDataException("Placed-use partial timer display failed.");
             SaveCheckpoint(); ResetWalker();
             if (_placedUseNodes.Count != 0) throw new InvalidDataException("Reset retained placed visuals.");
@@ -127,11 +130,11 @@ public partial class TemplePreview
             await CheckAppliedBarrierPreview(effect.Plan!, roots, owner.Key, item.Key);
             foreach (WorldArea area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
             GD.Print("TEMPLE_EXPLOSIVE_PREVIEW_AUDIT_OK: actual walk, controlled lockpick, real explosive collection, partial checkpoint, due target and read-only projection verified before the applied-effect audit; original source records retained, no general combat.");
-            GD.Print("PLACED_USE_PREVIEW_OK: real collected pot 358/item 364; GUID/transform, identity separation, nonblocking geometry, filter, timer, checkpoint, elevation isolation, due label and consumed visual removal through validated barrier effect; no activation UI or real-time clock.");
+            GD.Print("PLACED_USE_PREVIEW_OK: real collected pot 358/item 364; GUID/transform, identity separation, nonblocking geometry, filter, timer, checkpoint, elevation isolation, due label and consumed visual removal through validated barrier effect; controlled placement UI, no real-time clock.");
         }
         finally
         {
-            _hud.Filters["scenery"] = scenery; ResetWalker(); _checkingNavigation = false;
+            _hud.Filters["scenery"] = scenery; ResetWalker(); SetNavigationGrid(grid); _checkingNavigation = false;
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         }
     }

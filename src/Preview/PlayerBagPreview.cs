@@ -27,19 +27,21 @@ public partial class TemplePreview
     {
         if (_bag?.Visible == true) { CloseBag(); return; }
         if (_campaign == null) return;
-        CloseInventory(); CloseLoot(); ClearRouteHover();
+        CloseExplosivePreparation(); CloseInventory(); CloseLoot(); ClearRouteHover();
         GetTree().Root.GuiEmbedSubwindows = true;
         var dialog = new PlayerBagWindow { Size = new Vector2I(960, 680), Theme = _hud.GetChild<Control>(0).Theme };
         _bag = dialog; _hud.AddChild(dialog);
         dialog.Confirmed += CloseBag; dialog.Canceled += CloseBag; dialog.CloseRequested += CloseBag;
         dialog.ReturnRequested = ReturnFromBag;
         dialog.ApproachRequested = ApproachBagOrigin;
+        dialog.PrepareExplosiveRequested = OpenExplosivePreparation;
         RefreshBag(); dialog.PopupCenteredClamped(new Vector2I(960, 680), .92f);
     }
     private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName, _campaign.CarriedWeight, _campaign.CarryCapacity,
         item => _campaign.UnitWeight(item.Map, item.Source),
         (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true),
-        item => ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true), item => InventoryTexture(item.Map, item.Source));
+        item => ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true), item => InventoryTexture(item.Map, item.Source),
+        item => ProposeExplosivePreparation(item, ExplosiveTimer.DefaultSeconds).Status);
     private void ApproachBagOrigin(CarriedItem item)
     {
         if (_campaign == null) return;

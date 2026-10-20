@@ -85,6 +85,7 @@ public partial class TemplePreview : Node3D
 				if (args[i] == "--data-dir" && i + 1 < args.Length) _directory = args[++i];
 				else if (args[i] == "--capture" && i + 1 < args.Length) _capture = args[++i];
 				else if (args[i] == "--preview-test") _test = true;
+				else if (args[i] == "--explosive-preparation-test") { _test = true; _explosivePreparationTest = true; }
                 else if (args[i] == "--scene-review-test") { _test = true; _sceneReviewTest = true; }
 				else if (args[i] == "--visual-preferences-smoke") { _test = true; _preferencesStartupTest = true; }
 				else throw new ArgumentException($"Argumento desconhecido: {args[i]}");
@@ -103,6 +104,7 @@ public partial class TemplePreview : Node3D
 				await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 				if (_preferencesStartupTest) { await CheckVisualPreferencesStartup(); await Shutdown(0); return; }
+				if (_explosivePreparationTest) { await CheckPlacedUsePreview(); await Shutdown(0); return; }
                 if (_sceneReviewTest) { await CheckEntityReadability(); await Shutdown(0); return; }
 				if (_test) await CheckPreview();
 				if (_test) await CheckNavigation();
@@ -174,7 +176,7 @@ public partial class TemplePreview : Node3D
 	private void BuildWorld()
 	{
 		if (_map == null) return;
-		CloseLoot(); CloseBag(); CloseInventory();
+		CloseExplosivePreparation(); CloseLoot(); CloseBag(); CloseInventory();
 		_worldLabels.Clear();
 		using var resources = new ResourceScope();
 		_placedUseLayer = null; _placedUseNodes.Clear();
@@ -571,6 +573,7 @@ public partial class TemplePreview : Node3D
 	{
 		if (_shuttingDown) return;
 		_shuttingDown = true; SetProcess(false); SetProcessUnhandledInput(false);
+		CloseExplosivePreparation();
 		// Finish node deletion and managed finalizers while the native engine is still alive.
 		for (int i = GetChildCount() - 1; i >= 0; i--) GetChild(i).QueueFree();
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
