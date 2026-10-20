@@ -249,6 +249,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Quantidade escolhida: edição, carga e transferência](docs/item-quantity-2026-10-19.md)
 - [Baú do templo: referências externas e limites do adaptador](docs/temple-chest-script-2026-10-19.md)
 - [Baú: referências de diálogo e recuperação ainda não comprovada](docs/temple-chest-flow-2026-10-20.md)
+- [Baú: caminho nativo de recuperação manual](docs/temple-chest-native-recovery-2026-10-20.md)
 - [Recipiente vazio: informar scripts e impedimentos](docs/container-status-2026-10-19.md)
 - [Rota de retorno: áreas visitadas e passagens explícitas](docs/item-origin-route-2026-10-19.md)
 - [Bolsa: orientação de retorno entre áreas](docs/bag-return-route-2026-10-19.md)

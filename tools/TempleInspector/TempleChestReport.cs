@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using FalloutRemake.Import;
 
 internal static class TempleChestReport
@@ -49,6 +50,20 @@ internal static class TempleChestReport
             (13376, 0x80A7, null), (13378, 0xC001, 0), (13384, 0x8031, null),
             (13386, 0xC001, 0), (13392, 0x8032, null), (13394, 0x8132, null),
             (13396, 0xC001, 0), (13402, 0x8032, null), (13404, 0x812E, null));
+        Prototype chestPrototype = map.Prototypes.Single(p => p.Pid == chest.Header.Pid);
+        if (chest.Header is not { Pid: 245, Fid: 131, Frame: 0 } || chest.Subtype != 1
+            || chest.State.GetValueOrDefault("flags", -1) != 0 || chestPrototype.ScriptId != -1
+            || chestPrototype.Resource.Sha256 != "AF59B61FF1E07313112E5160F6DA59E54F4DF3D82E0952409F01CE3A0FB32CA6"
+            || publisher.Instructions.Any(i => i.Opcode == 0x80B9)
+            || publisher.Procedures[1] is not { Name: "checkPartyMembersNearDoor", BodyOffset: 754, Flags: 0 })
+            throw new InvalidDataException("Native chest recovery assumptions changed.");
+        var resources = new ResourceCatalog(data.Read);
+        string chestArtworkPath = "art/items/" + resources.ListEntry("art/items/items.lst", chest.Header.Fid, ".frm");
+        GameResource chestArtwork = resources.Read(chestArtworkPath);
+        if (chestArtwork.Bytes.Length < 62 || BinaryPrimitives.ReadInt32BigEndian(chestArtwork.Bytes) != 4)
+            throw new InvalidDataException("Unknown chest animation header.");
+        int frames = BinaryPrimitives.ReadInt16BigEndian(chestArtwork.Bytes.AsSpan(8, 2));
+        if (frames < 2) throw new InvalidDataException("Expected an animated container with a closed frame.");
         return new
         {
             Status = "Verified source identities and physical reference sequence; no scripts executed", Map = map.Source,
@@ -64,12 +79,25 @@ internal static class TempleChestReport
                 Scope = "Only the two hash-bound programs; decoded physical instructions, not execution or a global script search",
                 ConsumerWholeInventoryMoveOffsets = moves, PublisherWholeInventoryMoveCount = 0,
                 AutomaticReturnProven = false,
-                Recovery = "No reverse whole-inventory move in these programs. Manual recovery and other scripts remain unproven.",
+                Recovery = "No reverse whole-inventory move in these programs. See NativeRecovery for the engine path; challenge completion remains unproven.",
                 PossibleDialogueOptions = options,
                 SeparateGateOperation = new { Tile = 19928, Elevation = 2, Pid = 33555366,
                     LookupOffset = 13376, CloseOffset = 13394, LockOffset = 13404, IsChest = false },
                 PublisherHasUseProcedure = publisher.Procedures.Any(p => p.Name == "use_p_proc"),
                 PublisherHasPickupProcedure = publisher.Procedures.Any(p => p.Name == "pickup_p_proc")
+            },
+            NativeRecovery = new
+            {
+                SourceState = "Empty, unlocked and on closed frame zero",
+                StateFlags = chest.State["flags"], chest.Header.Frame, Prototype = chestPrototype.Resource,
+                Artwork = ResourceIdentity.From(chestArtwork), HeaderFrameCount = frames,
+                ArtworkScope = "Header metadata only; no pixels decoded, files extracted or animation executed",
+                MissingProcedureFallback = new { Index = 1, Name = publisher.Procedures[1].Name,
+                    BodyOffset = publisher.Procedures[1].BodyOffset, ScriptOverrideInstructionCount = 0 },
+                EngineRoute = "actionPickUp -> _obj_use_container -> scriptsRequestLooting -> inventoryOpenLooting",
+                Transfer = "Manual itemMove(target, player, selected quantity), or itemMoveAll after the carry-weight check",
+                Evidence = "Static native path supports manual recovery when open, reachable and not overridden; no automatic return required",
+                ChallengeStateAndReachabilityProven = false, RuntimeAdapterEnabled = false
             },
             RelatedResources = related, DialogueMessage100 = dialogue.Entries.GetValueOrDefault(100)?.Text,
             RequiredBeforeEnabling = new[] { "map external-variable lifecycle", "scripted dialogue/combat transition", "runtime item ownership beyond original source container", "validated storage/restoration checkpoint format" },
