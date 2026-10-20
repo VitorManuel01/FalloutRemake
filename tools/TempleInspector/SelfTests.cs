@@ -159,6 +159,7 @@ internal static class SelfTests
             TempleAdapterTests.Run(Check);
             InitialGateTests.Run(Check);
             TempleSpeechDraftTests.Run(Check);
+            TempleSpeechStateFileTests.Run(Check, root);
             CharacterSkillTests.Run(Check);
             TravelTests.Run(Check);
             ExitPreviewTests.Run(Check);

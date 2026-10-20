@@ -35,10 +35,15 @@ internal static class TempleStateReport
             if (draft.Choose(speech.Step(i).ChoiceOffset) != TempleSpeechStatus.Ready) throw new InvalidDataException("Known Speech choice failed.");
         if (draft.CommitDetached() != TempleSpeechStatus.Ready || speech.Classify(speechState.Capture()) != TempleSpeechState.Accepted
             || map.Prefix.GlobalVariables[20] != 0) throw new InvalidDataException("Detached Speech route changed original state or failed.");
+        byte[] savedSpeech = TempleSpeechStateFile.Encode(speech, speechState);
+        var restoredSpeech = TempleSpeechStateFile.Decode(speech, savedSpeech);
+        if (speech.Classify(restoredSpeech.Capture()) != TempleSpeechState.Accepted || restoredSpeech.SessionToken == speechState.SessionToken)
+            throw new InvalidDataException("Detached Speech persistence failed.");
         return new { Status = "TEMPLE_STATE_PROFILE_OK", Map = map.Source, configuration.Source, GlobalEntry = configuration.Entries[10],
             ActorMetadata = actorMeta, GateMetadata = gateMeta, State = state.Capture(), InitialGateWrites = "Verified entry subset applied to detached storage only",
             SpeechRehearsal = new { Profile = speech.Fingerprint, EffectiveIntelligence = 5, SpeechTagged = true,
-                Result = "Accepted in detached rehearsal; no active world, VM, NPC movement or original RNG replay", State = speechState.Capture(), SourceMapVariable20 = 0 },
+                Result = "Accepted in detached rehearsal; no active world, VM, NPC movement or original RNG replay", State = speechState.Capture(), SourceMapVariable20 = 0,
+                Persistence = new { Version = 1, Bytes = savedSpeech.Length, RoundTrip = "verified in memory; no file written", FreshSessionToken = true } },
             InvalidLocal16 = "refused atomically", RuntimeAdapterEnabled = false, OriginalReconstruction = "verified" };
     }
 }

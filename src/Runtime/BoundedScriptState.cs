@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace FalloutRemake.Runtime;
 
@@ -11,8 +12,10 @@ public enum ScriptVariableScope { ScriptLocal, Map, GameGlobal }
 public enum ScriptWriteStatus { Ready, NoChange, Stale, Invalid, UnknownBlock, OutOfRange, Duplicate, LimitReached }
 public sealed record ScriptVariableBlock(ScriptVariableScope Scope, string Key, string SourceHash, int[] Indices, int[] InitialValues);
 public sealed record ScriptVariableWrite(ScriptVariableScope Scope, string Key, int Index, int Value);
-public sealed record SavedScriptBlock(ScriptVariableScope Scope, string Key, string SourceHash, int[] Indices, int[] Values);
-public sealed record ScriptStateSnapshot(int Version, string SchemaHash, SavedScriptBlock[] Blocks);
+public sealed record SavedScriptBlock([property: JsonRequired] ScriptVariableScope Scope, [property: JsonRequired] string Key,
+    [property: JsonRequired] string SourceHash, [property: JsonRequired] int[] Indices, [property: JsonRequired] int[] Values);
+public sealed record ScriptStateSnapshot([property: JsonRequired] int Version, [property: JsonRequired] string SchemaHash,
+    [property: JsonRequired] SavedScriptBlock[] Blocks);
 
 /// <summary>Explicit source-bound variable blocks, not a VM. Unknown indices never alias another script's storage.</summary>
 public sealed class BoundedScriptState
