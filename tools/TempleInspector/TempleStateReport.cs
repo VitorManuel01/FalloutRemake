@@ -29,8 +29,16 @@ internal static class TempleStateReport
             new ScriptVariableWrite(ScriptVariableScope.ScriptLocal, actorKey, 16, 1) }, state.SessionToken, state.Revision);
         if (initialized != ScriptWriteStatus.Ready || refused != ScriptWriteStatus.OutOfRange || before != JsonSerializer.Serialize(state.Capture()))
             throw new InvalidDataException("Real source-bounded storage failed isolation.");
+        var speech = TempleSpeechProfile.Create(map, data.Read); var speechState = speech.CreateInitial();
+        var draft = TempleSpeechDraft.Begin(speech, speechState, 5, true) ?? throw new InvalidDataException("Known rehearsal profile failed.");
+        for (int i = 0; i < 5; i++)
+            if (draft.Choose(speech.Step(i).ChoiceOffset) != TempleSpeechStatus.Ready) throw new InvalidDataException("Known Speech choice failed.");
+        if (draft.CommitDetached() != TempleSpeechStatus.Ready || speech.Classify(speechState.Capture()) != TempleSpeechState.Accepted
+            || map.Prefix.GlobalVariables[20] != 0) throw new InvalidDataException("Detached Speech route changed original state or failed.");
         return new { Status = "TEMPLE_STATE_PROFILE_OK", Map = map.Source, configuration.Source, GlobalEntry = configuration.Entries[10],
             ActorMetadata = actorMeta, GateMetadata = gateMeta, State = state.Capture(), InitialGateWrites = "Verified entry subset applied to detached storage only",
+            SpeechRehearsal = new { Profile = speech.Fingerprint, EffectiveIntelligence = 5, SpeechTagged = true,
+                Result = "Accepted in detached rehearsal; no active world, VM, NPC movement or original RNG replay", State = speechState.Capture(), SourceMapVariable20 = 0 },
             InvalidLocal16 = "refused atomically", RuntimeAdapterEnabled = false, OriginalReconstruction = "verified" };
     }
 }
