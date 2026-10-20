@@ -39,6 +39,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   nesta sessão. Use **Aproximar-se**, aguarde chegar e abra novamente para retirar
   uma unidade ou a pilha. A bolsa é salva com K e restaurada com R; reiniciar
   a prévia esvazia a bolsa e restaura os recipientes.
+  **Retirar tudo** recolhe todas as pilhas restantes numa única operação, somente
+  se todos os itens forem suportados e couberem na bolsa. Uma recusa não recolhe nada.
 - **B / Bolsa:** consulta os itens recolhidos, nomes, quantidades e área de origem,
   inclusive depois de viajar e carregar checkpoint. B também fecha a janela.
   **Devolver 1 / Devolver esta pilha** repõem o item no recipiente original
@@ -247,6 +249,8 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Carga do perfil de teste: limite, pesos e compatibilidade](docs/carry-profile-2026-10-19.md)
 - [Pesos na interface: pilhas, carga e estados indisponíveis](docs/carry-weight-ui-2026-10-19.md)
 - [Quantidade escolhida: edição, carga e transferência](docs/item-quantity-2026-10-19.md)
+- [Retirar tudo: conservação e capacidade somada](docs/take-all-domain-2026-10-20.md)
+- [Retirar tudo na interface: coleta real e proteção de callbacks](docs/take-all-ui-2026-10-20.md)
 - [Baú do templo: referências externas e limites do adaptador](docs/temple-chest-script-2026-10-19.md)
 - [Baú: referências de diálogo e recuperação ainda não comprovada](docs/temple-chest-flow-2026-10-20.md)
 - [Baú: caminho nativo de recuperação manual](docs/temple-chest-native-recovery-2026-10-20.md)

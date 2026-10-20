@@ -32,6 +32,12 @@ public partial class TemplePreview
         _loot = dialog; _hud.AddChild(dialog);
         dialog.Confirmed += CloseLoot; dialog.Canceled += CloseLoot; dialog.CloseRequested += CloseLoot;
         dialog.TakeRequested = TakeFromContainer; dialog.ApproachRequested = ApproachLootContainer;
+        Guid sessionToken = _campaign.SessionToken;
+        dialog.TakeAllRequested = () =>
+        {
+            if (_loot != dialog || _campaign?.SessionToken != sessionToken || _lootOwner != owner.Key) return;
+            TakeAllFromContainer();
+        };
         RefreshLootWindow(); dialog.PopupCenteredClamped(new Vector2I(900, 560), .92f);
     }
     private void RefreshLootWindow()
@@ -42,7 +48,8 @@ public partial class TemplePreview
             (key, qty) => _campaign.CanTakeItem(_lootOwner, key, qty, _walker?.Moving == true), _campaign.CarriedCount, ContainerApproach(owner).HasValue,
             _campaign.CarriedWeight, _campaign.CarryCapacity, item => _campaign.UnitWeight(_campaign.CurrentMap, item),
             _campaign.Current.Items.ContainerStatus(_lootOwner), item => InventoryTexture(_campaign.CurrentMap, item),
-            ScriptedContainerExplanation(_campaign.Current.Map, owner));
+            ScriptedContainerExplanation(_campaign.Current.Map, owner),
+            () => _campaign.CanTakeAllItems(_lootOwner, _walker?.Moving == true));
     }
     private static string? ScriptedContainerExplanation(MapDocument map, MapObject owner)
     {
@@ -60,6 +67,14 @@ public partial class TemplePreview
         NavigationStatus(status == ItemTakeStatus.Ready ? $"Item recolhido · bolsa com {_campaign.CarriedCount} {(_campaign.CarriedCount == 1 ? "unidade" : "unidades")} · K para salvar" : ContainerLootWindow.Hint(status));
         RefreshLootWindow();
         RefreshContainerVisuals();
+    }
+    private void TakeAllFromContainer()
+    {
+        if (_loot?.Visible != true || _lootOwner == null || _campaign == null) return;
+        long before = _campaign.CarriedCount;
+        ItemTakeStatus status = _campaign.TakeAllItems(_lootOwner, _walker?.Moving == true);
+        NavigationStatus(status == ItemTakeStatus.Ready ? $"Recolhidas {_campaign.CarriedCount - before} unidade(s) · K para salvar" : ContainerLootWindow.Hint(status));
+        RefreshLootWindow(); RefreshContainerVisuals();
     }
     private void ApproachLootContainer()
     {
@@ -131,6 +146,7 @@ public partial class TemplePreview
                 || _campaign.Current.Items.ContainerStatus(_lootOwner!) != ItemTakeStatus.ScriptRequired
                 || !((Button)_loot.FindChild("TakeOneAction", true, false)).Disabled
                 || !((Button)_loot.FindChild("TakeStackAction", true, false)).Disabled
+                || !((Button)_loot.FindChild("TakeAllAction", true, false)).Disabled
                 || !((Button)_loot.FindChild("ApproachContainerAction", true, false)).Disabled)
                 throw new InvalidDataException("Empty scripted chest concealed its unsupported interaction or enabled an action.");
             var source = _selected!.Source;

@@ -99,8 +99,7 @@ public partial class TemplePreview
                 throw new InvalidDataException("Applied preview lost the passage on another elevation or used an incorrect arrival.");
             MapObject chest = _campaign.Current.Items.Containers.Single(o => o.Offset == 458120 && o.Header.Id == 376);
             Walk(ContainerApproach(chest)!.Value);
-            foreach (var item in _campaign.Current.Items.Contents(chest.Key).Where(i => i.Quantity > 0))
-                if (_campaign.TakeItem(chest.Key, item.Source.Key, item.Quantity, false) != ItemTakeStatus.Ready) throw new InvalidDataException("Applied preview upper collection failed.");
+            await CheckTakeAllChest(chest);
             RefreshContainerVisuals();
             if (_campaign.CarriedCount != 2 || _campaign.CarriedWeight != 2 || !_campaign.Carried.Select(i => (i.Source.Header.Id, i.Source.Header.Pid)).ToHashSet().SetEquals(new[] { (126, 273), (100, 49) }))
                 throw new InvalidDataException("Applied preview lost original upper item identities/weight.");

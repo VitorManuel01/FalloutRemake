@@ -18,14 +18,17 @@ public partial class ContainerLootWindow : AcceptDialog
         _status = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(800, 48) };
     private readonly Button _one = new() { Name = "TakeOneAction", Text = "Retirar 1", Disabled = true },
         _stack = new() { Name = "TakeStackAction", Text = "Retirar esta pilha", Disabled = true },
+        _all = new() { Name = "TakeAllAction", Text = "Retirar tudo", Disabled = true },
         _approach = new() { Name = "ApproachContainerAction", Text = "Aproximar-se", Disabled = true };
     private readonly Dictionary<string, ContainerItem> _lines = new();
     private readonly QuantityTransfer _quantity = new() { Name = "TakeQuantity", Visible = false };
     private Func<MapObject, PrototypeText?>? _text;
     private Func<string, int, ItemTakeStatus>? _canTake;
+    private Func<ItemTakeStatus>? _canTakeAll;
     private bool _canApproach;
     private string? _interactionHint;
     public Action<string, int>? TakeRequested;
+    public Action? TakeAllRequested;
     public Action? ApproachRequested;
     public string SelectedKey { get; private set; } = "";
     public string StatusText => _status.Text;
@@ -46,20 +49,21 @@ public partial class ContainerLootWindow : AcceptDialog
         body.AddChild(_owner); body.AddChild(_items); var detail = new HBoxContainer(); detail.AddThemeConstantOverride("separation", 16);
         detail.AddChild(_art); detail.AddChild(_description); body.AddChild(detail); body.AddChild(_status);
         var actions = new HFlowContainer(); actions.AddThemeConstantOverride("separation", 12); body.AddChild(actions);
-        actions.AddChild(_approach); actions.AddChild(_one); actions.AddChild(_stack); body.AddChild(_bag);
+        actions.AddChild(_approach); actions.AddChild(_one); actions.AddChild(_stack); actions.AddChild(_all); body.AddChild(_bag);
         actions.AddChild(_quantity); _quantity.Requested = qty => TakeRequested?.Invoke(SelectedKey, qty);
         _items.SetColumnTitle(0, "Item"); _items.SetColumnTitle(1, "Restante"); _items.SetColumnExpand(1, false); _items.SetColumnCustomMinimumWidth(1, 90);
         _items.SetColumnTitle(2, "Peso da pilha"); _items.SetColumnExpand(2, false); _items.SetColumnCustomMinimumWidth(2, 140);
         _items.ItemSelected += ShowSelected;
         _one.Pressed += () => { if (!_one.Disabled) TakeRequested?.Invoke(SelectedKey, 1); };
         _stack.Pressed += () => { if (!_stack.Disabled && _lines.TryGetValue(SelectedKey, out var line)) TakeRequested?.Invoke(SelectedKey, line.Quantity); };
+        _all.Pressed += () => { if (!_all.Disabled) TakeAllRequested?.Invoke(); };
         _approach.Pressed += () => { if (!_approach.Disabled) ApproachRequested?.Invoke(); };
     }
     public void Refresh(string owner, ContainerItem[] lines, Func<MapObject, PrototypeText?> text, Func<string, int, ItemTakeStatus> canTake, long carried, bool canApproach,
         long? carriedWeight, int capacity, Func<MapObject, long?> unitWeight, ItemTakeStatus ownerStatus = ItemTakeStatus.Ready, Func<MapObject, Texture2D?>? artwork = null,
-        string? interactionHint = null)
+        string? interactionHint = null, Func<ItemTakeStatus>? canTakeAll = null)
     {
-        _owner.Text = owner; _text = text; _canTake = canTake; _canApproach = canApproach; _interactionHint = interactionHint;
+        _owner.Text = owner; _text = text; _canTake = canTake; _canApproach = canApproach; _interactionHint = interactionHint; _canTakeAll = canTakeAll;
         _bag.Text = $"Bolsa: {carried} {(carried == 1 ? "unidade" : "unidades")} · Carga: {CarryWeightText.Load(carriedWeight, capacity)} · K para salvar";
         string selected = SelectedKey; _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
         foreach (ContainerItem line in lines)
@@ -74,6 +78,10 @@ public partial class ContainerLootWindow : AcceptDialog
         _art.Texture = null; _art.Visible = false;
         _description.Text = ""; _status.Text = ownerStatus == ItemTakeStatus.Ready ? "Este recipiente está vazio." : StatusHint(ownerStatus);
         if (select != null) { select.Select(0); ShowSelected(); }
+        ItemTakeStatus allStatus = _canTakeAll?.Invoke() ?? ItemTakeStatus.Unsupported;
+        _all.Disabled = Remaining <= 0 || allStatus != ItemTakeStatus.Ready;
+        _all.TooltipText = allStatus == ItemTakeStatus.Ready ? "Retirar todas as pilhas restantes deste recipiente, respeitando a capacidade de carga."
+            : "Retirar tudo: " + StatusHint(allStatus);
     }
     private void ShowSelected()
     {
