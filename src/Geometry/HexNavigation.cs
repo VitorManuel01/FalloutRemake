@@ -7,6 +7,7 @@ namespace FalloutRemake.Geometry;
 
 public sealed record HexBlocker(string Key, int Id, int Hex, int FidType, bool IsDoor, bool Multihex);
 public enum RouteStatus { Ready, AlreadyThere, OutsideGrid, Blocked, Unreachable, Busy }
+public enum ExitTraversalPolicy { StopAtExits, ContinueAcrossExits }
 public sealed record HexRoute(RouteStatus Status, int[] Tiles);
 public readonly record struct ObjectTraversalState(int Flags, int? DoorOpenFlags);
 
@@ -20,14 +21,18 @@ public sealed class HexNavigation
     public int BlockedHexCount => _blockers.Count;
     public int ExitHexCount => _exits.Count;
     public int DoorFlagDisagreements { get; private set; }
+    public ExitTraversalPolicy ExitPolicy { get; }
 
     public static HexNavigation FromMap(MapDocument map, int elevation) =>
         new(map.ObjectLayers.SelectMany(layer => layer.Objects), elevation);
 
     // Accept roots only. Inventory records are never placed in the world.
-    public HexNavigation(IEnumerable<MapObject> roots, int elevation, Func<MapObject, ObjectTraversalState>? stateFor = null)
+    public HexNavigation(IEnumerable<MapObject> roots, int elevation, Func<MapObject, ObjectTraversalState>? stateFor = null,
+        ExitTraversalPolicy exitPolicy = ExitTraversalPolicy.StopAtExits)
     {
         if (elevation is < 0 or > 2) throw new ArgumentOutOfRangeException(nameof(elevation));
+        if (!Enum.IsDefined(exitPolicy)) throw new ArgumentOutOfRangeException(nameof(exitPolicy));
+        ExitPolicy = exitPolicy;
         Elevation = elevation;
         foreach (MapObject obj in roots)
         {
@@ -70,8 +75,8 @@ public sealed class HexNavigation
         var queue = new Queue<int>(); queue.Enqueue(start); parent[start] = start; distance[start] = 0;
         while (queue.TryDequeue(out int current))
         {
-            // Exits are terminal endpoints. A separate travel session must resolve their destination.
-            if (IsExit(current)) continue;
+            // Player routes stop for explicit travel. NPC-only graphs may cross the same markers without travelling.
+            if (ExitPolicy == ExitTraversalPolicy.StopAtExits && IsExit(current)) continue;
             for (int direction = 0; direction < 6; direction++)
             {
                 if (FalloutGrid.Neighbor(current, direction) is not int next || !Walkable(next) || parent[next] != -1) continue;

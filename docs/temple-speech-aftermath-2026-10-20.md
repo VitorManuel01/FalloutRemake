@@ -45,6 +45,8 @@ regra adequada ao fluxo explícito de viagem do jogador. Isso explica a recusa
 na prévia. A confirmação nativa está em `src/object.cc`, no bloco
 `if (obj == gDude)` que lê a exit grid e agenda `mapSetTransition`: essa viagem
 é do jogador. A navegação ativa não foi alterada neste relatório.
+O [incremento seguinte](npc-exit-traversal-policy-2026-10-20.md) substitui o
+diagnóstico que omitia marcadores por uma política explícita que os preserva.
 
 Próximo marco: definir estado persistido e reposicionamento do bloqueador do NPC,
 com eventos de execução única, cancelamento e rollback, antes de habilitar a

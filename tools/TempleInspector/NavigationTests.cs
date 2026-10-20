@@ -61,6 +61,26 @@ internal static class NavigationTests
             Assert(nav.FindRoute(start, exit).Status == RouteStatus.Ready && nav.FindRoute(start, beyond).Status == RouteStatus.Unreachable);
             Assert(nav.FindRoute(exit, start).Status == RouteStatus.Unreachable);
         });
+        check("explicit NPC traversal crosses exit markers while preserving player terminal behavior and exit identities", () =>
+        {
+            int start = 20100, exit = FalloutGrid.Neighbor(start, 0)!.Value, beyond = FalloutGrid.Neighbor(exit, 0)!.Value;
+            var roots = Enumerable.Range(1, 5).Select(d => Obj(FalloutGrid.Neighbor(start, d)!.Value, 3)).ToList();
+            roots.Add(Obj(exit, 5) with { Header = Obj(exit, 5).Header with { Pid = 0x05000010 } });
+            var player = new HexNavigation(roots, 0);
+            var npc = new HexNavigation(roots, 0, exitPolicy: ExitTraversalPolicy.ContinueAcrossExits);
+            Assert(player.ExitPolicy == ExitTraversalPolicy.StopAtExits && player.FindRoute(start, beyond).Status == RouteStatus.Unreachable);
+            Assert(npc.FindRoute(start, beyond).Status == RouteStatus.Ready && npc.FindRoute(exit, start).Status == RouteStatus.Ready
+                && npc.FindRoute(start, beyond).Tiles.Contains(exit) && npc.IsExit(exit) && npc.ExitHexCount == player.ExitHexCount
+                && npc.BlockedHexCount == player.BlockedHexCount);
+        });
+        check("NPC exit traversal never removes source blockers and rejects unknown policies", () =>
+        {
+            var obstacle = Obj(20101, 3);
+            var npc = new HexNavigation(new[] { obstacle }, 0, exitPolicy: ExitTraversalPolicy.ContinueAcrossExits);
+            Assert(npc.FindRoute(20100, 20101).Status == RouteStatus.Blocked && npc.BlockersAt(20101).Single().Key == obstacle.Key);
+            try { new HexNavigation(Array.Empty<MapObject>(), 0, exitPolicy: (ExitTraversalPolicy)99); throw new Exception("Unknown exit policy accepted."); }
+            catch (ArgumentOutOfRangeException) { }
+        });
         check("marker advances continuously through valid adjacent hexes and rejects rerouting mid-step", () =>
         {
             var nav = new HexNavigation(Array.Empty<MapObject>(), 0);
