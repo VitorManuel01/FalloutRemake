@@ -48,6 +48,32 @@ internal static class TempleDialogueReport
         ScriptBinding gateBinding = map.ScriptBindings.Single(b => b.Sid == gate.Header.Sid);
         if (gateBinding.Program.Sha256 != "3E8AE39C72E0347330FF967EE7DEE36DBBA31CA27087F26D037A08F5E6C1B9DB")
             throw new InvalidDataException("Gate script differs from the recorded dependency.");
+        IntVariableWrite[] writes = IntVariableWrites.Inspect(program).Where(w => w.OwningProcedures.Contains(35)).ToArray();
+        if (!writes.Select(w => (w.Scope, w.Index, w.Value)).SequenceEqual(new[] {
+            (IntVariableScope.ScriptLocal, 12, 1), (IntVariableScope.ScriptLocal, 13, 2),
+            (IntVariableScope.Map, 20, 2), (IntVariableScope.GameGlobal, 10, 2) }))
+            throw new InvalidDataException("Speech state-write extraction changed.");
+        IntProgram gateProgram = IntProgram.Read(data.Read(gateBinding.Program.Path));
+        if (gateProgram.Source.Sha256 != gateBinding.Program.Sha256) throw new InvalidDataException("Gate program changed after MAP inspection.");
+        Expect(gateProgram, (5530, 0xC001, 5596), (5536, 0xC001, 3), (5542, 0x80C1, null),
+            (5544, 0xC001, 0), (5550, 0x8033, null), (5552, 0x802F, null),
+            (5554, 0xC001, 3), (5560, 0xC001, 1), (5566, 0x80C2, null),
+            (5568, 0xC001, 1), (5574, 0xC001, 1), (5580, 0x80C2, null),
+            (5582, 0xC001, 0), (5588, 0xC001, 1), (5594, 0x80C2, null),
+            (5602, 0x80BC, null), (5604, 0x80D4, null), (5606, 0xC001, 13528), (5612, 0x8033, null),
+            (5614, 0xC001, 20), (5620, 0x80C3, null), (5622, 0xC001, 2), (5628, 0x8034, null),
+            (5630, 0x803E, null), (5632, 0xC001, 7), (5638, 0x80C1, null), (5640, 0xC001, 0),
+            (5646, 0x8033, null), (5648, 0x803E, null), (5650, 0x802F, null),
+            (5652, 0xC001, 0), (5658, 0xC001, 0), (5664, 0x80C2, null),
+            (5672, 0xC001, 0), (5678, 0x80C1, null), (5680, 0xC001, 0), (5686, 0x8033, null),
+            (5688, 0x802F, null), (5690, 0x80BC, null), (5692, 0x812E, null),
+            (5694, 0xC001, 5706), (5700, 0x8004, null), (5702, 0x80BC, null), (5704, 0x812F, null));
+        Expect(gateProgram, (5782, 0xC001, 5828), (5788, 0xC001, 20), (5794, 0x80C3, null),
+            (5796, 0xC001, 1), (5802, 0x8033, null), (5804, 0x802F, null),
+            (5806, 0xC001, 0), (5812, 0xC001, 0), (5818, 0x80C2, null),
+            (5982, 0xC001, 0), (5988, 0x80C1, null), (5990, 0xC001, 0), (5996, 0x8033, null),
+            (5998, 0x802F, null), (6000, 0x80BC, null), (6002, 0x812E, null),
+            (6004, 0xC001, 6016), (6010, 0x8004, null), (6012, 0x80BC, null), (6014, 0x812F, null));
         return new
         {
             Status = "TEMPLE_DIALOGUE_EVIDENCE_OK", Scope = "Hash-bound static physical patterns and CE handler semantics; no dialogue, skill roll or state machine executed",
@@ -56,11 +82,16 @@ internal static class TempleDialogueReport
             Availability = "Node003 offers message 165 only with Speech tagged; these four choices require effective intelligence >= 4",
             Roll = new { Skill = 14, Name = "Speech", Modifier = 0, Offset = 14240, StoredAtFrameSlot = 0,
                 AcceptCondition = "Speech tagged OR successful/critical-success roll", FailureTarget = "Node002" },
-            SuccessWrites = new[] { new { Scope = "script local", Index = 12, Value = 1 }, new { Scope = "script local", Index = 13, Value = 2 },
-                new { Scope = "map variable", Index = 20, Value = 2 }, new { Scope = "game global", Index = 10, Value = 2 } },
+            SuccessWrites = writes.Select(w => new { w.Offset, Scope = w.Scope.ToString(), w.Index, w.Value }),
             LaterGateBranch = new { gate.Key, gate.Header.Id, gate.Header.Tile, gate.Header.Elevation, Program = gateBinding.Program,
                 Condition = "actor script local 13 == 2 AND local 14 == 0 AND self tile != 19728", UnlockOffset = 4494,
                 WholeInventoryMoveCountInSpeechBodies = 0 },
+            NativeGateLifecycle = new { SourceMapVariable20 = map.Prefix.GlobalVariables[20], SourceOpenFlags = gate.State["openFlags"],
+                FirstEntryWrites = "if local 3 == 0: local 3=1, local 1=1, local 0=1",
+                EntryException = "tile 13528 AND map variable 20 != 2 AND local 7 == 0 sets local 0=0; does not match gate tile 19928",
+                OnMapVariable20Equals1 = "map_update sets local 0=0, then locks this door",
+                LockRule = "local 0 == 0 locks; otherwise unlocks",
+                Inference = "Under zero initial locals this gate enters unlocked; later map state may lock it. This does not enable or prove the full NPC lifecycle." },
             RuntimeAdapterEnabled = false,
             RequiredBeforeEnabling = new[] { "actor local-variable initialization and conversation entry conditions", "effective intelligence and tagged-skill profile",
                 "map/global variable ownership and compatible checkpoint", "NPC movement and gate script lifecycle" },

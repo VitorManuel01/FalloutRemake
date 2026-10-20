@@ -6,6 +6,27 @@ internal static class IntTests
 {
     public static void Run(Action<string, Action> check)
     {
+        check("INT literal setters distinguish script-local map and game-global spaces without alias duplication", () =>
+        {
+            foreach (var (opcode, scope) in new[] { ((ushort)0x80C2, IntVariableScope.ScriptLocal), ((ushort)0x80C4, IntVariableScope.Map), ((ushort)0x80C6, IntVariableScope.GameGlobal) })
+            {
+                var p = DialogueFixture((0xC001, 12), (0xC001, -1), (opcode, null)); byte[] before = p.CopySourceBytes();
+                var write = IntVariableWrites.Inspect(p).Single();
+                Assert(write.Index == 12 && write.Value == -1 && write.Scope == scope && write.OwningProcedures.SequenceEqual(new[] { 0, 1 })
+                    && before.SequenceEqual(p.CopySourceBytes()));
+            }
+        });
+        check("INT literal setter patterns do not infer strings expressions or unrelated program-global stores", () =>
+        {
+            Assert(IntVariableWrites.Inspect(DialogueFixture((0xC001, 1), (0x9001, 2), (0x80C2, null))).Length == 0);
+            Assert(IntVariableWrites.Inspect(DialogueFixture((0xC001, 1), (0xC001, 2), (0x8000, null), (0x80C4, null))).Length == 0);
+            Assert(IntVariableWrites.Inspect(DialogueFixture((0xC001, 1), (0xC001, 2), (0x8013, null))).Length == 0);
+        });
+        check("INT literal setter evidence stays within its physical procedure even when argument pushes precede another body", () =>
+        {
+            var p = DialogueFixture((0xC001, 1), (0xC001, 2), (0x80C6, null)); byte[] split = p.CopySourceBytes();
+            I32(split, 86, p.Instructions.Last().Offset); Assert(IntVariableWrites.Inspect(Read(split)).Length == 0);
+        });
         check("INT dialogue options preserve literal messages targets signed IQ and aliased ownership once", () =>
         {
             var p = DialogueFixture((0xC001, 3), (0x8046, null), (0xC001, 749), (0xC001, 134), (0xC001, 1), (0xC001, 50), (0x8121, null));
