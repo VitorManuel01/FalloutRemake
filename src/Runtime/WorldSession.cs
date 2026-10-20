@@ -68,6 +68,10 @@ public sealed partial class WorldSession
     }
     public ItemTakeStatus CanReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap
         ? Current.Items.CanReturn(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
+    public ItemTakeStatus CanReturnAllItems(int sourceMap, string ownerKey, bool moving) => sourceMap == CurrentMap
+        ? Current.Items.CanReturnAll(ownerKey, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
+    public ItemTakeStatus ReturnAllItems(int sourceMap, string ownerKey, bool moving) => sourceMap == CurrentMap
+        ? Current.Items.ReturnAll(ownerKey, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
     public ItemTakeStatus ReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap
         ? Current.Items.Return(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
     public ExplosiveCommitResult CommitExplosiveUse(ExplosiveUsePlan? plan, bool moving)

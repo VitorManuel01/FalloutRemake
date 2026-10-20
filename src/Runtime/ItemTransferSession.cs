@@ -143,6 +143,32 @@ public sealed class ItemTransferSession
             candidate[line.Source.Key] = new(ownerKey, line.Source.Key, checked(line.Quantity + (_taken.GetValueOrDefault(line.Source.Key)?.Quantity ?? 0)));
         _taken = candidate; Revision++; return ItemTakeStatus.Ready;
     }
+    public ItemTakeStatus CanReturnAll(string ownerKey, ActorLocation actor, HexNavigation navigation, bool moving)
+    {
+        ItemTakeStatus status = ContainerStatus(ownerKey);
+        if (status != ItemTakeStatus.Ready) return status;
+        CarriedItem[] carried = Carried.Where(i => i.OwnerKey == ownerKey).ToArray();
+        if (carried.Length == 0) return ItemTakeStatus.Empty;
+        foreach (CarriedItem line in carried)
+        {
+            status = Eligibility(ownerKey, line.Source.Key, out _, out _);
+            if (status != ItemTakeStatus.Ready) return status;
+        }
+        return InteractionStatus(_owners[ownerKey], actor, navigation, moving);
+    }
+    public ItemTakeStatus ReturnAll(string ownerKey, ActorLocation actor, HexNavigation navigation, bool moving)
+    {
+        ItemTakeStatus status = CanReturnAll(ownerKey, actor, navigation, moving);
+        if (status != ItemTakeStatus.Ready) return status;
+        var candidate = new Dictionary<string, TakenItem>(_taken, StringComparer.Ordinal);
+        foreach (CarriedItem line in Carried.Where(i => i.OwnerKey == ownerKey))
+        {
+            TakenItem taken = candidate[line.Source.Key]; int retained = taken.Quantity - line.Quantity;
+            if (retained == 0) candidate.Remove(line.Source.Key);
+            else candidate[line.Source.Key] = taken with { Quantity = retained };
+        }
+        _taken = candidate; Revision++; return ItemTakeStatus.Ready;
+    }
     internal ItemUseStatus Place(ItemUseAllocation use)
     {
         if (!ItemUseProfile.Valid(use) || use.Phase != ItemUsePhase.Placed || use.RemainingTicks != use.Schedule.DelayTicks) return ItemUseStatus.InvalidState;

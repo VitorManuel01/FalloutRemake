@@ -5,7 +5,7 @@ using FalloutRemake.Runtime;
 
 internal static class TakeAllTests
 {
-    private static MapDocument Map(int weight)
+    internal static MapDocument Map(int weight)
     {
         MapDocument map = ItemTransferTests.Map(); MapObject owner = map.ObjectLayers[0].Objects[0];
         InventoryEntry entry = owner.Inventory[0];

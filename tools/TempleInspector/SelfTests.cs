@@ -145,6 +145,7 @@ internal static class SelfTests
             PrototypeWeightTests.Run(Check);
             CarryWeightTests.Run(Check);
             TakeAllTests.Run(Check);
+            ReturnAllTests.Run(Check);
             OcclusionTests.Run(Check);
             MessageTextTests.Run(Check);
             InventoryViewTests.Run(Check);
