@@ -38,7 +38,7 @@ internal static class ItemUseCheckpointReport
             throw new InvalidDataException("Legacy or consumed ownership restoration failed.");
         foreach (var area in consumed.Areas) MapLayoutWriter.Verify(area.Map);
         return new { Status = "ITEM_USE_CHECKPOINT_OK", Fixture = "isolated session seeded from original inventory; no gameplay placement, clock or explosion",
-            Version = 4, Profile = "neutral-v4", SourceMap = 3, SourceItem = item.Source.Key, ItemId = item.Source.Header.Id, use.Placement,
+            Version = consumed.Capture(catalog.Source.Sha256).Version, Profile = consumed.Capture(catalog.Source.Sha256).Profile, SourceMap = 3, SourceItem = item.Source.Key, ItemId = item.Source.Header.Id, use.Placement,
             PlacedRoundTrip = "verified", PartialTimerRoundTrip = "verified: 175 elapsed, 425 remaining", ConsumedRoundTrip = "verified", RepeatedCommit = "refused without state change", LegacyV2Carried = upgraded.CarriedCount, UpgradedVersion = upgraded.Capture(catalog.Source.Sha256).Version,
             Balance = consumed.Areas.Single(a => a.Map.Prefix.Header.MapIndex == 3).Items.Balance(owner.Key, item.Source.Key),
             RuntimeActivationEnabled = false, OriginalReconstruction = "verified" };

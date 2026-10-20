@@ -27,6 +27,8 @@ public sealed class DoorSession
     private readonly HashSet<int> _scriptedPrototypes;
     private readonly Dictionary<string, DoorState> _doors = new();
     private TempleDoorAdapter? _temple;
+    private string? _initialGateKey;
+    public string? InitialTempleGateKey => _initialGateKey;
     private long _revision;
     private bool _resolving;
     internal Func<string, bool>? IsSceneryReplaced { get; set; }
@@ -39,6 +41,7 @@ public sealed class DoorSession
         if (enableTempleDoorAdapter)
         {
             session._temple = TempleDoorAdapter.Match(map) ?? throw new InvalidDataException("Temple door adapter requires the verified original MAP, instance and script identities.");
+            session._initialGateKey = TempleInitialGateProfile.Match(map)?.Key;
             session.Reset();
         }
         return session;
@@ -51,7 +54,7 @@ public sealed class DoorSession
     public DoorState? Get(string key) => _doors.GetValueOrDefault(key);
     public SavedDoorSession Capture() => new(_doors.Values.OrderBy(d => d.Source.Key, StringComparer.Ordinal)
         .Select(d => new SavedDoor(d.Source.Key, d.Flags, d.OpenFlags)).ToArray(), _temple?.Snapshot.Locals.ToArray(), _temple?.Snapshot.Experience ?? 0);
-    public void Restore(SavedDoorSession saved)
+    public void Restore(SavedDoorSession saved, bool allowInitialGateChanges = true)
     {
         if (saved?.Doors == null || saved.Doors.Length != _doors.Count)
             throw new InvalidDataException("Checkpoint door count differs from its source MAP.");
@@ -63,7 +66,8 @@ public sealed class DoorSession
             bool adapted = _temple?.SourceKey == value.Key;
             int originalFlags = source.Source.Header.Flags, originalOpen = source.Source.State["openFlags"];
             bool changed = value.Flags != originalFlags || value.OpenFlags != originalOpen;
-            if (changed && source.Scripted && !adapted
+            bool initialGate = _initialGateKey == value.Key && allowInitialGateChanges;
+            if (changed && source.Scripted && !adapted && !initialGate
                 || ((value.Flags ^ originalFlags) & ~OpenDoorMask) != 0
                 || ((value.OpenFlags ^ originalOpen) & ~(adapted ? 1 | Locked | Jammed : 1)) != 0)
                 throw new InvalidDataException("Checkpoint attempts an unsupported door-state change.");
@@ -124,7 +128,7 @@ public sealed class DoorSession
             || ((h.Fid >> 24) & 15) != 2 || (door.Flags & (HexNavigation.Hidden | HexNavigation.Multihex)) != 0)
             return DoorUseStatus.Unavailable;
         bool adapted = _temple?.SourceKey == key;
-        if (lockpick && !adapted || door.Scripted && !adapted || adapted && !_temple!.TrapInactive)
+        if (lockpick && !adapted || door.Scripted && !adapted && key != _initialGateKey || adapted && !_temple!.TrapInactive)
             return DoorUseStatus.ScriptRequired;
         if (door.IsOpen != ((door.Flags & HexNavigation.NoBlock) != 0)) return DoorUseStatus.Inconsistent;
         if (lockpick && door.IsJammed) return DoorUseStatus.Jammed;

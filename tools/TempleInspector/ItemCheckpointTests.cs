@@ -18,7 +18,7 @@ internal static class ItemCheckpointTests
         {
             var w = World(); Take(w); WorldCheckpoint saved = CheckpointFile.Decode(CheckpointFile.Encode(w.Capture("catalog")));
             var fresh = Restore(saved);
-            Assert(saved.Version == 4 && saved.Profile == "neutral-v4" && fresh.CarriedCount == 2 && fresh.Carried.Single().Source.Key == "item");
+            Assert(saved.Version == 5 && saved.Profile == "neutral-v5" && fresh.CarriedCount == 2 && fresh.Carried.Single().Source.Key == "item");
             Assert(fresh.Current.Items.Contents("owner").Single().Quantity == 3 && fresh.Location == w.Location);
             saved.Areas[0].Taken![0] = new("owner", "item", 5); Assert(w.CarriedCount == 2 && fresh.CarriedCount == 2);
         });

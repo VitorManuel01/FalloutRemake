@@ -33,7 +33,7 @@ internal static class BarrierCommitTests
         {
             var world = World(); world.CommitBarrierEffect(Due(world), Guid.NewGuid(), false); world.Current.Travel.MoveTo(14322);
             var saved = CheckpointFile.Decode(State(world)); var restored = Restore(saved);
-            Assert(saved.Version == 4 && saved.Profile == "neutral-v4" && restored.Location.Hex == 14322 && State(restored).SequenceEqual(State(world)));
+            Assert(saved.Version == 5 && saved.Profile == "neutral-v5" && restored.Location.Hex == 14322 && State(restored).SequenceEqual(State(world)));
             saved.Areas[0].Replacements![0] = saved.Areas[0].Replacements![0] with { Id = Guid.NewGuid() };
             Assert(world.SceneryReplacements.Single().Id == restored.SceneryReplacements.Single().Id);
             restored.Reset(); Assert(restored.SceneryReplacements.Length == 0 && !restored.Current.Doors.Navigation(1).Walkable(14322) && restored.Current.Items.Balance("owner", "item") == new ItemBalance(5, 5, 0, 0, 0));
@@ -99,7 +99,7 @@ internal static class BarrierCommitTests
             var world = World(); var plan = Due(world); var saved = world.Capture("catalog");
             var legacy = saved with { Version = 3, Profile = "neutral-v3", Areas = saved.Areas.Select(a => a with { Replacements = null }).ToArray() };
             var restored = Restore(CheckpointFile.Decode(CheckpointFile.Encode(legacy)));
-            Assert(restored.ItemUses.Single().Allocation.Phase == ItemUsePhase.Placed && restored.SceneryReplacements.Length == 0 && restored.Capture("catalog").Version == 4);
+            Assert(restored.ItemUses.Single().Allocation.Phase == ItemUsePhase.Placed && restored.SceneryReplacements.Length == 0 && restored.Capture("catalog").Version == 5);
             world.CompleteDueUse(plan.UseId); saved = world.Capture("catalog");
             legacy = saved with { Version = 3, Profile = "neutral-v3", Areas = saved.Areas.Select(a => a with { Replacements = null }).ToArray() };
             restored = Restore(legacy); Assert(restored.ItemUses.Single().Allocation.Phase == ItemUsePhase.Consumed && !restored.Current.Doors.Navigation(1).Walkable(14322));

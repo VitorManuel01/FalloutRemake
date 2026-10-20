@@ -182,14 +182,15 @@ public sealed partial class WorldSession
     public WorldCheckpoint Capture(string catalogHash)
     {
         ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses();
-        return new(4, "neutral-v4", catalogHash, InitialMap, CurrentMap,
+        return new(5, "neutral-v5", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
                 DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray());
     }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null)
     {
         if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2"
-            || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4") || checkpoint.CatalogHash != catalogHash
+            || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
+            || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5") || checkpoint.CatalogHash != catalogHash
             || checkpoint.InitialMap != initialMap || checkpoint.Areas is not { Length: > 0 and <= 16 })
             throw new InvalidDataException("Checkpoint version, profile or catalog is incompatible.");
         var allowed = allowedMaps.ToHashSet();
@@ -206,10 +207,10 @@ public sealed partial class WorldSession
                 throw new InvalidDataException("Checkpoint source or dependency fingerprints changed.");
             if (checkpoint.Version == 1 && saved.Taken != null || checkpoint.Version >= 2 && saved.Taken == null
                 || checkpoint.Version < 3 && saved.Uses != null || checkpoint.Version >= 3 && saved.Uses == null
-                || checkpoint.Version < 4 && saved.Replacements != null || checkpoint.Version == 4 && saved.Replacements == null)
+                || checkpoint.Version < 4 && saved.Replacements != null || checkpoint.Version >= 4 && saved.Replacements == null)
                 throw new InvalidDataException("Checkpoint item state does not match its schema version.");
             area.Items.Restore(saved.Taken ?? Array.Empty<TakenItem>(), saved.Uses ?? Array.Empty<ItemUseAllocation>());
-            area.Doors.Restore(saved.Session);
+            area.Doors.Restore(saved.Session, checkpoint.Version >= 5);
         }
         var scenes = checkpoint.Areas.Select(a => (Area: candidate._areas[a.Map], Records: a.Replacements ?? Array.Empty<SceneryReplacement>())).ToArray();
         candidate.ValidateScenery(scenes);
@@ -233,7 +234,8 @@ public sealed partial class WorldSession
             if (!navigations.TryGetValue(level, out HexNavigation? navigation))
                 navigations[level] = navigation = placementArea.Doors.Navigation(position.Elevation);
             if (navigation.IsExit(position.Hex) || navigation.BlockersAt(position.Hex).Any(b => !b.IsDoor
-                || placementArea.Doors.Get(b.Key) is not DoorState door || door.Scripted && placementArea.Doors.TempleDoor?.SourceKey != b.Key))
+                || placementArea.Doors.Get(b.Key) is not DoorState door || door.Scripted && placementArea.Doors.TempleDoor?.SourceKey != b.Key
+                    && placementArea.Doors.InitialTempleGateKey != b.Key))
                 throw new InvalidDataException("Item-use placement is not valid on the restored geometry.");
         }
     }

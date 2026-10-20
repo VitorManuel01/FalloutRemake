@@ -55,6 +55,7 @@ internal static class AppliedTempleContinuation
         var scripted = resumed.Current.Items.Containers.Single(o => o.Offset == 465604);
         if (resumed.Current.Items.ContainerStatus(scripted.Key) != ItemTakeStatus.ScriptRequired || resumed.Current.Items.Contents(scripted.Key).Length != 0)
             throw new InvalidDataException("Real continuation bypassed the scripted chest.");
+        object initialGate = InitialGateAudit.Create(resumed, catalog, data);
         resumed = Resume(State(resumed)); TravelTo(resumed, 1); ActorLocation returnArrival = resumed.Location; Walk(resumed, 14322);
         var final = Resume(State(resumed));
         if (final.Location.Hex != 14322 || final.CarriedCount != 2 || final.SceneryReplacements.Single().Id != id || final.Experience != beforeXp
@@ -63,6 +64,7 @@ internal static class AppliedTempleContinuation
         return new { Status = "APPLIED_TEMPLE_CONTINUATION_OK", Replacement = final.SceneryReplacements.Single(),
             CheckpointVersion = final.Capture(catalog.Source.Sha256).Version, ReachableAfterEffect = 1258, UpperArrival = upperArrival, UpperReachable = upperReachable,
             ActorApproaches = actorApproaches,
+            InitialGate = initialGate,
             Collected = collected, final.CarriedCount, final.CarriedWeight, ScriptedChest = "empty and ScriptRequired", ReturnArrival = returnArrival, FinalLocation = final.Location,
             ExtraWalkingSteps = steps, ExperienceUnchangedByEffect = beforeXp, RepeatedEffect = "refused without mutation", Checkpoints = "former blocker, upper loot and return verified", OriginalReconstruction = "verified" };
     }
