@@ -89,6 +89,7 @@ public partial class TemplePreview
         if (!State().SequenceEqual(changed)) throw new InvalidDataException("Rehearsal advanced time automatically.");
         _focus = Point(FalloutGrid.HexCenter(plan.Placement.Hex) - _layout!.Origin, 0); _camera.Size = 18; UpdateCamera();
         if (_capture != null) await Capture(Path.ChangeExtension(_capture, "explosive-preparation-placed.png"));
+        await CheckUseClock(plan.Id);
         Restore();
         if (!State().SequenceEqual(initial) || _campaign.CarriedCount != 1 || _placedUseNodes.Count != 0)
             throw new InvalidDataException("Preparation audit did not restore its prior test fixture.");

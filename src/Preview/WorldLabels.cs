@@ -23,7 +23,7 @@ public partial class TemplePreview
         if (_camera == null || _hud == null) return;
         Vector2 viewport = GetViewport().GetVisibleRect().Size;
         var occupied = new List<Rect2>();
-        _worldLabels.RemoveAll(label => !GodotObject.IsInstanceValid(label) || label.IsQueuedForDeletion());
+        _worldLabels.RemoveAll(label => !GodotObject.IsInstanceValid(label) || label.IsQueuedForDeletion() || !label.IsInsideTree());
         foreach (Label3D label in _worldLabels.OrderBy(l => l.GetParent() == (_selected == null ? null : _bodies.GetValueOrDefault(_selected.Source.Key)) ? 0 : 1))
         {
             label.PixelSize = _camera.Size / Math.Max(1, viewport.Y) * 14 / label.FontSize;

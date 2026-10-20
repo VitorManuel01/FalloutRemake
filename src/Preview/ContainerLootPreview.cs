@@ -26,7 +26,7 @@ public partial class TemplePreview
     {
         if (_loot?.Visible == true) { CloseLoot(); return; }
         if (_selected?.Source is not { Subtype: 1 } owner || owner.Header.Pid >> 24 != 0 || _campaign == null) return;
-        CloseExplosivePreparation(); CloseInventory(); ClearRouteHover(); _lootOwner = owner.Key;
+        CloseUseClock(); CloseExplosivePreparation(); CloseInventory(); ClearRouteHover(); _lootOwner = owner.Key;
         GetTree().Root.GuiEmbedSubwindows = true;
         var dialog = new ContainerLootWindow { Size = new Vector2I(900, 560), Theme = _hud.GetChild<Control>(0).Theme };
         _loot = dialog; _hud.AddChild(dialog);

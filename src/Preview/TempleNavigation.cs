@@ -60,6 +60,7 @@ public partial class TemplePreview
         _hud.StopAction(_walker?.Moving == true, _walker?.StopRequested == true);
         RefreshTravelAction(); RefreshCheckpointActions();
         RefreshFrameRouteAction();
+        RefreshUseClock();
     }
 
     private void RefreshReachability()

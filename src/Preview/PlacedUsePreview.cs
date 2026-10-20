@@ -43,6 +43,7 @@ public partial class TemplePreview
             _placedUseLayer.AddChild(node); _placedUseNodes.Add(use.Id, node);
         }
         ApplyPlacedUseFilter();
+        RefreshUseClock();
     }
 
     private void ApplyPlacedUseFilter()

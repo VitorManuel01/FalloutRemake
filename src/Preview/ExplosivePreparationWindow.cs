@@ -25,7 +25,7 @@ public partial class ExplosivePreparationWindow : ConfirmationDialog
         var body = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         body.AddThemeConstantOverride("separation", 14); scroll.AddChild(body);
         body.AddChild(new Label { Text = "Uma unidade será deixada no chão, junto do personagem.", AutowrapMode = TextServer.AutowrapMode.WordSmart });
-        body.AddChild(new Label { Text = "Ensaio controlado: a preparação sempre tem sucesso. O tempo fica parado; posicionar não provoca uma explosão.",
+        body.AddChild(new Label { Text = "Ensaio controlado: a preparação sempre tem sucesso. Depois, use Tempo · ensaio para avançar o prazo manualmente. Posicionar não provoca uma explosão.",
             AutowrapMode = TextServer.AutowrapMode.WordSmart, Modulate = new Color("e8c78d") });
         var row = new HBoxContainer(); row.AddChild(new Label { Text = "Temporizador (10–180 s):" }); row.AddChild(_seconds); body.AddChild(row);
         body.AddChild(_status); _seconds.ValueChanged += _ => RefreshPlan();

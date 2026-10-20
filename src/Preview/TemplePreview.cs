@@ -79,6 +79,7 @@ public partial class TemplePreview : Node3D
 			_hud.FrameRouteRequested = FrameRoute;
 			_hud.LootRequested = OpenLoot;
 			_hud.BagRequested = OpenBag;
+			_hud.UseClockRequested = OpenUseClock;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -176,7 +177,7 @@ public partial class TemplePreview : Node3D
 	private void BuildWorld()
 	{
 		if (_map == null) return;
-		CloseExplosivePreparation(); CloseLoot(); CloseBag(); CloseInventory();
+		CloseUseClock(); CloseExplosivePreparation(); CloseLoot(); CloseBag(); CloseInventory();
 		_worldLabels.Clear();
 		using var resources = new ResourceScope();
 		_placedUseLayer = null; _placedUseNodes.Clear();
@@ -574,6 +575,7 @@ public partial class TemplePreview : Node3D
 		if (_shuttingDown) return;
 		_shuttingDown = true; SetProcess(false); SetProcessUnhandledInput(false);
 		CloseExplosivePreparation();
+		CloseUseClock();
 		// Finish node deletion and managed finalizers while the native engine is still alive.
 		for (int i = GetChildCount() - 1; i >= 0; i--) GetChild(i).QueueFree();
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
