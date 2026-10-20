@@ -155,6 +155,7 @@ internal static class SelfTests
             IntTests.Run(Check);
             ScriptMetadataTests.Run(Check);
             BoundedScriptStateTests.Run(Check);
+            GameGlobalTests.Run(Check);
             TempleAdapterTests.Run(Check);
             CharacterSkillTests.Run(Check);
             TravelTests.Run(Check);

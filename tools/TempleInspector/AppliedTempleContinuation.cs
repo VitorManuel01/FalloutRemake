@@ -37,6 +37,11 @@ internal static class AppliedTempleContinuation
         if (resumed.Location.Hex != 14322 || resumed.SceneryReplacements.Single().Id != id) throw new InvalidDataException("Real checkpoint failed on the former blocked tile.");
         TravelTo(resumed, 2); ActorLocation upperArrival = resumed.Location;
         int upperReachable = resumed.Current.Doors.Navigation(2).ReachableFrom(upperArrival.Hex).Count;
+        var actorSource = resumed.Current.Map.AllObjects.Single(o => o.Offset == 425776 && o.Header.Id == 126);
+        var actorNavigation = resumed.Current.Doors.Navigation(2); var actorReach = actorNavigation.ReachableFrom(upperArrival.Hex);
+        var actorApproaches = Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(actorSource.Header.Tile, d))
+            .Where(t => t.HasValue && actorReach.Distance(t.Value) >= 0 && !actorNavigation.IsExit(t.Value)).Select(t => t!.Value)
+            .OrderBy(actorReach.Distance).ThenBy(t => t).Select(t => new { Hex = t, Steps = actorReach.Distance(t) }).ToArray();
         var owner = resumed.Current.Items.Containers.Single(o => o.Offset == 458120 && o.Header.Id == 376);
         var navigation = resumed.Current.Doors.Navigation(2); var reach = navigation.ReachableFrom(resumed.Location.Hex);
         int approach = Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(owner.Header.Tile, d)).Append(owner.Header.Tile)
@@ -57,6 +62,7 @@ internal static class AppliedTempleContinuation
         foreach (WorldArea area in final.Areas) MapLayoutWriter.Verify(area.Map);
         return new { Status = "APPLIED_TEMPLE_CONTINUATION_OK", Replacement = final.SceneryReplacements.Single(),
             CheckpointVersion = final.Capture(catalog.Source.Sha256).Version, ReachableAfterEffect = 1258, UpperArrival = upperArrival, UpperReachable = upperReachable,
+            ActorApproaches = actorApproaches,
             Collected = collected, final.CarriedCount, final.CarriedWeight, ScriptedChest = "empty and ScriptRequired", ReturnArrival = returnArrival, FinalLocation = final.Location,
             ExtraWalkingSteps = steps, ExperienceUnchangedByEffect = beforeXp, RepeatedEffect = "refused without mutation", Checkpoints = "former blocker, upper loot and return verified", OriginalReconstruction = "verified" };
     }

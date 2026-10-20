@@ -26,6 +26,11 @@ try
         Console.WriteLine(JsonSerializer.Serialize(ItemTransferReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
+    if (args.Length == 3 && args[2] == "--temple-state-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(TempleStateReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
     if (args.Length == 3 && args[2] == "--temple-dialogue-report")
     {
         Console.WriteLine(JsonSerializer.Serialize(TempleDialogueReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
