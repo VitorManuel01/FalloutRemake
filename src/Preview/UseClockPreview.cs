@@ -37,6 +37,7 @@ public partial class TemplePreview
         Guid token = _campaign.SessionToken;
         var dialog = new UseClockWindow { Size = new(720, 500), Theme = _hud.GetChild<Control>(0).Theme };
         _useClock = dialog;
+        dialog.ReviewRequested = id => { if (_useClock == dialog && _campaign?.SessionToken == token) ReviewPendingEffect(id); };
         dialog.AdvanceRequested = ticks =>
         {
             if (_useClock != dialog || _campaign?.SessionToken != token || ticks is not (10 or 100)) return;

@@ -66,6 +66,7 @@ public partial class TemplePreview
         if (_campaign!.DueItemUses.Single().Allocation.Id != id || !action.Text.Contains("pendente")) throw new InvalidDataException("Pending checkpoint did not restore the same stopped event.");
         callback(100); CheckTicks(0); OpenUseClock();
         if (!((Button)_useClock!.FindChild("AdvanceUseTenSeconds", true, false)).Disabled) throw new InvalidDataException("Reload unblocked a pending event.");
+        await CheckBarrierEffectReview(id);
         CloseUseClock(); Restore(); CheckTicks(75);
         GD.Print("USE_CLOCK_UI_OK: real placed GUID, 7.5s display, explicit +1/+10s, exact 6.5s deadline clamp, pending freeze, no effect/consumption, checkpoint restoration, invalid step/moving/inspection/modal/late-callback guards, unchanged actor/items/doors/source bytes.");
     }

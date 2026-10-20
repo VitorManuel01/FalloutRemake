@@ -12,9 +12,11 @@ public partial class UseClockWindow : AcceptDialog
         CustomMinimumSize = new(480, 150), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
     private readonly Button _one = new() { Name = "AdvanceUseOneSecond", Text = "+1 s", Disabled = true },
         _ten = new() { Name = "AdvanceUseTenSeconds", Text = "+10 s", Disabled = true };
+    private readonly Button _effect = new() { Name = "ReviewPendingEffect", Text = "Ver efeito", Disabled = true };
     private readonly Label _summary = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart },
         _status = new() { Name = "UseClockStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     public Action<int>? AdvanceRequested;
+    public Action<Guid>? ReviewRequested;
     public string StatusText => _status.Text;
     public int EventCount { get; private set; }
     public static string Duration(int ticks) => ((decimal)ticks / ExplosiveTimer.TicksPerSecond).ToString("0.#", CultureInfo.GetCultureInfo("pt-BR")) + " s";
@@ -32,23 +34,31 @@ public partial class UseClockWindow : AcceptDialog
         _events.SetColumnTitle(0, "Local"); _events.SetColumnTitle(1, "Prazo restante"); _events.SetColumnTitle(2, "Estado");
         _events.SetColumnExpand(1, false); _events.SetColumnCustomMinimumWidth(1, 110);
         _events.SetColumnExpand(2, false); _events.SetColumnCustomMinimumWidth(2, 160);
-        var actions = new HBoxContainer(); actions.AddChild(_one); actions.AddChild(_ten); body.AddChild(actions); body.AddChild(_status);
+        var actions = new HBoxContainer(); actions.AddChild(_one); actions.AddChild(_ten); actions.AddChild(_effect); body.AddChild(actions); body.AddChild(_status);
         _one.Pressed += () => { if (!_one.Disabled) AdvanceRequested?.Invoke(ExplosiveTimer.TicksPerSecond); };
         _ten.Pressed += () => { if (!_ten.Disabled) AdvanceRequested?.Invoke(10 * ExplosiveTimer.TicksPerSecond); };
+        _events.ItemSelected += RefreshReviewAction;
+        _effect.Pressed += () => { if (!_effect.Disabled && SelectedUse() is Guid id) ReviewRequested?.Invoke(id); };
     }
+    private Guid? SelectedUse() => _events.GetSelected() is TreeItem row && Guid.TryParse(row.GetMetadata(0).AsString(), out Guid id) ? id : null;
+    private void RefreshReviewAction() => _effect.Disabled = _events.GetSelected()?.GetMetadata(1).AsBool() != true;
     public void Refresh(WorldItemUse[] uses, Func<int, string> mapName, string? blocked, string? message = null)
     {
-        EventCount = uses.Length; _events.Clear(); TreeItem root = _events.CreateItem();
+        Guid? selected = SelectedUse(); EventCount = uses.Length; _events.Clear(); TreeItem root = _events.CreateItem(); TreeItem? selection = null;
         foreach (WorldItemUse entry in uses.OrderBy(u => u.Allocation.RemainingTicks).ThenBy(u => u.Allocation.Placement.Map).ThenBy(u => u.Allocation.Id))
         {
             var use = entry.Allocation; TreeItem row = _events.CreateItem(root);
             row.SetText(0, $"{mapName(use.Placement.Map)} · elevação {use.Placement.Elevation}");
             row.SetText(1, Duration(use.RemainingTicks)); row.SetText(2, use.RemainingTicks == 0 ? "Aguarda resolução" : "Pausado");
             row.SetMetadata(0, use.Id.ToString("D"));
+            row.SetMetadata(1, use.RemainingTicks == 0);
+            if (selection == null || selected == use.Id) selection = row;
         }
         int due = uses.Count(u => u.Allocation.RemainingTicks == 0);
         _summary.Text = $"{uses.Length} posicionado(s) · {due} aguardando resolução";
         _one.Disabled = _ten.Disabled = blocked != null;
         _status.Text = message ?? blocked ?? "Escolha quanto avançar. Fechar ou caminhar mantém os prazos pausados.";
+        selection?.Select(0); RefreshReviewAction();
     }
+    public void Message(string message) => _status.Text = message;
 }

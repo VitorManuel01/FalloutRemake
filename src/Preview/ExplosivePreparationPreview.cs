@@ -22,7 +22,7 @@ public partial class TemplePreview
     {
         ExplosiveProposal proposal = ProposeExplosivePreparation(item, ExplosiveTimer.DefaultSeconds);
         if (proposal.Status != ExplosiveProposalStatus.Ready) { NavigationStatus(ExplosivePreparationWindow.Hint(proposal.Status)); RefreshBag(); return; }
-        CloseUseClock(); CloseExplosivePreparation(); CloseBag(); CloseLoot(); CloseInventory(); ClearRouteHover();
+        CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseBag(); CloseLoot(); CloseInventory(); ClearRouteHover();
         GetTree().Root.GuiEmbedSubwindows = true;
         var dialog = new ExplosivePreparationWindow { Size = new(580, 320), Theme = _hud.GetChild<Control>(0).Theme,
             Propose = seconds => ProposeExplosivePreparation(item, seconds) };

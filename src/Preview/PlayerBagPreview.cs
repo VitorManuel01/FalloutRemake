@@ -27,7 +27,7 @@ public partial class TemplePreview
     {
         if (_bag?.Visible == true) { CloseBag(); return; }
         if (_campaign == null) return;
-        CloseUseClock(); CloseExplosivePreparation(); CloseInventory(); CloseLoot(); ClearRouteHover();
+        CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseInventory(); CloseLoot(); ClearRouteHover();
         GetTree().Root.GuiEmbedSubwindows = true;
         var dialog = new PlayerBagWindow { Size = new Vector2I(960, 680), Theme = _hud.GetChild<Control>(0).Theme };
         _bag = dialog; _hud.AddChild(dialog);
