@@ -50,6 +50,8 @@ public partial class PreviewHud : CanvasLayer
     public Action? StopRequested;
     public Action<bool>? RevealActorRequested;
     public Action? InventoryRequested;
+    public Action? SpeechRequested;
+    private readonly Button _speech = new() { Name = "SpeechAction", Text = "Conversa · ensaio", Visible = false, Disabled = true };
     public Action<bool>? NavigationGridRequested;
     public Action? FrameRouteRequested;
     public Action? LootRequested;
@@ -131,9 +133,10 @@ public partial class PreviewHud : CanvasLayer
         _details.BbcodeEnabled = false; _details.SizeFlagsVertical = Control.SizeFlags.ExpandFill; _details.SizeFlagsStretchRatio = 1.2f;
         _details.CustomMinimumSize = new Vector2(0, 70); _details.AddThemeFontSizeOverride("normal_font_size", 13);
         _details.Text = "Clique em um volume para consultar os IDs e a posição do objeto original.\n\nAs formas e alturas são provisórias."; sideSections.AddChild(_details);
-        var selectionActions = new HBoxContainer { Name = "SelectionActions" }; sideSections.AddChild(selectionActions);
+        var selectionActions = new HFlowContainer { Name = "SelectionActions" }; sideSections.AddChild(selectionActions);
         _cycle.Pressed += () => CycleRequested?.Invoke(); selectionActions.AddChild(_cycle);
         _inventory.Pressed += () => InventoryRequested?.Invoke(); selectionActions.AddChild(_inventory);
+        _speech.Pressed += () => { if (!_speech.Disabled) SpeechRequested?.Invoke(); }; selectionActions.AddChild(_speech);
 
         _navigationPanel = new PanelContainer { AnchorTop = 1, AnchorBottom = 1,
             AnchorRight = 1, OffsetLeft = 16, OffsetRight = -316, OffsetTop = -272, OffsetBottom = -64 };
@@ -188,6 +191,8 @@ public partial class PreviewHud : CanvasLayer
     public string SelectionDetails => _details.Text;
     public void CycleAction(bool enabled) => _cycle.Disabled = !enabled;
     public void InventoryAction(bool enabled) => _inventory.Disabled = !enabled;
+    public void SpeechAction(bool visible, bool enabled, string hint)
+    { _speech.Visible = visible; _speech.Disabled = !enabled; _speech.TooltipText = hint; }
     public void NavigationGrid(bool enabled) => _grid.SetPressedNoSignal(enabled);
     public void FrameRouteAction(bool enabled) => _frameRoute.Disabled = !enabled;
     public void LootAction(bool enabled) => _loot.Disabled = !enabled;

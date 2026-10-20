@@ -15,7 +15,8 @@ em um ensaio de cenário, preservado pelo checkpoint.
 O leitor verifica a reconstrução dos bytes do mapa antes de montar a cena.
 O personagem ainda tem apenas as regras mínimas deste teste, sem combate ou arte final.
 A porta final já abre no estado inicial, permitindo chegar perto do NPC;
-conversa e duelo permanecem indisponíveis.
+o botão **Conversa · ensaio** permite consultar cinco escolhas originais, sem
+alterar a partida. Conversa ativa e duelo permanecem indisponíveis.
 
 **Correção do primeiro marco:** o interior é `maps/arcaves.map`, ID 3.
 `maps/artemple.map`, ID 126, é a área externa com Klint. O inspetor agora usa o interior
@@ -125,7 +126,9 @@ dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do
 6. Use **Ver efeito → Aplicar no cenário** para conferir e abrir a passagem.
    Cancelar mantém o evento pendente. **K/R** salvam/restauram prazo e cenário.
 7. Atravesse para a elevação 2. A porta final pode ser aberta com U antes do
-   desafio; depois, caminhe até o NPC. A conversa e o duelo ainda não são simulados.
+   desafio; depois, caminhe até um hex do NPC e selecione-o. **Conversa · ensaio**
+   consulta cinco escolhas com INT 5/Speech marcado, em um estado separado.
+   Fechar ou recomeçar preserva a partida. Conversa ativa e duelo ainda não estão disponíveis.
 
 O efeito deste ensaio altera somente a barreira validada; não há dano a personagens
 ou combate geral. A preparação fora desse alcance fica indisponível. Baús com
@@ -172,7 +175,7 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 seguidos de saída com código 0.
 Prefira `tools/Validate-Temple.ps1 -GodotExe $godotExe -DataDirectory <pasta-local>`
 para conferir também os marcadores atuais e os logs: **16 etapas**, incluindo
-262 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
+273 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
 vazados são recusados mesmo quando o processo retorna zero. O manifesto fica em `.local/`.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo

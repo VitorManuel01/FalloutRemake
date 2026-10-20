@@ -61,6 +61,18 @@ public sealed class TempleSpeechProfile
                 || !choice.OwningProcedures.Any(p => program.Procedures[p].Name == Procedures[i]))
                 throw new InvalidDataException("Verified Speech route changed.");
         }
+        // The two message fragments are concatenated around obj_name(dude_obj), not alternatives.
+        for (int i = 0; i < ChoiceOffsets.Length; i++)
+        {
+            int start = i switch { 0 => 11522, 1 => 11854, 2 => 12488, 3 => 14118, _ => 14284 };
+            (ushort Op, int? Value)[] expected = Replies[i].Length == 2
+                ? new (ushort, int?)[] { (0xC001,749), (0xC001,749), (0xC001,Replies[i][0]), (0x8105,null),
+                    (0x80BF,null), (0x80A4,null), (0x8039,null), (0xC001,749), (0xC001,Replies[i][1]), (0x8105,null), (0x8039,null), (0x811E,null) }
+                : new (ushort, int?)[] { (0xC001,749), (0xC001,Replies[i][0]), (0x811E,null) };
+            var actual = program.Instructions.Where(instruction => instruction.Offset >= start).Take(expected.Length)
+                .Select(instruction => (instruction.Opcode, instruction.OperandBits));
+            if (!actual.SequenceEqual(expected)) throw new InvalidDataException("Verified Speech reply composition changed.");
+        }
         return new(actors[0].Key, gate.Key, map.Source.Sha256, globals.Source.Path, map.Prefix.GlobalVariables);
     }
     public BoundedScriptState CreateInitial() => new(_blocks);

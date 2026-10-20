@@ -23,7 +23,11 @@ public partial class TemplePreview
             .OrderBy(_reachable!.Distance).ThenBy(t => t).First();
         try
         {
+            SelectObject(actor);
+            var speechAction = (Button)_hud.FindChild("SpeechAction", true, false);
+            if (!speechAction.Visible || !speechAction.Disabled) throw new InvalidDataException("Distant NPC allowed a Speech consultation.");
             SelectObject(gate); int approach = Approach(gate.Source.Header.Tile); Walk(approach);
+            if (speechAction.Visible) throw new InvalidDataException("Non-NPC selection displayed a Speech consultation.");
             if (!_hud.SelectionDetails.Contains("Porta final do templo") || _doors!.CanLockpick(gate.Source.Key, approach, 2, false) != DoorUseStatus.ScriptRequired)
                 throw new InvalidDataException("Initial gate identification or restricted interaction missing.");
             UseDoor(gate.Source.Key);
@@ -40,8 +44,9 @@ public partial class TemplePreview
             _focus = Point(actor.Position, 0); _camera.Size = 20; UpdateCamera();
             if (near != 13928 || _campaign.Experience != baseline.Areas.Sum(a => a.Session.Experience) || _campaign.CarriedCount != 2)
                 throw new InvalidDataException("Source NPC approach changed items/XP or arrived elsewhere.");
-            _hud.Status("Ao alcance do personagem · conversa e duelo ainda indisponíveis");
+            _hud.Status("Ao alcance do personagem · consulta da conversa disponível");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "npc-approach.png"));
+            await CheckSpeechConsultation();
             CheckpointFile.Write(CheckpointPath, _campaign.Capture(_mapCatalog.Source.Sha256)); LoadCheckpoint();
             if (_campaign.Location.Hex != near || !_doors!.Get(gate.Source.Key)!.IsOpen) throw new InvalidDataException("NPC approach checkpoint lost gate state.");
             GD.Print("INITIAL_GATE_PREVIEW_OK: original gate 104 open via production interaction, 974->1321 reachable, occupied-close refusal, v5 load on gate, actual walk to NPC at 13928, unchanged XP/items/source, no dialogue/lockpick/combat.");

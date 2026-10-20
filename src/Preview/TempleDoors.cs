@@ -33,6 +33,7 @@ public partial class TemplePreview
     };
     private void RefreshDoorAction()
     {
+        RefreshSpeechAction();
         DoorState? door = _selected == null ? null : _doors?.Get(_selected.Source.Key);
         DoorUseStatus status = door == null ? DoorUseStatus.NoDoor : DoorStatus(door.Source.Key);
         _hud.DoorAction(status == DoorUseStatus.Ready, door?.IsOpen == true, DoorHint(status));

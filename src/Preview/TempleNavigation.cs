@@ -61,6 +61,7 @@ public partial class TemplePreview
         RefreshTravelAction(); RefreshCheckpointActions();
         RefreshFrameRouteAction();
         RefreshUseClock();
+        RefreshSpeechAction();
     }
 
     private void RefreshReachability()

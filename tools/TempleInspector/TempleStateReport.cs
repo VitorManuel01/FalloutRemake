@@ -30,6 +30,8 @@ internal static class TempleStateReport
         if (initialized != ScriptWriteStatus.Ready || refused != ScriptWriteStatus.OutOfRange || before != JsonSerializer.Serialize(state.Capture()))
             throw new InvalidDataException("Real source-bounded storage failed isolation.");
         var speech = TempleSpeechProfile.Create(map, data.Read); var speechState = speech.CreateInitial();
+        var language = new PrototypeTextCatalog(data.Read, data.FindPaths("pro_")).Language;
+        var speechText = new TempleSpeechText(speech, MessageTextFile.Read(data.Read($"text/{language}/dialog/actemvil.msg")), language);
         var draft = TempleSpeechDraft.Begin(speech, speechState, 5, true) ?? throw new InvalidDataException("Known rehearsal profile failed.");
         for (int i = 0; i < 5; i++)
             if (draft.Choose(speech.Step(i).ChoiceOffset) != TempleSpeechStatus.Ready) throw new InvalidDataException("Known Speech choice failed.");
@@ -41,7 +43,7 @@ internal static class TempleStateReport
             throw new InvalidDataException("Detached Speech persistence failed.");
         return new { Status = "TEMPLE_STATE_PROFILE_OK", Map = map.Source, configuration.Source, GlobalEntry = configuration.Entries[10],
             ActorMetadata = actorMeta, GateMetadata = gateMeta, State = state.Capture(), InitialGateWrites = "Verified entry subset applied to detached storage only",
-            SpeechRehearsal = new { Profile = speech.Fingerprint, EffectiveIntelligence = 5, SpeechTagged = true,
+            SpeechRehearsal = new { Profile = speech.Fingerprint, EffectiveIntelligence = 5, SpeechTagged = true, TextSource = speechText.Source,
                 Result = "Accepted in detached rehearsal; no active world, VM, NPC movement or original RNG replay", State = speechState.Capture(), SourceMapVariable20 = 0,
                 Persistence = new { Version = 1, Bytes = savedSpeech.Length, RoundTrip = "verified in memory; no file written", FreshSessionToken = true } },
             InvalidLocal16 = "refused atomically", RuntimeAdapterEnabled = false, OriginalReconstruction = "verified" };
