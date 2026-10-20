@@ -1,5 +1,7 @@
 # Resumo de todos os marcos até 20/10/2026
 
+Retomada posterior: [doze incrementos adicionais e validações](continuation-batch-2026-10-20.md).
+
 Parada solicitada pelo usuário ao concluir a análise adicional do baú.
 Histórico conferido no Git e nos registros do projeto. A tabela agrupa os marcos
 numerados de 1 a 59; a lista seguinte cobre todos os incrementos posteriores.

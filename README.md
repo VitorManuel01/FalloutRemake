@@ -1,6 +1,7 @@
 # Fallout Remake — prévia 3D do templo
 
 [Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
+[Continuação mais recente: doze novos incrementos e validações](docs/continuation-batch-2026-10-20.md).
 
 Projeto pessoal em Godot 4 .NET/C#, começando por Fallout 2. A direção visual futura é
 um ambiente isométrico 3D inspirado em Wasteland 3. A cena principal já permite
