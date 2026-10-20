@@ -45,6 +45,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   inclusive depois de viajar e carregar checkpoint. B também fecha a janela.
   **Devolver 1 / Devolver esta pilha** repõem o item no recipiente original
   quando o personagem estiver ao alcance. A devolução também é salva com K.
+  **Devolver tudo à origem** devolve conjuntamente as pilhas recolhidas do mesmo
+  recipiente do item selecionado. Itens de outras origens permanecem na bolsa.
   **Voltar ao recipiente** solicita a aproximação à origem na área atual.
   Em outra área visitada, **Ir à passagem** guia o primeiro trecho; use Enter
   e abra B novamente para continuar. Depois de chegar, confirme a devolução.
@@ -165,7 +167,7 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 seguidos de saída com código 0.
 Prefira `tools/Validate-Temple.ps1 -GodotExe $godotExe -DataDirectory <pasta-local>`
 para conferir também os marcadores atuais e os logs: **15 etapas**, incluindo
-235 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
+239 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
 vazados são recusados mesmo quando o processo retorna zero. O manifesto fica em `.local/`.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo
@@ -246,6 +248,8 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Coleta: aproximação, quantidades restantes e janela](docs/container-loot-2026-10-19.md)
 - [Bolsa do personagem: consulta e origem dos itens](docs/player-bag-2026-10-19.md)
 - [Devolver itens: origem, proximidade e conservação](docs/item-return-2026-10-19.md)
+- [Devolver todas as pilhas da mesma origem: domínio e conservação](docs/return-all-domain-2026-10-20.md)
+- [Devolução conjunta na bolsa: sessão, seleção e checkpoint](docs/return-all-ui-2026-10-20.md)
 - [Recipientes no modo Caminhar: prévia, clique e enquadramento](docs/container-route-2026-10-19.md)
 - [Bolsa: solicitar aproximação ao recipiente de origem](docs/bag-origin-2026-10-19.md)
 - [Peso base original: layout PRO e validações](docs/item-base-weight-2026-10-19.md)

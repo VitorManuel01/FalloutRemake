@@ -33,6 +33,13 @@ public partial class TemplePreview
         _bag = dialog; _hud.AddChild(dialog);
         dialog.Confirmed += CloseBag; dialog.Canceled += CloseBag; dialog.CloseRequested += CloseBag;
         dialog.ReturnRequested = ReturnFromBag;
+        Guid sessionToken = _campaign.SessionToken;
+        dialog.ReturnAllRequested = item =>
+        {
+            if (_bag != dialog || _campaign?.SessionToken != sessionToken || dialog.SelectedItem is not { } selected
+                || selected.Map != item.Map || selected.OwnerKey != item.OwnerKey || selected.Source.Key != item.Source.Key) return;
+            ReturnAllToOrigin(item);
+        };
         dialog.ApproachRequested = ApproachBagOrigin;
         dialog.PrepareExplosiveRequested = OpenExplosivePreparation;
         dialog.BarrierApproachRequested = ApproachBarrierForPlacement;
@@ -42,7 +49,8 @@ public partial class TemplePreview
         item => _campaign.UnitWeight(item.Map, item.Source),
         (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true),
         item => ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true), item => InventoryTexture(item.Map, item.Source),
-        item => ProposeExplosivePreparation(item, ExplosiveTimer.DefaultSeconds).Status, PreparationHint, item => BarrierPlacementApproach(item).HasValue);
+        item => ProposeExplosivePreparation(item, ExplosiveTimer.DefaultSeconds).Status, PreparationHint, item => BarrierPlacementApproach(item).HasValue,
+        item => _campaign.CanReturnAllItems(item.Map, item.OwnerKey, _walker?.Moving == true));
     private void ApproachBagOrigin(CarriedItem item)
     {
         if (_campaign == null) return;
@@ -69,6 +77,14 @@ public partial class TemplePreview
         RefreshBag();
         RefreshContainerVisuals();
     }
+    private void ReturnAllToOrigin(CarriedItem item)
+    {
+        if (_bag?.Visible != true || _campaign == null) return;
+        long before = _campaign.CarriedCount;
+        ItemTakeStatus status = _campaign.ReturnAllItems(item.Map, item.OwnerKey, _walker?.Moving == true);
+        NavigationStatus(status == ItemTakeStatus.Ready ? $"Devolvidas {before - _campaign.CarriedCount} unidade(s) à mesma origem · K para salvar" : ContainerLootWindow.Hint(status));
+        RefreshBag(); RefreshContainerVisuals();
+    }
     private async Task CheckPlayerBag()
     {
         _checkingNavigation = true;
@@ -92,6 +108,7 @@ public partial class TemplePreview
             if (_bag == null || _bag.RowCount != 1 || _bag.TotalQuantity != 1 || _campaign.CarriedWeight != 1 || _campaign.CarryCapacity != 150 || _bag.SelectedItem?.Source.Header.Id != 106
                 || _bag.SelectedItem.Map != 3 || !_bag.DetailText.Contains(name) || !_bag.DetailText.Contains(MapDisplayName(3)) || !_bag.SummaryText.Contains("1 / 150 lb") || _bag.SelectedWeightText != "1 lb" || _bag.SelectedArtFid != 0x070000AA
                 || !_bag.ReadableLayout || _bag.Size.X > viewport.X - 32 || _bag.Size.Y > viewport.Y - 32 || _campaign.Location != before
+                || !((Button)_bag.FindChild("ReturnOriginAction", true, false)).Disabled
                 || ((Button)_hud.FindChild("LoadAction", true, false)).GetGlobalRect().End.X > viewport.X - 15)
                 throw new InvalidDataException("Bag lost original item identity/name from an inactive area or its readable layout.");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "bag.png"));

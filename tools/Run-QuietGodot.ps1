@@ -21,8 +21,8 @@ $quietResult = [QuietGodot]::Run((Resolve-Path -LiteralPath $GodotExe).Path, $qu
 $quietMarkers = switch ($Check) {
     'VisualPreferencesStartup' { @('VISUAL_PREFERENCES_STARTUP_OK') }
     'SceneReview' { @('ENTITY_READABILITY_OK', 'SCENE_REVIEW_OK', 'CONTAINER_LOCATOR_OK') }
-    'ExplosivePreparation' { @('BARRIER_PLACEMENT_GUIDANCE_OK', 'BARRIER_EFFECT_UI_OK', 'USE_CLOCK_UI_OK', 'EXPLOSIVE_PREPARATION_UI_OK', 'APPLIED_BARRIER_PREVIEW_OK', 'TAKE_ALL_UI_OK') }
-    default { @('PREVIEW_TEST_OK', 'VISUAL_PREFERENCES_OK', 'TAKE_ALL_UI_OK') }
+    'ExplosivePreparation' { @('BARRIER_PLACEMENT_GUIDANCE_OK', 'BARRIER_EFFECT_UI_OK', 'USE_CLOCK_UI_OK', 'EXPLOSIVE_PREPARATION_UI_OK', 'APPLIED_BARRIER_PREVIEW_OK', 'TAKE_ALL_UI_OK', 'RETURN_ALL_UI_OK') }
+    default { @('PREVIEW_TEST_OK', 'VISUAL_PREFERENCES_OK', 'TAKE_ALL_UI_OK', 'RETURN_ALL_UI_OK') }
 }
 $quietLogFailure = $null
 try { Assert-GodotValidationLog -StandardOutputPath $quietLog -StandardErrorPath $quietErrorLog -RequiredMarkers $quietMarkers }

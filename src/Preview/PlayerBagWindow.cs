@@ -17,6 +17,7 @@ public partial class PlayerBagWindow : AcceptDialog
     private readonly Label _summary = new();
     private readonly Button _returnOne = new() { Name = "ReturnOneAction", Text = "Devolver 1", Disabled = true },
         _returnStack = new() { Name = "ReturnStackAction", Text = "Devolver esta pilha", Disabled = true },
+        _returnOrigin = new() { Name = "ReturnOriginAction", Text = "Devolver tudo à origem", Disabled = true },
         _approach = new() { Name = "BagOriginApproachAction", Text = "Voltar ao recipiente", Disabled = true };
     private readonly RichTextLabel _returnStatus = new() { BbcodeEnabled = false, CustomMinimumSize = new Vector2(860, 64) };
     private readonly Dictionary<string, CarriedItem> _lines = new();
@@ -31,8 +32,10 @@ public partial class PlayerBagWindow : AcceptDialog
     private Func<CarriedItem, PrototypeText?>? _text;
     private Func<int, string>? _mapName;
     private Func<CarriedItem, int, ItemTakeStatus>? _canReturn;
+    private Func<CarriedItem, ItemTakeStatus>? _canReturnAll;
     private Func<CarriedItem, ItemOriginPlan?>? _originRoute;
     public Action<CarriedItem, int>? ReturnRequested;
+    public Action<CarriedItem>? ReturnAllRequested;
     public Action<CarriedItem>? ApproachRequested;
     public CarriedItem? SelectedItem { get; private set; }
     public long TotalQuantity { get; private set; }
@@ -53,7 +56,7 @@ public partial class PlayerBagWindow : AcceptDialog
         scroll.OffsetLeft = 20; scroll.OffsetRight = -20; scroll.OffsetTop = 20; scroll.OffsetBottom = -60; body.AddThemeConstantOverride("separation", 12);
         body.AddChild(_summary); body.AddChild(_items); var detail = new HBoxContainer(); detail.AddThemeConstantOverride("separation", 16);
         detail.AddChild(_art); detail.AddChild(_detail); body.AddChild(detail);
-        body.AddChild(_returnStatus); var actions = new HFlowContainer(); body.AddChild(actions); actions.AddChild(_approach); actions.AddChild(_returnOne); actions.AddChild(_returnStack);
+        body.AddChild(_returnStatus); var actions = new HFlowContainer(); body.AddChild(actions); actions.AddChild(_approach); actions.AddChild(_returnOne); actions.AddChild(_returnStack); actions.AddChild(_returnOrigin);
         actions.AddChild(_quantity); _quantity.Requested = qty => { if (SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, qty); };
         actions.AddChild(_prepareExplosive);
         actions.AddChild(_barrierApproach);
@@ -62,6 +65,7 @@ public partial class PlayerBagWindow : AcceptDialog
         _approach.Pressed += () => { if (!_approach.Disabled && SelectedItem != null) ApproachRequested?.Invoke(SelectedItem); };
         _returnOne.Pressed += () => { if (!_returnOne.Disabled && SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, 1); };
         _returnStack.Pressed += () => { if (!_returnStack.Disabled && SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, SelectedItem.Quantity); };
+        _returnOrigin.Pressed += () => { if (!_returnOrigin.Disabled && SelectedItem != null) ReturnAllRequested?.Invoke(SelectedItem); };
         body.AddChild(new Label { Text = "K salva a bolsa junto da posição, portas e XP, depois de fechar esta janela." });
         _items.SetColumnTitle(0, "Item"); _items.SetColumnTitle(1, "Quantidade"); _items.SetColumnTitle(2, "Peso"); _items.SetColumnTitle(3, "Encontrado em");
         _items.SetColumnExpand(1, false); _items.SetColumnCustomMinimumWidth(1, 100);
@@ -72,11 +76,12 @@ public partial class PlayerBagWindow : AcceptDialog
     public void Refresh(CarriedItem[] items, Func<CarriedItem, PrototypeText?> text, Func<int, string> mapName, long? carriedWeight, int capacity,
         Func<CarriedItem, long?> unitWeight, Func<CarriedItem, int, ItemTakeStatus>? canReturn = null, Func<CarriedItem, ItemOriginPlan?>? originRoute = null,
         Func<CarriedItem, Texture2D?>? artwork = null, Func<CarriedItem, ExplosiveProposalStatus>? canPrepareExplosive = null,
-        Func<ExplosiveProposalStatus, string>? preparationHint = null, Func<CarriedItem, bool>? canApproachBarrier = null)
+        Func<ExplosiveProposalStatus, string>? preparationHint = null, Func<CarriedItem, bool>? canApproachBarrier = null,
+        Func<CarriedItem, ItemTakeStatus>? canReturnAll = null)
     {
         string? selected = SelectedItem == null ? null : RowKey(SelectedItem);
         _text = text; _mapName = mapName; _canReturn = canReturn; _originRoute = originRoute; _canPrepareExplosive = canPrepareExplosive;
-        _preparationHint = preparationHint; _canApproachBarrier = canApproachBarrier;
+        _preparationHint = preparationHint; _canApproachBarrier = canApproachBarrier; _canReturnAll = canReturnAll;
         _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
         TotalQuantity = items.Sum(i => (long)i.Quantity);
         _summary.Text = items.Length == 0 ? "Sua bolsa está vazia." : $"{TotalQuantity} {(TotalQuantity == 1 ? "unidade" : "unidades")} em {items.Length} {(items.Length == 1 ? "pilha" : "pilhas")}";
@@ -92,7 +97,8 @@ public partial class PlayerBagWindow : AcceptDialog
         }
         SelectedItem = null; _art.Texture = null; _art.Visible = false;
         _detail.Text = items.Length == 0 ? "Recolha itens de recipientes com J. Itens recolhidos acompanham você ao trocar de área." : "Selecione um item para consultar a descrição.";
-        _returnOne.Disabled = _returnStack.Disabled = _approach.Disabled = true; _returnStatus.Text = ""; _quantity.Configure(0, "Devolver quantidade", null);
+        _returnOne.Disabled = _returnStack.Disabled = _returnOrigin.Disabled = _approach.Disabled = true; _returnOrigin.TooltipText = "";
+        _returnStatus.Text = ""; _quantity.Configure(0, "Devolver quantidade", null);
         _prepareExplosive.Visible = false; _prepareExplosive.Disabled = true;
         _barrierApproach.Visible = false; _barrierApproach.Disabled = true;
         if (select != null) { select.Select(0); ShowSelected(); }
@@ -117,6 +123,12 @@ public partial class PlayerBagWindow : AcceptDialog
             : status == ItemTakeStatus.Empty ? "Você já não carrega esta pilha." : ContainerLootWindow.Hint(status);
         _returnOne.Disabled = status != ItemTakeStatus.Ready;
         _returnStack.Disabled = status != ItemTakeStatus.Ready || _canReturn!(item, item.Quantity) != ItemTakeStatus.Ready;
+        ItemTakeStatus allStatus = _canReturnAll?.Invoke(item) ?? ItemTakeStatus.Unsupported;
+        _returnOrigin.Disabled = allStatus != ItemTakeStatus.Ready;
+        long originQuantity = _lines.Values.Where(i => i.Map == item.Map && i.OwnerKey == item.OwnerKey).Sum(i => (long)i.Quantity);
+        _returnOrigin.TooltipText = allStatus == ItemTakeStatus.Ready
+            ? $"Devolver {originQuantity} unidade(s) ao recipiente de origem deste item. Itens de outras origens continuam na bolsa."
+            : "Devolver tudo à origem: " + ContainerLootWindow.Hint(allStatus);
         ItemOriginPlan? plan = status is ItemTakeStatus.TooFar or ItemTakeStatus.Unavailable or ItemTakeStatus.AtExit ? _originRoute?.Invoke(item) : null;
         _approach.Disabled = plan == null;
         _approach.Text = plan?.Legs[0].Destination != null ? (plan.Legs[0].Tiles.Length == 1 ? "Ver passagem" : "Ir à passagem") : "Voltar ao recipiente";

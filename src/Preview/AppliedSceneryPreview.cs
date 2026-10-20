@@ -100,6 +100,7 @@ public partial class TemplePreview
             MapObject chest = _campaign.Current.Items.Containers.Single(o => o.Offset == 458120 && o.Header.Id == 376);
             Walk(ContainerApproach(chest)!.Value);
             await CheckTakeAllChest(chest);
+            await CheckReturnAllChest(chest);
             RefreshContainerVisuals();
             if (_campaign.CarriedCount != 2 || _campaign.CarriedWeight != 2 || !_campaign.Carried.Select(i => (i.Source.Header.Id, i.Source.Header.Pid)).ToHashSet().SetEquals(new[] { (126, 273), (100, 49) }))
                 throw new InvalidDataException("Applied preview lost original upper item identities/weight.");
