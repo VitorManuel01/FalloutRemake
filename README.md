@@ -228,6 +228,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Porta final: escritas constantes, entrada e atualização de estado](docs/temple-gate-state-evidence-2026-10-20.md)
 - [Scripts.lst: metadados de locais e alocação inicial](docs/script-local-metadata-2026-10-20.md)
 - [Locais do NPC: referências fora da contagem declarada](docs/temple-local-reference-audit-2026-10-20.md)
+- [Patch/master: comparação das contagens e armazenamento do CE](docs/temple-script-source-comparison-2026-10-20.md)
 - [Adaptador de arrombamento: regras e validação](docs/door-adapter-2026-10-18.md)
 - [Arrombamento na prévia: perfil e controles](docs/lockpick-preview-2026-10-18.md)
 - [Passagens internas: destinos e estado do personagem](docs/travel-2026-10-18.md)

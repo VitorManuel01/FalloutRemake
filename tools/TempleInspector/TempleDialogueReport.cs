@@ -64,6 +64,22 @@ internal static class TempleDialogueReport
             .Select(r => (object)new { r.Offset, r.Index, DeclaredCount = metadata.DeclaredLocals,
                 Procedures = r.OwningProcedures.Select(i => inspected.Procedures[i].Name).ToArray() }).ToArray();
         object[] actorOutside = OutOfRange(program, actorMetadata), gateOutside = OutOfRange(gateProgram, gateMetadata);
+        // Compare only archives already discovered by the standard installation profile.
+        // This does not change source priority or load an alternative program into the world.
+        var listVariants = new List<object>();
+        foreach (string sourcePath in data.SourcePriority.Where(p => Path.GetExtension(p).Equals(".dat", StringComparison.OrdinalIgnoreCase)))
+        {
+            var archive = new DatArchive(sourcePath);
+            if (!archive.Entries.ContainsKey("scripts/scripts.lst")) continue;
+            var resource = new GameResource("scripts/scripts.lst", archive.FilePath, archive.Read("scripts/scripts.lst"));
+            ScriptListEntry actorVersion = ScriptListMetadata.Read(resource, binding.Index);
+            ScriptListEntry gateVersion = ScriptListMetadata.Read(resource, gateBinding.Index);
+            ResourceIdentity? containedActor = archive.Entries.ContainsKey(program.Source.Path)
+                ? ResourceIdentity.From(new GameResource(program.Source.Path, archive.FilePath, archive.Read(program.Source.Path))) : null;
+            listVariants.Add(new { List = actorVersion.Source, Actor = new { actorVersion.ProgramPath, actorVersion.DeclaredLocals },
+                Gate = new { gateVersion.ProgramPath, gateVersion.DeclaredLocals }, ContainedActorProgram = containedActor,
+                IsResolvedList = actorVersion.Source.Source == actorMetadata.Source.Source });
+        }
         Expect(gateProgram, (5530, 0xC001, 5596), (5536, 0xC001, 3), (5542, 0x80C1, null),
             (5544, 0xC001, 0), (5550, 0x8033, null), (5552, 0x802F, null),
             (5554, 0xC001, 3), (5560, 0xC001, 1), (5566, 0x80C2, null),
@@ -108,7 +124,9 @@ internal static class TempleDialogueReport
             LocalReferenceAudit = new { ActorOutsideDeclaredRange = actorOutside, GateOutsideDeclaredRange = gateOutside,
                 RequiresInvestigation = actorOutside.Length > 0 || gateOutside.Length > 0, AutomaticCorrection = false,
                 Scope = "Adjacent literal getters only; computed accesses and setters may add more. A static reference does not prove execution or a crash.",
+                NativeStorageBounds = "CE adds the script offset to the index and checks the full map-local vector; these calls do not enforce a per-script bound. Allocation order matters.",
                 RuntimeAdapterEnabled = false },
+            ScriptListArchiveVariants = listVariants,
             RuntimeAdapterEnabled = false,
             RequiredBeforeEnabling = new[] { "actor local-variable initialization and conversation entry conditions", "effective intelligence and tagged-skill profile",
                 "map/global variable ownership and compatible checkpoint", "NPC movement and gate script lifecycle" },
