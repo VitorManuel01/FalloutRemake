@@ -154,6 +154,7 @@ internal static class SelfTests
             DoorTests.Run(Check);
             IntTests.Run(Check);
             ScriptMetadataTests.Run(Check);
+            BoundedScriptStateTests.Run(Check);
             TempleAdapterTests.Run(Check);
             CharacterSkillTests.Run(Check);
             TravelTests.Run(Check);
