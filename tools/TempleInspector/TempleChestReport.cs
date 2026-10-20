@@ -27,6 +27,28 @@ internal static class TempleChestReport
         string[] related = data.FindPaths("actemvil").ToArray();
         string dialoguePath = related.Single(p => p.EndsWith("/actemvil.msg", StringComparison.OrdinalIgnoreCase));
         MessageTextFile dialogue = MessageTextFile.Read(data.Read(dialoguePath));
+        // Count decoded instructions once: procedure aliases can share a physical body.
+        int[] moves = consumer.Instructions.Where(i => i.Opcode == 0x8147).Select(i => i.Offset).ToArray();
+        if (!moves.SequenceEqual(new[] { 13356 }) || publisher.Instructions.Any(i => i.Opcode == 0x8147))
+            throw new InvalidDataException("Inspected whole-inventory transfer census changed.");
+        var options = new List<object>();
+        foreach (var site in new[] { ("Node006", 12966, 134), ("Node006", 13032, 136), ("Node008", 13214, 141), ("Node008", 13280, 143) })
+        {
+            IntProcedure procedure = consumer.Procedures.Single(p => p.Name == site.Item1);
+            // giq_option pops reaction, procedure, message and message-list after IQ.
+            // These literal arguments identify a possible target, not arrival at this node.
+            Expect(consumer, (site.Item2 - 24, 0xC001, 749), (site.Item2 - 18, 0xC001, site.Item3),
+                (site.Item2 - 12, 0xC001, 28), (site.Item2 - 6, 0xC001, 50), (site.Item2, 0x8121, null));
+            if (!consumer.ProcedureInstructions(procedure.Index).Any(i => i.Offset == site.Item2)
+                || consumer.Procedures[28].Name != "Node009") throw new InvalidDataException("Dialogue target changed.");
+            options.Add(new { Procedure = site.Item1, Offset = site.Item2, MessageList = 749, Message = site.Item3,
+                TargetIndex = 28, Target = "Node009", ReachabilityProven = false });
+        }
+        // The object closed and locked here is a tile/PID lookup, not temple_chest_ptr.
+        Expect(consumer, (13358, 0xC001, 19928), (13364, 0xC001, 2), (13370, 0xC001, 33555366),
+            (13376, 0x80A7, null), (13378, 0xC001, 0), (13384, 0x8031, null),
+            (13386, 0xC001, 0), (13392, 0x8032, null), (13394, 0x8132, null),
+            (13396, 0xC001, 0), (13402, 0x8032, null), (13404, 0x812E, null));
         return new
         {
             Status = "Verified source identities and physical reference sequence; no scripts executed", Map = map.Source,
@@ -37,9 +59,31 @@ internal static class TempleChestReport
                 Program = consumer.Source, Procedure = "Node009", Reference = fetch, InventoryMoveOffset = 13356,
                 Operation = "dude_obj -> fetched temple_chest_ptr -> move_obj_inven_to_obj" },
             RuntimeAdapterEnabled = false,
+            StaticInventoryFlow = new
+            {
+                Scope = "Only the two hash-bound programs; decoded physical instructions, not execution or a global script search",
+                ConsumerWholeInventoryMoveOffsets = moves, PublisherWholeInventoryMoveCount = 0,
+                AutomaticReturnProven = false,
+                Recovery = "No reverse whole-inventory move in these programs. Manual recovery and other scripts remain unproven.",
+                PossibleDialogueOptions = options,
+                SeparateGateOperation = new { Tile = 19928, Elevation = 2, Pid = 33555366,
+                    LookupOffset = 13376, CloseOffset = 13394, LockOffset = 13404, IsChest = false },
+                PublisherHasUseProcedure = publisher.Procedures.Any(p => p.Name == "use_p_proc"),
+                PublisherHasPickupProcedure = publisher.Procedures.Any(p => p.Name == "pickup_p_proc")
+            },
             RelatedResources = related, DialogueMessage100 = dialogue.Entries.GetValueOrDefault(100)?.Text,
             RequiredBeforeEnabling = new[] { "map external-variable lifecycle", "scripted dialogue/combat transition", "runtime item ownership beyond original source container", "validated storage/restoration checkpoint format" },
             OriginalReconstruction = "verified"
         };
+    }
+
+    private static void Expect(IntProgram program, params (int Offset, ushort Opcode, int? Operand)[] expected)
+    {
+        foreach (var item in expected)
+        {
+            IntInstruction? instruction = program.Instructions.SingleOrDefault(i => i.Offset == item.Offset);
+            if (instruction == null || instruction.Opcode != item.Opcode || instruction.OperandBits != item.Operand)
+                throw new InvalidDataException($"Chest flow evidence changed at byte {item.Offset}.");
+        }
     }
 }

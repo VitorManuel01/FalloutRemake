@@ -1,5 +1,7 @@
 # Fallout Remake — prévia 3D do templo
 
+[Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
+
 Projeto pessoal em Godot 4 .NET/C#, começando por Fallout 2. A direção visual futura é
 um ambiente isométrico 3D inspirado em Wasteland 3. A cena principal já permite
 explorar o Temple of Trials com formas provisórias, inspecionar os objetos originais
@@ -246,6 +248,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Pesos na interface: pilhas, carga e estados indisponíveis](docs/carry-weight-ui-2026-10-19.md)
 - [Quantidade escolhida: edição, carga e transferência](docs/item-quantity-2026-10-19.md)
 - [Baú do templo: referências externas e limites do adaptador](docs/temple-chest-script-2026-10-19.md)
+- [Baú: referências de diálogo e recuperação ainda não comprovada](docs/temple-chest-flow-2026-10-20.md)
 - [Recipiente vazio: informar scripts e impedimentos](docs/container-status-2026-10-19.md)
 - [Rota de retorno: áreas visitadas e passagens explícitas](docs/item-origin-route-2026-10-19.md)
 - [Bolsa: orientação de retorno entre áreas](docs/bag-return-route-2026-10-19.md)
