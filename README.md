@@ -164,8 +164,8 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 Prefira `tools/Validate-Temple.ps1 -GodotExe $godotExe -DataDirectory <pasta-local>`
-para conferir também os marcadores atuais e os logs: **14 etapas**, incluindo
-227 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
+para conferir também os marcadores atuais e os logs: **15 etapas**, incluindo
+235 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
 vazados são recusados mesmo quando o processo retorna zero. O manifesto fica em `.local/`.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo
@@ -258,6 +258,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Baú: referências de diálogo e recuperação ainda não comprovada](docs/temple-chest-flow-2026-10-20.md)
 - [Baú: caminho nativo de recuperação manual](docs/temple-chest-native-recovery-2026-10-20.md)
 - [Baú do desafio: explicação na interface e limites atuais](docs/temple-chest-role-ui-2026-10-20.md)
+- [Cameron: evidência da alternativa Speech e estados ainda não implementados](docs/temple-speech-evidence-2026-10-20.md)
 - [Recipiente vazio: informar scripts e impedimentos](docs/container-status-2026-10-19.md)
 - [Rota de retorno: áreas visitadas e passagens explícitas](docs/item-origin-route-2026-10-19.md)
 - [Bolsa: orientação de retorno entre áreas](docs/bag-return-route-2026-10-19.md)
