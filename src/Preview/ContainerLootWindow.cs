@@ -24,6 +24,7 @@ public partial class ContainerLootWindow : AcceptDialog
     private Func<MapObject, PrototypeText?>? _text;
     private Func<string, int, ItemTakeStatus>? _canTake;
     private bool _canApproach;
+    private string? _interactionHint;
     public Action<string, int>? TakeRequested;
     public Action? ApproachRequested;
     public string SelectedKey { get; private set; } = "";
@@ -55,9 +56,10 @@ public partial class ContainerLootWindow : AcceptDialog
         _approach.Pressed += () => { if (!_approach.Disabled) ApproachRequested?.Invoke(); };
     }
     public void Refresh(string owner, ContainerItem[] lines, Func<MapObject, PrototypeText?> text, Func<string, int, ItemTakeStatus> canTake, long carried, bool canApproach,
-        long? carriedWeight, int capacity, Func<MapObject, long?> unitWeight, ItemTakeStatus ownerStatus = ItemTakeStatus.Ready, Func<MapObject, Texture2D?>? artwork = null)
+        long? carriedWeight, int capacity, Func<MapObject, long?> unitWeight, ItemTakeStatus ownerStatus = ItemTakeStatus.Ready, Func<MapObject, Texture2D?>? artwork = null,
+        string? interactionHint = null)
     {
-        _owner.Text = owner; _text = text; _canTake = canTake; _canApproach = canApproach;
+        _owner.Text = owner; _text = text; _canTake = canTake; _canApproach = canApproach; _interactionHint = interactionHint;
         _bag.Text = $"Bolsa: {carried} {(carried == 1 ? "unidade" : "unidades")} · Carga: {CarryWeightText.Load(carriedWeight, capacity)} · K para salvar";
         string selected = SelectedKey; _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
         foreach (ContainerItem line in lines)
@@ -70,7 +72,7 @@ public partial class ContainerLootWindow : AcceptDialog
         }
         SelectedKey = ""; _one.Disabled = _stack.Disabled = _approach.Disabled = true; _quantity.Configure(0, "Retirar quantidade", null);
         _art.Texture = null; _art.Visible = false;
-        _description.Text = ""; _status.Text = ownerStatus == ItemTakeStatus.Ready ? "Este recipiente está vazio." : Hint(ownerStatus);
+        _description.Text = ""; _status.Text = ownerStatus == ItemTakeStatus.Ready ? "Este recipiente está vazio." : StatusHint(ownerStatus);
         if (select != null) { select.Select(0); ShowSelected(); }
     }
     private void ShowSelected()
@@ -80,7 +82,7 @@ public partial class ContainerLootWindow : AcceptDialog
         SelectedKey = line.Source.Key; _description.Text = _text!(line.Source)?.Description ?? "Descrição indisponível.";
         _art.Texture = row.GetIcon(0); _art.Visible = _art.Texture != null;
         ItemTakeStatus status = _canTake!(SelectedKey, 1);
-        _status.Text = Hint(status);
+        _status.Text = StatusHint(status);
         if (status == ItemTakeStatus.TooFar && !_canApproach) _status.Text = "Sem caminho até o recipiente com os bloqueios atuais.";
         _one.Disabled = status != ItemTakeStatus.Ready;
         ItemTakeStatus stackStatus = _canTake(SelectedKey, line.Quantity);
@@ -89,6 +91,8 @@ public partial class ContainerLootWindow : AcceptDialog
         _approach.Disabled = status != ItemTakeStatus.TooFar || !_canApproach;
         _quantity.Configure(line.Quantity, "Retirar quantidade", qty => _canTake!(SelectedKey, qty));
     }
+    private string StatusHint(ItemTakeStatus status) => status == ItemTakeStatus.ScriptRequired && !string.IsNullOrWhiteSpace(_interactionHint)
+        ? _interactionHint : Hint(status);
     public static string Hint(ItemTakeStatus status) => status switch
     {
         ItemTakeStatus.Ready => "Escolha quanto deseja retirar. A transferência não usa nem equipa o item.",

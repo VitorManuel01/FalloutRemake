@@ -39,6 +39,8 @@ O relatório diferencia explicitamente essas duas afirmações.
 Reprodução: `--temple-chest-report` do TempleInspector, usando os dados Epic
 locais já configurados. O comando valida os hashes e a reconstrução do MAP.
 Evidência local: `.local/chest-native-recovery.json`.
+Validação deste incremento: relatório Epic com reconstrução verificada e
+227 grupos sintéticos aprovados; nenhuma rotina de jogo foi executada pelo relatório.
 
 Próximo incremento: explicar a função deste baú na interface, mantendo as ações
 bloqueadas até existir suporte à custódia dos itens e aos estados do desafio.

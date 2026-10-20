@@ -41,7 +41,17 @@ public partial class TemplePreview
         _loot.Refresh(OriginalText(owner)?.Name ?? "Recipiente", _campaign.Current.Items.Contents(_lootOwner), OriginalText,
             (key, qty) => _campaign.CanTakeItem(_lootOwner, key, qty, _walker?.Moving == true), _campaign.CarriedCount, ContainerApproach(owner).HasValue,
             _campaign.CarriedWeight, _campaign.CarryCapacity, item => _campaign.UnitWeight(_campaign.CurrentMap, item),
-            _campaign.Current.Items.ContainerStatus(_lootOwner), item => InventoryTexture(_campaign.CurrentMap, item));
+            _campaign.Current.Items.ContainerStatus(_lootOwner), item => InventoryTexture(_campaign.CurrentMap, item),
+            ScriptedContainerExplanation(_campaign.Current.Map, owner));
+    }
+    private static string? ScriptedContainerExplanation(MapDocument map, MapObject owner)
+    {
+        if (map.Source.Sha256 != TempleBarrierEffectProposal.MapHash || owner.Key != TempleBarrierEffectProposal.MapHash + ":465604"
+            || owner.Header is not { Id: 100, Pid: 245, Tile: 20132, Elevation: 2, Sid: 50331654, ScriptIndex: 758 }
+            || !map.ScriptBindings.Any(b => b.Sid == owner.Header.Sid && b.Index == 758
+                && b.Program.Sha256 == "D80BC3F24D0936D43CA030ED4A24332B4C34CB655982BEFC64402813E451963C")) return null;
+        return "Baú do desafio: no jogo original, recebe os itens do personagem por script. "
+            + "O desafio e a recuperação desses itens ainda não estão disponíveis nesta prévia.";
     }
     private void TakeFromContainer(string key, int quantity)
     {
@@ -116,17 +126,28 @@ public partial class TemplePreview
             ChangeElevation(2); SelectObject(_layout!.Objects.Single(o => o.Source.Offset == 465604));
             OpenLoot(); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-            if (_loot == null || _loot.Remaining != 0 || !_loot.StatusText.Contains("interação ainda não disponível")
+            if (_loot == null || _loot.Remaining != 0 || !_loot.StatusText.Contains("Baú do desafio")
+                || !_loot.StatusText.Contains("recuperação desses itens ainda não")
                 || _campaign.Current.Items.ContainerStatus(_lootOwner!) != ItemTakeStatus.ScriptRequired
                 || !((Button)_loot.FindChild("TakeOneAction", true, false)).Disabled
                 || !((Button)_loot.FindChild("TakeStackAction", true, false)).Disabled
                 || !((Button)_loot.FindChild("ApproachContainerAction", true, false)).Disabled)
                 throw new InvalidDataException("Empty scripted chest concealed its unsupported interaction or enabled an action.");
+            var source = _selected!.Source;
+            if (ScriptedContainerExplanation(_map!, source with { Header = source.Header with { Pid = 246 } }) != null
+                || ScriptedContainerExplanation(_map! with { Source = _map.Source with { Sha256 = new string('0', 64) } }, source) != null)
+                throw new InvalidDataException("Known chest explanation leaked to another source profile.");
+            // Refreshing the same dialog must clear a previous source-specific explanation.
+            _loot.Refresh("Recipiente especial", Array.Empty<ContainerItem>(), _ => null, (_, _) => ItemTakeStatus.ScriptRequired,
+                0, false, 0, _campaign.CarryCapacity, _ => null, ItemTakeStatus.ScriptRequired);
+            if (!_loot.StatusText.Contains("interação ainda não disponível") || _loot.StatusText.Contains("Baú do desafio"))
+                throw new InvalidDataException("A generic scripted container retained a known chest explanation.");
+            RefreshLootWindow();
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "scripted-chest.png"));
             if (_campaign.Location != location || _campaign.CarriedCount != 0 || !_doors.Capture().Doors.SequenceEqual(doors.Doors))
                 throw new InvalidDataException("Inspecting scripted storage changed world state.");
             MapLayoutWriter.Verify(_map!); CloseLoot(); ResetWalker();
-            GD.Print("SCRIPTED_CONTAINER_OK: original empty chest ID 100, script requirement displayed, actions disabled, unchanged actor/items/doors/source bytes verified.");
+            GD.Print("SCRIPTED_CONTAINER_OK: known chest role and recovery limitation, generic fallback/reset, actions disabled, unchanged actor/items/doors/source bytes verified.");
         }
         finally { CloseLoot(); _checkingNavigation = false; }
     }
