@@ -1,7 +1,8 @@
 # Fallout Remake — prévia 3D do templo
 
 [Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
-[Continuação mais recente: doze novos incrementos e validações](docs/continuation-batch-2026-10-20.md).
+[Bateria mais recente: estados, porta final e consulta de Speech](docs/temple-state-batch-2026-10-20.md).
+[Bateria anterior: doze incrementos e validações](docs/continuation-batch-2026-10-20.md).
 
 Projeto pessoal em Godot 4 .NET/C#, começando por Fallout 2. A direção visual futura é
 um ambiente isométrico 3D inspirado em Wasteland 3. A cena principal já permite
@@ -178,8 +179,8 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 Prefira `tools/Validate-Temple.ps1 -GodotExe $godotExe -DataDirectory <pasta-local>`
-para conferir também os marcadores atuais e os logs: **16 etapas**, incluindo
-273 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
+para conferir também os marcadores atuais e os logs: **17 etapas**, incluindo
+275 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
 vazados são recusados mesmo quando o processo retorna zero. O manifesto fica em `.local/`.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo
