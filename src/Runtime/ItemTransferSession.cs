@@ -18,7 +18,7 @@ public sealed class ItemTransferSession
     public int MapId { get; }
     private readonly Dictionary<string, MapObject> _owners;
     private readonly Dictionary<int, Prototype> _prototypes;
-    private readonly Dictionary<string, TakenItem> _taken = new(StringComparer.Ordinal);
+    private Dictionary<string, TakenItem> _taken = new(StringComparer.Ordinal);
     private readonly Dictionary<Guid, ItemUseAllocation> _uses = new();
     public const int MaxUses = 1024;
     public long Revision { get; private set; }
@@ -119,6 +119,29 @@ public sealed class ItemTransferSession
         ItemTakeStatus status = CanTake(ownerKey, itemKey, quantity, actor, navigation, moving);
         if (status == ItemTakeStatus.Ready) { _taken[itemKey] = new(ownerKey, itemKey, quantity + (_taken.GetValueOrDefault(itemKey)?.Quantity ?? 0)); Revision++; }
         return status;
+    }
+    public ItemTakeStatus CanTakeAll(string ownerKey, ActorLocation actor, HexNavigation navigation, bool moving)
+    {
+        ItemTakeStatus status = ContainerStatus(ownerKey);
+        if (status != ItemTakeStatus.Ready) return status;
+        ContainerItem[] remaining = Contents(ownerKey).Where(i => i.Quantity > 0).ToArray();
+        if (remaining.Length == 0) return ItemTakeStatus.Empty;
+        foreach (ContainerItem line in remaining)
+        {
+            status = Eligibility(ownerKey, line.Source.Key, out _, out _);
+            if (status != ItemTakeStatus.Ready) return status;
+        }
+        return InteractionStatus(_owners[ownerKey], actor, navigation, moving);
+    }
+    public ItemTakeStatus TakeAll(string ownerKey, ActorLocation actor, HexNavigation navigation, bool moving)
+    {
+        ItemTakeStatus status = CanTakeAll(ownerKey, actor, navigation, moving);
+        if (status != ItemTakeStatus.Ready) return status;
+        // Build the complete replacement before publishing any item transfer.
+        var candidate = new Dictionary<string, TakenItem>(_taken, StringComparer.Ordinal);
+        foreach (ContainerItem line in Contents(ownerKey).Where(i => i.Quantity > 0))
+            candidate[line.Source.Key] = new(ownerKey, line.Source.Key, checked(line.Quantity + (_taken.GetValueOrDefault(line.Source.Key)?.Quantity ?? 0)));
+        _taken = candidate; Revision++; return ItemTakeStatus.Ready;
     }
     internal ItemUseStatus Place(ItemUseAllocation use)
     {

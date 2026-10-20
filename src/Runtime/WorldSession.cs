@@ -51,6 +51,21 @@ public sealed partial class WorldSession
         ItemTakeStatus status = CanTakeItem(ownerKey, itemKey, quantity, moving);
         return status == ItemTakeStatus.Ready ? Current.Items.Take(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : status;
     }
+    public ItemTakeStatus CanTakeAllItems(string ownerKey, bool moving)
+    {
+        ItemTakeStatus status = Current.Items.CanTakeAll(ownerKey, Location, Current.Doors.Navigation(Location.Elevation), moving);
+        if (status != ItemTakeStatus.Ready) return status;
+        long? carried = CarriedWeight;
+        long? additional = CarryWeight.Total(Current.Items.Contents(ownerKey).Where(i => i.Quantity > 0)
+            .Select(i => (UnitWeight(CurrentMap, i.Source), i.Quantity)));
+        if (!carried.HasValue || !additional.HasValue) return ItemTakeStatus.WeightUnavailable;
+        return carried.Value > CarryCapacity || additional.Value > CarryCapacity - carried.Value ? ItemTakeStatus.OverCapacity : ItemTakeStatus.Ready;
+    }
+    public ItemTakeStatus TakeAllItems(string ownerKey, bool moving)
+    {
+        ItemTakeStatus status = CanTakeAllItems(ownerKey, moving);
+        return status == ItemTakeStatus.Ready ? Current.Items.TakeAll(ownerKey, Location, Current.Doors.Navigation(Location.Elevation), moving) : status;
+    }
     public ItemTakeStatus CanReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap
         ? Current.Items.CanReturn(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
     public ItemTakeStatus ReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap
