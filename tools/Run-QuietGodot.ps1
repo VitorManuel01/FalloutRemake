@@ -8,6 +8,7 @@ param(
     [ValidateSet('Preview', 'VisualPreferencesStartup', 'SceneReview', 'ExplosivePreparation')][string]$Check = 'Preview'
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'GodotLogValidation.ps1')
 $quietProject = (Resolve-Path -LiteralPath $ProjectPath).Path
 $quietCapture = [IO.Path]::GetFullPath($CapturePath)
 $quietLog = [IO.Path]::ChangeExtension($quietCapture, 'stdout.log')
@@ -17,5 +18,18 @@ Add-Type -Path (Join-Path $PSScriptRoot 'QuietGodot.cs')
 $quietCheckArgument = switch ($Check) { 'VisualPreferencesStartup' { '--visual-preferences-smoke' } 'SceneReview' { '--scene-review-test' } 'ExplosivePreparation' { '--explosive-preparation-test' } default { '--preview-test' } }
 $quietArguments = @('--path', $quietProject, '--resolution', ("{0}x{1}" -f $Width, $Height), '--audio-driver', 'Dummy', '--max-fps', '30', '--', $quietCheckArgument, '--capture', $quietCapture)
 $quietResult = [QuietGodot]::Run((Resolve-Path -LiteralPath $GodotExe).Path, $quietProject, $quietArguments, $quietLog, $quietErrorLog, $TimeoutSeconds)
+$quietMarkers = switch ($Check) {
+    'VisualPreferencesStartup' { @('VISUAL_PREFERENCES_STARTUP_OK') }
+    'SceneReview' { @('ENTITY_READABILITY_OK', 'SCENE_REVIEW_OK') }
+    'ExplosivePreparation' { @('BARRIER_PLACEMENT_GUIDANCE_OK', 'BARRIER_EFFECT_UI_OK', 'USE_CLOCK_UI_OK', 'EXPLOSIVE_PREPARATION_UI_OK', 'APPLIED_BARRIER_PREVIEW_OK') }
+    default { @('PREVIEW_TEST_OK', 'VISUAL_PREFERENCES_OK') }
+}
+$quietLogFailure = $null
+try { Assert-GodotValidationLog -StandardOutputPath $quietLog -StandardErrorPath $quietErrorLog -RequiredMarkers $quietMarkers }
+catch { $quietLogFailure = $_.Exception.Message }
+$quietPassed = $quietResult.ExitCode -eq 0 -and -not $quietResult.TimedOut -and $null -eq $quietLogFailure -and $quietResult.InputDesktopBefore -eq $quietResult.InputDesktopAfter
+$quietResult | Add-Member -NotePropertyName Passed -NotePropertyValue $quietPassed
+$quietResult | Add-Member -NotePropertyName LogFailure -NotePropertyValue $quietLogFailure
 $quietResult | ConvertTo-Json
-exit $quietResult.ExitCode
+if (-not $quietPassed) { exit 1 }
+exit 0

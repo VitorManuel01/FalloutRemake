@@ -6,6 +6,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'GodotLogValidation.ps1')
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $godotPath = (Resolve-Path -LiteralPath $GodotExe).ProviderPath
 $dataPath = (Resolve-Path -LiteralPath $DataDirectory).ProviderPath
@@ -28,7 +29,7 @@ function ConvertTo-NativeArgument([string]$Value) {
     return '"' + $escaped + '"'
 }
 
-function Invoke-ValidationStep([string]$Name, [string]$Executable, [string[]]$Arguments, [string[]]$Markers = @(), [switch]$JsonReport) {
+function Invoke-ValidationStep([string]$Name, [string]$Executable, [string[]]$Arguments, [string[]]$Markers = @(), [switch]$JsonReport, [switch]$CheckGodotLogs) {
     $stdout = Join-Path $outputPath ($Name + '.stdout.log')
     $stderr = Join-Path $outputPath ($Name + '.stderr.log')
     $watch = [Diagnostics.Stopwatch]::StartNew()
@@ -49,6 +50,7 @@ function Invoke-ValidationStep([string]$Name, [string]$Executable, [string[]]$Ar
         if ($process.ExitCode -ne 0) { throw "Validation step '$Name' exited with code $($process.ExitCode)." }
         $output = [IO.File]::ReadAllText($stdout)
         foreach ($marker in $Markers) { if (-not $output.Contains($marker)) { throw "Validation step '$Name' did not emit '$marker'." } }
+        if ($CheckGodotLogs) { Assert-GodotValidationLog -StandardOutputPath $stdout -StandardErrorPath $stderr -RequiredMarkers $Markers }
         if ($JsonReport) {
             $report = $output | ConvertFrom-Json
             if ($report.OriginalReconstruction -ne 'verified') { throw "Source reconstruction was not verified by '$Name'." }
@@ -59,6 +61,8 @@ function Invoke-ValidationStep([string]$Name, [string]$Executable, [string[]]$Ar
 }
 
 try {
+    $powershellPath = (Get-Command powershell.exe -CommandType Application -ErrorAction Stop).Source
+    Invoke-ValidationStep 'godot-log-validator' $powershellPath @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $PSScriptRoot 'Test-GodotLogValidation.ps1')) @('Godot log validation groups passed.')
     Invoke-ValidationStep 'build-preview' $dotnetPath @('build', (Join-Path $projectRoot 'Fallout Remake.csproj'))
     Invoke-ValidationStep 'build-inspector' $dotnetPath @('build', (Join-Path $projectRoot 'tools/TempleInspector/TempleInspector.csproj'))
     $inspector = Join-Path $projectRoot 'tools/TempleInspector/bin/Debug/net8.0/TempleInspector.dll'
@@ -68,7 +72,7 @@ try {
     }
     # No graphical fallback: this command always passes --headless.
     Invoke-ValidationStep 'godot-preview' $godotPath @('--headless', '--path', $projectRoot, '--', '--data-dir', $dataPath, '--preview-test') @(
-        'PREVIEW_TEST_OK', 'ITEM_CHECKPOINT_OK', 'BAG_ORIGIN_OK', 'SCRIPTED_CONTAINER_OK', 'INVENTORY_ART_UI_OK', 'ELEVATION_WALK_GUARD_OK', 'PLACED_USE_PREVIEW_OK', 'BARRIER_PLACEMENT_GUIDANCE_OK', 'EXPLOSIVE_PREPARATION_UI_OK', 'USE_CLOCK_UI_OK', 'BARRIER_EFFECT_UI_OK', 'TEMPLE_EXPLOSIVE_PREVIEW_AUDIT_OK', 'APPLIED_BARRIER_PREVIEW_OK', 'ENTITY_READABILITY_OK', 'SCENE_REVIEW_OK', 'VISUAL_PREFERENCES_OK')
+        'PREVIEW_TEST_OK', 'ITEM_CHECKPOINT_OK', 'BAG_ORIGIN_OK', 'SCRIPTED_CONTAINER_OK', 'INVENTORY_ART_UI_OK', 'ELEVATION_WALK_GUARD_OK', 'PLACED_USE_PREVIEW_OK', 'BARRIER_PLACEMENT_GUIDANCE_OK', 'EXPLOSIVE_PREPARATION_UI_OK', 'USE_CLOCK_UI_OK', 'BARRIER_EFFECT_UI_OK', 'TEMPLE_EXPLOSIVE_PREVIEW_AUDIT_OK', 'APPLIED_BARRIER_PREVIEW_OK', 'ENTITY_READABILITY_OK', 'SCENE_REVIEW_OK', 'VISUAL_PREFERENCES_OK') -CheckGodotLogs
     $manifest.Passed = $true
 }
 catch { $manifest.Failure = $_.Exception.Message }
