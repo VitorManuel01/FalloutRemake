@@ -14,6 +14,8 @@ uma unidade, avançar seu prazo manualmente e confirmar a abertura da passagem
 em um ensaio de cenário, preservado pelo checkpoint.
 O leitor verifica a reconstrução dos bytes do mapa antes de montar a cena.
 O personagem ainda tem apenas as regras mínimas deste teste, sem combate ou arte final.
+A porta final já abre no estado inicial, permitindo chegar perto do NPC;
+conversa e duelo permanecem indisponíveis.
 
 **Correção do primeiro marco:** o interior é `maps/arcaves.map`, ID 3.
 `maps/artemple.map`, ID 126, é a área externa com Klint. O inspetor agora usa o interior
@@ -70,7 +72,7 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 - **K / Salvar:** checkpoint local quando estiver parado. **R / Carregar:**
   recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
   Os atalhos usam letras para evitar conflito com os controles do editor Godot.
-  O schema atual é v4; checkpoints v1/v2/v3 continuam carregando. Itens posicionados,
+  O schema atual é v5; checkpoints v1/v2/v3/v4 continuam carregando. Itens posicionados,
   consumidos e substituições de cenário têm estado próprio. Ao carregar, o modo
   e a seleção ainda válida são preservados.
 - **C / Personagem:** reenquadra e acompanha o personagem. WASD ou arrasto retomam
@@ -122,6 +124,8 @@ dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do
    avançam esse relógio. Ele para no primeiro evento vencido, inclusive entre segundos.
 6. Use **Ver efeito → Aplicar no cenário** para conferir e abrir a passagem.
    Cancelar mantém o evento pendente. **K/R** salvam/restauram prazo e cenário.
+7. Atravesse para a elevação 2. A porta final pode ser aberta com U antes do
+   desafio; depois, caminhe até o NPC. A conversa e o duelo ainda não são simulados.
 
 O efeito deste ensaio altera somente a barreira validada; não há dano a personagens
 ou combate geral. A preparação fora desse alcance fica indisponível. Baús com
@@ -167,8 +171,8 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 Prefira `tools/Validate-Temple.ps1 -GodotExe $godotExe -DataDirectory <pasta-local>`
-para conferir também os marcadores atuais e os logs: **15 etapas**, incluindo
-249 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
+para conferir também os marcadores atuais e os logs: **16 etapas**, incluindo
+262 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
 vazados são recusados mesmo quando o processo retorna zero. O manifesto fica em `.local/`.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo
@@ -230,6 +234,10 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Scripts.lst: metadados de locais e alocação inicial](docs/script-local-metadata-2026-10-20.md)
 - [Locais do NPC: referências fora da contagem declarada](docs/temple-local-reference-audit-2026-10-20.md)
 - [Patch/master: comparação das contagens e armazenamento do CE](docs/temple-script-source-comparison-2026-10-20.md)
+- [Estado limitado de scripts: blocos separados e transações](docs/bounded-script-state-2026-10-20.md)
+- [Perfil inicial: GAM global, metadados e geometria](docs/temple-original-state-profile-2026-10-20.md)
+- [Porta final inicial e checkpoint v5](docs/initial-temple-gate-v5-2026-10-20.md)
+- [Porta final na cena: abertura, percurso e restauração](docs/initial-temple-gate-preview-2026-10-20.md)
 - [Adaptador de arrombamento: regras e validação](docs/door-adapter-2026-10-18.md)
 - [Arrombamento na prévia: perfil e controles](docs/lockpick-preview-2026-10-18.md)
 - [Passagens internas: destinos e estado do personagem](docs/travel-2026-10-18.md)

@@ -104,7 +104,9 @@ public partial class TemplePreview
         if (_selected != null && _containerVisuals.ContainsKey(_selected.Source.Key)) SelectObject(_selected);
         RefreshContainerLocator();
     }
-    private string EntityDescription(PreviewObject obj) => EntityPresentation.Role(obj.Source) switch
+    private string EntityDescription(PreviewObject obj) => _doors?.InitialTempleGateKey == obj.Source.Key
+        ? "Porta final do templo · pode ser aberta e fechada antes do desafio. A conversa e o duelo ainda não estão disponíveis."
+        : EntityPresentation.Role(obj.Source) switch
     {
         EntityVisualRole.Barrier => IsSharedBlockingProxy(obj)
             ? "Bloqueador técnico original · contorno vermelho no chão. Mantém o bloqueio do hex compartilhado; use Próximo para voltar ao recipiente ou à luz."

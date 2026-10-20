@@ -101,6 +101,7 @@ public partial class TemplePreview
             Walk(ContainerApproach(chest)!.Value);
             await CheckTakeAllChest(chest);
             await CheckReturnAllChest(chest);
+            await CheckInitialGatePreview();
             RefreshContainerVisuals();
             if (_campaign.CarriedCount != 2 || _campaign.CarriedWeight != 2 || !_campaign.Carried.Select(i => (i.Source.Header.Id, i.Source.Header.Pid)).ToHashSet().SetEquals(new[] { (126, 273), (100, 49) }))
                 throw new InvalidDataException("Applied preview lost original upper item identities/weight.");
