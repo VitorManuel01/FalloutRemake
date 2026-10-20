@@ -13,10 +13,14 @@ public partial class TempleSpeechWindow : AcceptDialog
     private readonly Button _choice = new() { Name = "SpeechChoice", AutowrapMode = TextServer.AutowrapMode.WordSmart,
         CustomMinimumSize = new(0, 72), Alignment = HorizontalAlignment.Left },
         _restart = new() { Name = "SpeechRestart", Text = "Recomeçar ensaio" };
+    private readonly Button _save = new() { Name = "SpeechSave", Text = "Salvar resultado", Disabled = true,
+        TooltipText = "Salva somente o resultado do ensaio concluído, separado da partida." },
+        _load = new() { Name = "SpeechLoad", Text = "Carregar ensaio", Disabled = true,
+            TooltipText = "Substitui as escolhas deste ensaio pelo arquivo salvo. Não carrega a partida." };
     private readonly Label _status = new() { Name = "SpeechStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private TempleSpeechProfile? _profile;
     private TempleSpeechText? _text;
-    public Action? ChooseRequested, RestartRequested;
+    public Action? ChooseRequested, RestartRequested, SaveRequested, LoadRequested;
     public string ReplyText => _replies.Text;
     public string ChoiceText => _choice.Text;
     public string StatusText => _status.Text;
@@ -33,15 +37,18 @@ public partial class TempleSpeechWindow : AcceptDialog
         body.AddChild(new Label { Text = "Ensaio separado da partida · INT 5 e Speech marcado. Somente cinco escolhas verificadas estão disponíveis. Nenhuma escolha concede XP, move o NPC ou muda seus itens e progresso.",
             AutowrapMode = TextServer.AutowrapMode.WordSmart, Modulate = new Color("e8c78d") });
         body.AddChild(_speaker); body.AddChild(_progress); body.AddChild(_replies); body.AddChild(_choice); body.AddChild(_status); body.AddChild(_restart);
+        var files = new HFlowContainer(); files.AddChild(_save); files.AddChild(_load); body.AddChild(files);
         _choice.Pressed += () => { if (!_choice.Disabled) ChooseRequested?.Invoke(); };
         _restart.Pressed += () => RestartRequested?.Invoke();
+        _save.Pressed += () => { if (!_save.Disabled) SaveRequested?.Invoke(); };
+        _load.Pressed += () => { if (!_load.Disabled) LoadRequested?.Invoke(); };
     }
     public void Inspect(TempleSpeechProfile profile, TempleSpeechText text)
     { _profile = profile; _text = text; _speaker.Text = "Descrição original: " + text.Speaker; }
-    public void Refresh(TempleSpeechDraft draft, TempleSpeechState state)
+    public void Refresh(TempleSpeechDraft? draft, TempleSpeechState state)
     {
         bool done = state == TempleSpeechState.Accepted;
-        _progress.Text = done ? "Ensaio concluído · estado da partida preservado" : $"Escolha {Math.Min(draft.StepIndex + 1, 5)} de 5";
+        _progress.Text = done ? "Ensaio concluído · estado da partida preservado" : $"Escolha {Math.Min(draft!.StepIndex + 1, 5)} de 5";
         _choice.Visible = !done; _choice.Disabled = done;
         if (done)
         {
@@ -49,10 +56,12 @@ public partial class TempleSpeechWindow : AcceptDialog
             _status.Text = "Você pode fechar ou recomeçar. O personagem permanece no mesmo lugar e os itens continuam com seus donos.";
             return;
         }
-        var step = _profile!.Step(draft.StepIndex);
+        var step = _profile!.Step(draft!.StepIndex);
         _replies.Text = _text!.Reply(step, "[nome do personagem]");
         _choice.Text = _text!.Message(step.ChoiceMessage);
         _status.Text = step.ReplyMessages.Length > 1 ? "O nome aparece como marcador porque o personagem deste protótipo ainda não tem nome definido." : "Escolha a resposta para continuar o ensaio.";
     }
     public void Message(string text) { _status.Text = text; _choice.Disabled = true; }
+    public void PersistenceActions(bool canSave, bool canLoad) { _save.Disabled = !canSave; _load.Disabled = !canLoad; }
+    public void Notice(string text) => _status.Text = text;
 }

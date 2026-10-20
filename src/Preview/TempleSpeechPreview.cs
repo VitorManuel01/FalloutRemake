@@ -13,6 +13,9 @@ public partial class TemplePreview
     private TempleSpeechDraft? _speechDraft;
     private BoundedScriptState? _speechState;
     private TempleSpeechProfile? _speechProfile;
+    private string? _speechCheckpointOverride;
+    private string SpeechCheckpointPath => _speechCheckpointOverride ?? ProjectSettings.GlobalizePath(_test
+        ? "res://.local/checkpoints/temple-speech-test.json" : "res://.local/checkpoints/temple-speech.json");
     private string? SpeechBlockedReason()
     {
         if (_selected?.Source.Offset != 425776 || _map?.Source.Sha256 != TempleBarrierEffectProposal.MapHash || _campaign?.CurrentMap != 3)
@@ -50,12 +53,18 @@ public partial class TemplePreview
             Guid worldToken = _campaign!.SessionToken;
             var dialog = new TempleSpeechWindow { Size = new(800, 570), Theme = _hud.GetChild<Control>(0).Theme };
             _speechWindow = dialog; _speechProfile = profile;
+            void Refresh()
+            {
+                var state = profile.Classify(_speechState!.Capture());
+                dialog.Refresh(_speechDraft, state);
+                dialog.PersistenceActions(state == TempleSpeechState.Accepted, File.Exists(SpeechCheckpointPath));
+            }
             void Restart()
             {
                 if (_speechWindow != dialog || _campaign?.SessionToken != worldToken) return;
                 _speechDraft?.Cancel(); _speechState = profile.CreateInitial();
                 _speechDraft = TempleSpeechDraft.Begin(profile, _speechState, 5, true)!;
-                dialog.Refresh(_speechDraft, profile.Classify(_speechState.Capture()));
+                Refresh();
             }
             dialog.RestartRequested = Restart;
             dialog.ChooseRequested = () =>
@@ -66,7 +75,32 @@ public partial class TemplePreview
                 var result = _speechDraft.Choose(profile.Step(_speechDraft.StepIndex).ChoiceOffset);
                 if (result == TempleSpeechStatus.Ready && _speechDraft.ChoicesComplete) result = _speechDraft.CommitDetached();
                 if (result != TempleSpeechStatus.Ready) { dialog.Message("Ensaio desatualizado. Feche e abra novamente."); return; }
-                dialog.Refresh(_speechDraft, profile.Classify(_speechState.Capture()));
+                Refresh();
+            };
+            dialog.SaveRequested = () =>
+            {
+                if (_speechWindow != dialog || _campaign?.SessionToken != worldToken || _speechState == null
+                    || profile.Classify(_speechState.Capture()) != TempleSpeechState.Accepted) return;
+                try
+                {
+                    TempleSpeechStateFile.Write(SpeechCheckpointPath, profile, _speechState);
+                    Refresh(); dialog.Notice("Resultado do ensaio salvo em arquivo separado. O checkpoint da partida não foi alterado.");
+                }
+                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
+                { dialog.Notice("Não foi possível salvar o ensaio. O arquivo anterior e a partida foram preservados."); GD.Print("SPEECH_SAVE_FAILED: " + error.Message); }
+            };
+            dialog.LoadRequested = () =>
+            {
+                if (_speechWindow != dialog || _campaign?.SessionToken != worldToken) return;
+                try
+                {
+                    var candidate = TempleSpeechStateFile.Read(SpeechCheckpointPath, profile);
+                    _speechDraft?.Cancel(); _speechState = candidate;
+                    _speechDraft = TempleSpeechDraft.Begin(profile, candidate, 5, true);
+                    Refresh(); dialog.Notice("Ensaio carregado. As escolhas anteriores foram substituídas; a partida permanece no mesmo estado.");
+                }
+                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
+                { dialog.Notice("Arquivo de ensaio indisponível ou incompatível. As escolhas atuais e a partida foram preservadas."); GD.Print("SPEECH_LOAD_REJECTED: " + error.Message); }
             };
             dialog.Confirmed += CloseSpeechConsultation; dialog.Canceled += CloseSpeechConsultation; dialog.CloseRequested += CloseSpeechConsultation;
             _hud.AddChild(dialog); dialog.Inspect(profile, text); Restart();

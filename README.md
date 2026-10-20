@@ -129,6 +129,9 @@ dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do
    desafio; depois, caminhe até um hex do NPC e selecione-o. **Conversa · ensaio**
    consulta cinco escolhas com INT 5/Speech marcado, em um estado separado.
    Fechar ou recomeçar preserva a partida. Conversa ativa e duelo ainda não estão disponíveis.
+8. Ao concluir as cinco escolhas, **Salvar resultado** grava apenas o ensaio.
+   **Carregar ensaio** restaura esse arquivo separado; não carrega a partida.
+   Escolhas incompletas precisam ser concluídas ou recomeçadas para salvar.
 
 O efeito deste ensaio altera somente a barreira validada; não há dano a personagens
 ou combate geral. A preparação fora desse alcance fica indisponível. Baús com
