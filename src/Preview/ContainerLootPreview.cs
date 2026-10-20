@@ -32,7 +32,7 @@ public partial class TemplePreview
         _loot = dialog; _hud.AddChild(dialog);
         dialog.Confirmed += CloseLoot; dialog.Canceled += CloseLoot; dialog.CloseRequested += CloseLoot;
         dialog.TakeRequested = TakeFromContainer; dialog.ApproachRequested = ApproachLootContainer;
-        RefreshLootWindow(); dialog.PopupCentered(new Vector2I(900, 560));
+        RefreshLootWindow(); dialog.PopupCenteredClamped(new Vector2I(900, 560), .92f);
     }
     private void RefreshLootWindow()
     {

@@ -38,11 +38,13 @@ public partial class ContainerLootWindow : AcceptDialog
     {
         Title = "Recolher do recipiente"; Exclusive = true; Transient = true; GetOkButton().Text = "Fechar";
         WindowInput += input => { if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.J }) { SetInputAsHandled(); EmitSignal(SignalName.Canceled); } };
-        var body = new VBoxContainer(); body.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        body.OffsetLeft = 20; body.OffsetRight = -20; body.OffsetTop = 20; body.OffsetBottom = -60; body.AddThemeConstantOverride("separation", 12); AddChild(body);
+        var scroll = new ScrollContainer { Name = "DialogScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        scroll.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect); AddChild(scroll);
+        var body = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill }; scroll.AddChild(body);
+        scroll.OffsetLeft = 20; scroll.OffsetRight = -20; scroll.OffsetTop = 20; scroll.OffsetBottom = -60; body.AddThemeConstantOverride("separation", 12);
         body.AddChild(_owner); body.AddChild(_items); var detail = new HBoxContainer(); detail.AddThemeConstantOverride("separation", 16);
         detail.AddChild(_art); detail.AddChild(_description); body.AddChild(detail); body.AddChild(_status);
-        var actions = new HBoxContainer(); actions.AddThemeConstantOverride("separation", 12); body.AddChild(actions);
+        var actions = new HFlowContainer(); actions.AddThemeConstantOverride("separation", 12); body.AddChild(actions);
         actions.AddChild(_approach); actions.AddChild(_one); actions.AddChild(_stack); body.AddChild(_bag);
         actions.AddChild(_quantity); _quantity.Requested = qty => TakeRequested?.Invoke(SelectedKey, qty);
         _items.SetColumnTitle(0, "Item"); _items.SetColumnTitle(1, "Restante"); _items.SetColumnExpand(1, false); _items.SetColumnCustomMinimumWidth(1, 90);

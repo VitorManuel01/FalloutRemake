@@ -34,7 +34,7 @@ public partial class TemplePreview
         dialog.Confirmed += CloseBag; dialog.Canceled += CloseBag; dialog.CloseRequested += CloseBag;
         dialog.ReturnRequested = ReturnFromBag;
         dialog.ApproachRequested = ApproachBagOrigin;
-        RefreshBag(); dialog.PopupCentered(new Vector2I(960, 680));
+        RefreshBag(); dialog.PopupCenteredClamped(new Vector2I(960, 680), .92f);
     }
     private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName, _campaign.CarriedWeight, _campaign.CarryCapacity,
         item => _campaign.UnitWeight(item.Map, item.Source),

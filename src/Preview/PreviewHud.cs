@@ -12,6 +12,7 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _save = new() { Name = "SaveAction", Text = "Salvar [K]", Disabled = true };
     private readonly Button _load = new() { Name = "LoadAction", Text = "Carregar [R]", Disabled = true };
     private readonly Button _bag = new() { Name = "BagAction", Text = "Bolsa [B]" };
+    private readonly Button _cycle = new() { Name = "CycleAction", Text = "Próximo", Disabled = true, TooltipText = "Próximo objeto original no mesmo hex" };
     private readonly Button _inventory = new() { Name = "InventoryAction", Text = "Inventário [I]", Disabled = true,
         TooltipText = "Consultar o inventário original do objeto selecionado, sem transferir itens" };
     private readonly Button _focusCharacter = new() { Name = "CharacterFocusAction", Text = "Personagem [C]" };
@@ -78,11 +79,13 @@ public partial class PreviewHud : CanvasLayer
         root.Theme = theme;
 
         PanelContainer header = Panel(root, 16, 12, -16, 72, true);
-        var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 22); header.AddChild(row);
+        var headerScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Auto, VerticalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        header.AddChild(headerScroll);
+        var row = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill }; row.AddThemeConstantOverride("separation", 8); headerScroll.AddChild(row);
         var badge = new Label { Text = "F2", VerticalAlignment = VerticalAlignment.Center };
         badge.AddThemeColorOverride("font_color", new Color("c2a66d")); badge.AddThemeFontSizeOverride("font_size", 26); row.AddChild(badge);
-        var heading = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill }; row.AddChild(heading);
-        heading.AddChild(_area);
+        var heading = new VBoxContainer { CustomMinimumSize = new(170, 0), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill }; row.AddChild(heading);
+        _area.ClipText = true; _status.ClipText = true; heading.AddChild(_area);
         _status.Text = "Prévia espacial · carregando os dados…"; _status.AddThemeFontSizeOverride("font_size", 12); _status.Modulate = new Color("8fa69a"); heading.AddChild(_status);
         Button(row, "Abrir dados", () => OpenRequested?.Invoke());
         Button(row, "Entrada  [F]", () => EntryRequested?.Invoke());
@@ -95,7 +98,10 @@ public partial class PreviewHud : CanvasLayer
         var side = new PanelContainer { AnchorLeft = 1, AnchorRight = 1, AnchorTop = 0, AnchorBottom = 1,
             OffsetLeft = -300, OffsetRight = -16, OffsetTop = 84, OffsetBottom = -64 };
         side.AddThemeStyleboxOverride("panel", Box("15211ff2", 10)); root.AddChild(side);
-        var column = new VBoxContainer(); column.AddThemeConstantOverride("separation", 8); side.AddChild(column);
+        var sideSections = new VBoxContainer(); sideSections.AddThemeConstantOverride("separation", 8); side.AddChild(sideSections);
+        var filtersScroll = new ScrollContainer { Name = "FiltersScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill, CustomMinimumSize = new(0, 140) }; sideSections.AddChild(filtersScroll);
+        var column = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill }; column.AddThemeConstantOverride("separation", 6); filtersScroll.AddChild(column);
         Label overline = new() { Text = "EXPLORAR O CENÁRIO", Modulate = new Color("c2a66d") }; overline.AddThemeFontSizeOverride("font_size", 12); column.AddChild(overline);
         for (int i = 0; i < 3; i++) _elevation.AddItem($"Elevação {i}");
         _elevation.ItemSelected += index => ElevationRequested?.Invoke((int)index); column.AddChild(_elevation);
@@ -113,23 +119,23 @@ public partial class PreviewHud : CanvasLayer
         var entityLegend = new RichTextLabel { Name = "EntityLegend", BbcodeEnabled = true, FitContent = true, ScrollActive = false,
             MouseFilter = Control.MouseFilterEnum.Ignore,
             Text = "[color=#e18b88]▰ Obstáculo[/color]   [color=#ffd166]● Luz[/color]\n[color=#45c9b2]▣ Com itens[/color]   [color=#a3b3bf]□ Vazio[/color]\n[color=#b09add]◇ Interação especial[/color]" };
-        entityLegend.AddThemeFontSizeOverride("normal_font_size", 12); column.AddChild(entityLegend);
+        entityLegend.AddThemeFontSizeOverride("normal_font_size", 12); sideSections.AddChild(entityLegend);
         column.AddChild(new HSeparator());
         _selectionTitle.Text = "Nenhum elemento selecionado";
-        _selectionTitle.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _selectionTitle.AddThemeColorOverride("font_color", new Color("dcc390")); column.AddChild(_selectionTitle);
-        _details.BbcodeEnabled = false; _details.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        _selectionTitle.AutowrapMode = TextServer.AutowrapMode.WordSmart; _selectionTitle.MaxLinesVisible = 2; _selectionTitle.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        _selectionTitle.AddThemeColorOverride("font_color", new Color("dcc390")); sideSections.AddChild(_selectionTitle);
+        _details.BbcodeEnabled = false; _details.SizeFlagsVertical = Control.SizeFlags.ExpandFill; _details.SizeFlagsStretchRatio = 1.2f;
         _details.CustomMinimumSize = new Vector2(0, 70); _details.AddThemeFontSizeOverride("normal_font_size", 13);
-        _details.Text = "Clique em um volume para consultar os IDs e a posição do objeto original.\n\nAs formas e alturas são provisórias."; column.AddChild(_details);
-        var selectionActions = new HBoxContainer { Name = "SelectionActions" }; column.AddChild(selectionActions);
-        Button(selectionActions, "Próximo", () => CycleRequested?.Invoke()).TooltipText = "Próximo objeto no mesmo hex";
+        _details.Text = "Clique em um volume para consultar os IDs e a posição do objeto original.\n\nAs formas e alturas são provisórias."; sideSections.AddChild(_details);
+        var selectionActions = new HBoxContainer { Name = "SelectionActions" }; sideSections.AddChild(selectionActions);
+        _cycle.Pressed += () => CycleRequested?.Invoke(); selectionActions.AddChild(_cycle);
         _inventory.Pressed += () => InventoryRequested?.Invoke(); selectionActions.AddChild(_inventory);
 
         _navigationPanel = new PanelContainer { AnchorTop = 1, AnchorBottom = 1,
-            OffsetLeft = 16, OffsetRight = 864, OffsetTop = -272, OffsetBottom = -64 };
+            AnchorRight = 1, OffsetLeft = 16, OffsetRight = -316, OffsetTop = -272, OffsetBottom = -64 };
         _navigationPanel.AddThemeStyleboxOverride("panel", Box("15211ff2", 10)); root.AddChild(_navigationPanel);
         var navigation = new VBoxContainer(); navigation.AddThemeConstantOverride("separation", 6); _navigationPanel.AddChild(navigation);
-        var actions = new HBoxContainer(); actions.AddThemeConstantOverride("separation", 12); navigation.AddChild(actions);
+        var actions = new HFlowContainer(); actions.AddThemeConstantOverride("h_separation", 6); navigation.AddChild(actions);
         _walkMode.Pressed += () => WalkModeRequested?.Invoke(); actions.AddChild(_walkMode);
         _resetWalker.Pressed += () => ResetWalkerRequested?.Invoke(); actions.AddChild(_resetWalker);
         _doorUse.Pressed += () => DoorUseRequested?.Invoke(); actions.AddChild(_doorUse);
@@ -141,9 +147,9 @@ public partial class PreviewHud : CanvasLayer
         _navigationStatus.AddThemeFontSizeOverride("font_size", 12); movement.AddChild(_navigationStatus);
         _stop.Pressed += () => StopRequested?.Invoke(); movement.AddChild(_stop);
         var legend = new Label { Text = "Verde: alcançável  ·  Vermelho: bloqueio  ·  Âmbar: saída", Modulate = new Color("9fb2a8") };
-        var guide = new HBoxContainer(); navigation.AddChild(guide);
+        var guide = new HFlowContainer(); navigation.AddChild(legend); navigation.AddChild(guide);
         legend.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        legend.AddThemeFontSizeOverride("font_size", 12); guide.AddChild(legend);
+        legend.AddThemeFontSizeOverride("font_size", 12); legend.ClipText = true;
         _grid.Toggled += enabled => NavigationGridRequested?.Invoke(enabled); guide.AddChild(_grid);
         _frameRoute.Pressed += () => FrameRouteRequested?.Invoke(); guide.AddChild(_frameRoute);
         _loot.Pressed += () => LootRequested?.Invoke(); guide.AddChild(_loot);
@@ -152,7 +158,7 @@ public partial class PreviewHud : CanvasLayer
         footer.AnchorTop = 1; footer.AnchorBottom = 1;
         var help = new Label { Text = "W A S D  mover    ·    Botão direito  arrastar    ·    Roda  zoom    ·    Q / E  girar    ·    M  caminhar    ·    U  porta    ·    L  arrombar    ·    Enter  passar",
             HorizontalAlignment = HorizontalAlignment.Center, Modulate = new Color("9fb2a8") };
-        help.AddThemeFontSizeOverride("font_size", 12); footer.AddChild(help);
+        help.ClipText = true; help.AddThemeFontSizeOverride("font_size", 12); footer.AddChild(help);
     }
 
     public void Status(string text) => _status.Text = text;
@@ -172,16 +178,18 @@ public partial class PreviewHud : CanvasLayer
         _walkMode.Text = walkingMode ? "Inspecionar [M]" : "Caminhar [M]";
         _navigationMessage = status; _navigationStatus.Text = _routeHint ?? status;
     }
-    public void Select(string title, string text) { _selectionTitle.Text = title; _details.Text = text; }
+    public void Select(string title, string text) { _selectionTitle.Text = title; _selectionTitle.TooltipText = title; _details.Text = text; }
     public string SelectionHeading => _selectionTitle.Text;
     public string SelectionDetails => _details.Text;
+    public void CycleAction(bool enabled) => _cycle.Disabled = !enabled;
     public void InventoryAction(bool enabled) => _inventory.Disabled = !enabled;
     public void NavigationGrid(bool enabled) => _grid.SetPressedNoSignal(enabled);
     public void FrameRouteAction(bool enabled) => _frameRoute.Disabled = !enabled;
     public void LootAction(bool enabled) => _loot.Disabled = !enabled;
     public Rect2 CameraSafeRect => new(32, 94, Math.Max(0, GetViewport().GetVisibleRect().Size.X - 354),
         Math.Max(0, (_navigationPanel?.GetGlobalRect().Position.Y ?? GetViewport().GetVisibleRect().Size.Y - 272) - 110));
-    public bool NavigationFits => _navigationPanel != null && _navigationPanel.GetGlobalRect().End.Y <= GetViewport().GetVisibleRect().Size.Y - 56;
+    public bool NavigationFits => _navigationPanel != null && _navigationPanel.GetGlobalRect().End.Y <= GetViewport().GetVisibleRect().Size.Y - 56
+        && _navigationPanel.GetGlobalRect().End.X <= GetViewport().GetVisibleRect().Size.X - 306;
     public string? RouteHintText => _routeHint;
     public void RouteHint(string? text) { _routeHint = text; _navigationStatus.Text = text ?? _navigationMessage; }
     public void DoorAction(bool enabled, bool open, string hint)
@@ -220,7 +228,7 @@ public partial class PreviewHud : CanvasLayer
     {
         BgColor = new Color(color), CornerRadiusTopLeft = radius, CornerRadiusTopRight = radius,
         CornerRadiusBottomLeft = radius, CornerRadiusBottomRight = radius,
-        ContentMarginLeft = 16, ContentMarginRight = 16, ContentMarginTop = 10, ContentMarginBottom = 10
+        ContentMarginLeft = radius == 6 ? 8 : 16, ContentMarginRight = radius == 6 ? 8 : 16, ContentMarginTop = radius == 6 ? 5 : 10, ContentMarginBottom = radius == 6 ? 5 : 10
     });
     public override void _ExitTree() => _resources.Dispose();
 }

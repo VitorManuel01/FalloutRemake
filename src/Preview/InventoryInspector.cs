@@ -33,8 +33,10 @@ public partial class InventoryInspector : AcceptDialog
             { SetInputAsHandled(); EmitSignal(SignalName.Canceled); }
         };
         GetOkButton().Text = "Fechar";
-        var body = new VBoxContainer(); body.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        body.OffsetLeft = 16; body.OffsetRight = -16; body.OffsetTop = 16; body.OffsetBottom = -60; AddChild(body);
+        var scroll = new ScrollContainer { Name = "DialogScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        scroll.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect); AddChild(scroll);
+        var body = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill }; scroll.AddChild(body);
+        scroll.OffsetLeft = 16; scroll.OffsetRight = -16; scroll.OffsetTop = 16; scroll.OffsetBottom = -60;
         body.AddChild(new Label { Name = "InventoryOwner", ClipText = true, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis });
         var split = new HSplitContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill }; body.AddChild(split);
         split.AddChild(_tree); var detail = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };

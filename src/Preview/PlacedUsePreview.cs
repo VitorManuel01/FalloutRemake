@@ -36,9 +36,10 @@ public partial class TemplePreview
             node.SetMeta("active_pid", ExplosiveUseProposal.ActivePid); node.SetMeta("remaining_ticks", use.RemainingTicks);
             node.AddChild(new MeshInstance3D { Mesh = _placedUseMesh, MaterialOverride = _placedUseMaterial });
             int seconds = (use.RemainingTicks + ExplosiveTimer.TicksPerSecond - 1) / ExplosiveTimer.TicksPerSecond;
-            node.AddChild(new Label3D { Name = "UseLabel", Text = use.RemainingTicks == 0 ? "PENDENTE\naguarda resolução" : $"POSICIONADO\n{seconds} s · tempo lógico",
-                Position = new Vector3(0, 1.1f, 0), FontSize = 32, PixelSize = .012f, Modulate = new Color("ffd496"),
-                Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, NoDepthTest = true });
+            var caption = new Label3D { Name = "UseLabel", Text = use.RemainingTicks == 0 ? "PENDENTE\naguarda resolução" : $"POSICIONADO\n{seconds} s · tempo lógico",
+                Position = new Vector3(0, 1.8f, 0), FontSize = 32, PixelSize = .012f, Modulate = new Color("ffd496"),
+                Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, NoDepthTest = true };
+            node.AddChild(caption); RegisterWorldLabel(caption);
             _placedUseLayer.AddChild(node); _placedUseNodes.Add(use.Id, node);
         }
         ApplyPlacedUseFilter();

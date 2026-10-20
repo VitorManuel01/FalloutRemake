@@ -15,9 +15,20 @@ internal static class EntityPresentationTests
             var obj = BarrierEffectTests.Fixture().ObjectLayers[1].Objects[0];
             var lit = obj with { Header = obj.Header with { LightDistance = 3, LightIntensity = 65536 } };
             Assert(EntityPresentation.Role(lit) == EntityVisualRole.LightSource);
+            Assert(EntityPresentation.Blocks(lit));
+            Assert(!EntityPresentation.Blocks(lit with { Header = lit.Header with { Flags = HexNavigation.NoBlock } }));
             Assert(EntityPresentation.Role(lit with { Header = lit.Header with { LightIntensity = 0 } }) == EntityVisualRole.Barrier);
             Assert(EntityPresentation.Role(lit with { Subtype = 0 }) == EntityVisualRole.Original);
             Assert(EntityPresentation.Role(lit with { Header = lit.Header with { Pid = 0x01000001, Fid = 0x01000001 } }) == EntityVisualRole.Original);
+        });
+        check("technical blocker requires exact original prototype and FID", () =>
+        {
+            var obj = BarrierEffectTests.Fixture().ObjectLayers[1].Objects[0];
+            var proxy = obj with { Header = obj.Header with { Pid = 0x02000043, Fid = 0x02000015, Flags = 0 } };
+            Assert(EntityPresentation.IsBlockingProxy(proxy));
+            Assert(!EntityPresentation.IsBlockingProxy(proxy with { Header = proxy.Header with { Pid = 0x02000044 } }));
+            Assert(!EntityPresentation.IsBlockingProxy(proxy with { Header = proxy.Header with { Fid = 0x02000016 } }));
+            Assert(!EntityPresentation.IsBlockingProxy(proxy with { Header = proxy.Header with { Flags = HexNavigation.NoBlock } }));
         });
         check("obstacle presentation follows original navigation blocking flags rather than the scenery name", () =>
         {

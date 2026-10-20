@@ -30,8 +30,9 @@ public partial class TemplePreview
             foreach (Vector3 position in new[] { new Vector3(-.18f, .06f, -.16f), new Vector3(.18f, .06f, .16f), new Vector3(.08f, .1f, -.1f) })
                 node.AddChild(new MeshInstance3D { Mesh = _replacementMesh, MaterialOverride = _replacementMaterial, Position = position,
                     RotationDegrees = new Vector3(0, position.X < 0 ? 28 : -20, 0) });
-            node.AddChild(new Label3D { Text = "PASSAGEM\nABERTA", Position = new Vector3(0, .85f, 0), FontSize = 32, PixelSize = .012f,
-                Modulate = new Color("b6edc8"), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, NoDepthTest = true });
+            var caption = new Label3D { Text = "PASSAGEM\nABERTA", Position = new Vector3(0, 1.8f, 0), FontSize = 32, PixelSize = .012f,
+                Modulate = new Color("b6edc8"), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, NoDepthTest = true };
+            node.AddChild(caption); RegisterWorldLabel(caption);
             _world.AddChild(node); _replacementNodes.Add(replacement.Id, node);
         }
         ApplySceneryReplacementFilter();

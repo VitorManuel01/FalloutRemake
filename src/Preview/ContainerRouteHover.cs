@@ -16,8 +16,10 @@ public partial class TemplePreview
     {
         PreviewObject? nearest = WorldObjectAtScreen(screen);
         // The source pot shares a hex with a larger scenery placeholder. Resolve only that same-hex overlap.
-        if (nearest != null && nearest.Kind is PreviewKind.Scenery or PreviewKind.Item && _layout != null)
-            return _layout.Objects.Where(o => IsContainer(o) && o.Source.Header.Tile == nearest.Source.Header.Tile && VisibleObject(o))
+        if (nearest != null && EntityPresentation.Blocks(nearest.Source) && _layout != null)
+            return _layout.Objects.Where(o => (EntityPresentation.Role(o.Source) == EntityVisualRole.LightSource
+                    || EntityPresentation.IsBlockingProxy(nearest.Source) && IsContainer(o))
+                    && o.Source.Header.Tile == nearest.Source.Header.Tile && VisibleObject(o))
                 .OrderBy(o => o.Source.Offset).FirstOrDefault() ?? nearest;
         return nearest;
     }

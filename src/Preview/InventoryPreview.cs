@@ -26,7 +26,7 @@ public partial class TemplePreview
         _inventory = dialog; _hud.AddChild(dialog);
         dialog.Confirmed += CloseInventory; dialog.Canceled += CloseInventory; dialog.CloseRequested += CloseInventory;
         dialog.Inspect(_selected.Source, OriginalText, item => InventoryTexture(_campaign!.CurrentMap, item));
-        dialog.PopupCentered(new Vector2I(1000, 620));
+        dialog.PopupCenteredClamped(new Vector2I(1000, 620), .92f);
     }
     private static bool CanInspectInventory(MapObject obj) => obj.Inventory.Length > 0
         || obj.Header.Pid >> 24 == 1 || (obj.Header.Pid >> 24 == 0 && obj.Subtype == 1);
