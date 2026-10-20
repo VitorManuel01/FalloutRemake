@@ -79,6 +79,7 @@ public partial class TemplePreview
         OpenBag(); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame); CheckDialogBounds(_bag!);
         if (_capture != null) await Capture(Path.ChangeExtension(_capture, "review-bag.png"));
         CloseBag();
+        await CheckContainerLocator();
         ClearSelection(); if (!FindHudButton("CycleAction").Disabled) throw new InvalidDataException("Cycle enabled without selection.");
         GD.Print($"SCENE_REVIEW_OK: 7 containers/3 lamps, 60 unobstructed inspection rays at 3 rotations/elevations, original blocker navigation, cycling, blocking light, long title, HUD/modal bounds at {viewport}, zoom 8..220 and modal cleanup.");
     }

@@ -102,6 +102,7 @@ public partial class TemplePreview
             visual.Body.SetMeta("container_special", special);
         }
         if (_selected != null && _containerVisuals.ContainsKey(_selected.Source.Key)) SelectObject(_selected);
+        RefreshContainerLocator();
     }
     private string EntityDescription(PreviewObject obj) => EntityPresentation.Role(obj.Source) switch
     {
@@ -160,6 +161,9 @@ public partial class TemplePreview
             RefreshContainerVisuals();
             if (container.Label.Text != "VAZIO" || container.Contents.Visible || container.Hinge.RotationDegrees.X <= 0 || !_hud.SelectionDetails.Contains("0 unidade(s)"))
                 throw new InvalidDataException("Depleted container retained full presentation.");
+            var locator = (OptionButton)_hud.FindChild("ContainerLocator", true, false);
+            int potIndex = Enumerable.Range(1, locator.ItemCount - 1).Single(i => locator.GetItemMetadata(i).AsString() == pot.Source.Key);
+            if (!locator.GetItemText(potIndex).Contains("vazio")) throw new InvalidDataException("Locator retained collected container contents.");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "entity-container-empty.png"));
             SaveCheckpoint(); ResetWalker();
             if (_containerVisuals[pot.Source.Key].Label.Text != "ITENS · 1") throw new InvalidDataException("Reset did not restore full baseline.");

@@ -108,6 +108,7 @@ public partial class PreviewHud : CanvasLayer
         Label overline = new() { Text = "EXPLORAR O CENÁRIO", Modulate = new Color("c2a66d") }; overline.AddThemeFontSizeOverride("font_size", 12); column.AddChild(overline);
         for (int i = 0; i < 3; i++) _elevation.AddItem($"Elevação {i}");
         _elevation.ItemSelected += index => ElevationRequested?.Invoke((int)index); column.AddChild(_elevation);
+        AddContainerLocator(column);
         _counts.AddThemeFontSizeOverride("font_size", 12); _counts.Modulate = new Color("8fa69a"); column.AddChild(_counts);
         column.AddChild(new HSeparator());
         _originalFloor.Toggled += enabled => OriginalFloorRequested?.Invoke(enabled); column.AddChild(_originalFloor);

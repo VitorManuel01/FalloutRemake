@@ -80,6 +80,7 @@ public partial class TemplePreview : Node3D
 			_hud.LootRequested = OpenLoot;
 			_hud.BagRequested = OpenBag;
 			_hud.UseClockRequested = OpenUseClock;
+			_hud.ContainerLocateRequested = LocateContainer;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -289,6 +290,7 @@ public partial class TemplePreview : Node3D
 		_hud.Counts($"{_layout.Floors.Length:N0} células de piso\n{visible:N0} / {_layout.Objects.Length:N0} objetos visíveis");
 		if (_selected != null && !VisibleObject(_selected)) ClearSelection();
 		_occlusionDirty = true; UpdateWallOcclusion();
+		RefreshContainerLocator();
 	}
 
 	public override void _Process(double delta)
