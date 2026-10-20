@@ -6,6 +6,9 @@ explorar o Temple of Trials com formas provisórias, inspecionar os objetos orig
 e mover um marcador por hexágonos válidos na elevação do personagem. A primeira porta pode ser
 aberta e fechada; a segunda já aceita arrombamento com um perfil de teste,
 atualizando os caminhos sem alterar os dados originais.
+Já é possível recolher o explosivo original, caminhar até a barreira, posicionar
+uma unidade, avançar seu prazo manualmente e confirmar a abertura da passagem
+em um ensaio de cenário, preservado pelo checkpoint.
 O leitor verifica a reconstrução dos bytes do mapa antes de montar a cena.
 O personagem ainda tem apenas as regras mínimas deste teste, sem combate ou arte final.
 
@@ -25,6 +28,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 - **Clique:** consultar objeto ou piso; painel lateral: elevações 0–2 e filtros.
   O inspetor inclui nome e descrição originais quando disponíveis na instalação.
 - **Próximo no mesmo hex:** alternar objetos sobrepostos sem confundir seus IDs.
+- **Localizar recipiente…:** no painel lateral, escolher por nome e conteúdo
+  restante para enquadrar a câmera. Não move o personagem nem recolhe itens.
 - **I / Inventário:** consultar o conteúdo original do objeto selecionado.
   Exibe hierarquia, quantidades e descrições; não transfere itens. A janela
   suspende o avanço da caminhada enquanto está aberta.
@@ -59,8 +64,8 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
   recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
   Os atalhos usam letras para evitar conflito com os controles do editor Godot.
   O schema atual é v4; checkpoints v1/v2/v3 continuam carregando. Itens posicionados,
-  consumidos e substituições de cenário têm estado próprio; a ativação ainda não
-  possui ação na interface.
+  consumidos e substituições de cenário têm estado próprio. Ao carregar, o modo
+  e a seleção ainda válida são preservados.
 - **C / Personagem:** reenquadra e acompanha o personagem. WASD ou arrasto retomam
   a câmera livre; recentrar mantém o percurso em andamento.
 - **O / Piso original:** compara o piso com imagens lidas da instalação local.
@@ -90,10 +95,30 @@ são provisórias. O bloqueio usa FID/flags dos objetos, sem depender do piso ou
 filtros visuais. Portas fechadas bloqueiam; saídas encerram o percurso e aguardam
 Enter. Passagens internas e saídas entre templo, exterior e vila usam os destinos
 originais; outras áreas continuam indisponíveis. O retorno preserva portas e XP.
-A interação exige proximidade e marcador parado. Apenas o script conferido
-da segunda porta possui adaptador; uma passagem ocupada não pode ser fechada.
+A interação exige proximidade e marcador parado. A segunda porta e o efeito de
+cenário da barreira possuem adaptadores restritos aos scripts conferidos;
+uma passagem ocupada não pode ser fechada.
 O perfil de teste usa PER/AGI/SOR 5, Arrombamento 20, dificuldade normal e primeiro
 dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do d100.
+
+## Ensaiar a abertura da barreira
+
+1. Atravesse a primeira porta com U. Na segunda, use L para destrancar e U para
+   abrir; caminhe até a passagem e use Enter para chegar à elevação 1.
+2. Em **Localizar recipiente…**, encontre o pote com **Plastic Explosives**.
+   No modo Caminhar, clique no recipiente para se aproximar e use J para recolher.
+3. Abra B, selecione o explosivo e use **Ir à barreira**. A aproximação respeita
+   o caminho e para dentro do alcance; abra B novamente ao chegar.
+4. Use **Posicionar · ensaio**, escolha 10–180 segundos e confirme uma unidade.
+   Cancelar preserva a bolsa. O ensaio prepara com sucesso fixo, sem rolagem real.
+5. Em **Tempo · ensaio**, avance com **+1 s / +10 s**. Caminhar e esperar não
+   avançam esse relógio. Ele para no primeiro evento vencido, inclusive entre segundos.
+6. Use **Ver efeito → Aplicar no cenário** para conferir e abrir a passagem.
+   Cancelar mantém o evento pendente. **K/R** salvam/restauram prazo e cenário.
+
+O efeito deste ensaio altera somente a barreira validada; não há dano a personagens
+ou combate geral. A preparação fora desse alcance fica indisponível. Baús com
+scripts ainda não suportados permanecem identificados como interação especial.
 
 Na raiz do repositório, com SDK .NET capaz de compilar `net8.0` e runtime .NET 8:
 
@@ -134,6 +159,10 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `ELEVATION_WALK_GUARD_OK`,
 `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
+Prefira `tools/Validate-Temple.ps1 -GodotExe $godotExe -DataDirectory <pasta-local>`
+para conferir também os marcadores atuais e os logs: **14 etapas**, incluindo
+227 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
+vazados são recusados mesmo quando o processo retorna zero. O manifesto fica em `.local/`.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo
 `tools/Run-QuietGodot.ps1`, com caminhos explícitos. Esse runner usa um desktop
@@ -149,6 +178,20 @@ e `.door.png` da primeira passagem aberta, além de `.lockpick.png` da segunda
 porta após arrombar e atravessar. `.route-frame.png` mostra o percurso enquadrado.
 `.exit.png` mostra a passagem interna disponível e
 `.travel.png` a chegada na elevação 1; `.outside.png` mostra o exterior. Todas ficam fora do Git.
+Para repetir somente o ensaio completo do explosivo, acrescente
+`-Check ExplosivePreparation`; para a leitura visual/localizador, `-Check SceneReview`.
+O runner aceita `-Width 1280 -Height 720` e retorna `Passed`/`LogFailure`, além do
+código do processo e dos desktops de entrada antes/depois.
+
+Marcos recentes:
+
+- [Preparação pela bolsa](docs/explosive-preparation-ui-2026-10-20.md)
+- [Aproximação e alcance da barreira](docs/barrier-placement-guidance-2026-10-20.md)
+- [Avanço manual e eventos pendentes](docs/manual-use-clock-2026-10-20.md)
+- [Revisão e aplicação do efeito](docs/barrier-effect-ui-2026-10-20.md)
+- [Localizar recipientes pelo conteúdo](docs/container-locator-2026-10-20.md)
+- [Gravação atômica com recusa transitória](docs/atomic-save-retry-2026-10-20.md)
+- [Validação estrita dos logs](docs/strict-godot-validation-2026-10-20.md)
 
 O leitor abre os dados em modo de leitura e imprime um resumo JSON, com contagens,
 origens, hashes e divergências dos dados originais. Sempre verifica uma reconstrução
