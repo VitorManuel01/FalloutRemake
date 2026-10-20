@@ -52,6 +52,8 @@ public partial class PreviewHud : CanvasLayer
     public Action? InventoryRequested;
     public Action? SpeechRequested;
     private readonly Button _speech = new() { Name = "SpeechAction", Text = "Conversa · ensaio", Visible = false, Disabled = true };
+    public Action? NpcApproachRequested;
+    private readonly Button _npcApproach = new() { Name = "NpcApproachAction", Text = "Chegar ao NPC", Visible = false, Disabled = true };
     public Action<bool>? NavigationGridRequested;
     public Action? FrameRouteRequested;
     public Action? LootRequested;
@@ -137,6 +139,7 @@ public partial class PreviewHud : CanvasLayer
         _cycle.Pressed += () => CycleRequested?.Invoke(); selectionActions.AddChild(_cycle);
         _inventory.Pressed += () => InventoryRequested?.Invoke(); selectionActions.AddChild(_inventory);
         _speech.Pressed += () => { if (!_speech.Disabled) SpeechRequested?.Invoke(); }; selectionActions.AddChild(_speech);
+        _npcApproach.Pressed += () => { if (!_npcApproach.Disabled) NpcApproachRequested?.Invoke(); }; selectionActions.AddChild(_npcApproach);
 
         _navigationPanel = new PanelContainer { AnchorTop = 1, AnchorBottom = 1,
             AnchorRight = 1, OffsetLeft = 16, OffsetRight = -316, OffsetTop = -272, OffsetBottom = -64 };
@@ -193,6 +196,8 @@ public partial class PreviewHud : CanvasLayer
     public void InventoryAction(bool enabled) => _inventory.Disabled = !enabled;
     public void SpeechAction(bool visible, bool enabled, string hint)
     { _speech.Visible = visible; _speech.Disabled = !enabled; _speech.TooltipText = hint; }
+    public void NpcApproachAction(bool visible, bool enabled, string hint)
+    { _npcApproach.Visible = visible; _npcApproach.Disabled = !enabled; _npcApproach.TooltipText = hint; }
     public void NavigationGrid(bool enabled) => _grid.SetPressedNoSignal(enabled);
     public void FrameRouteAction(bool enabled) => _frameRoute.Disabled = !enabled;
     public void LootAction(bool enabled) => _loot.Disabled = !enabled;

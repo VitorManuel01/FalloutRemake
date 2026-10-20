@@ -26,6 +26,8 @@ public partial class TemplePreview
             SelectObject(actor);
             var speechAction = (Button)_hud.FindChild("SpeechAction", true, false);
             if (!speechAction.Visible || !speechAction.Disabled) throw new InvalidDataException("Distant NPC allowed a Speech consultation.");
+            var npcAction = (Button)_hud.FindChild("NpcApproachAction", true, false);
+            if (TempleNpcApproachTarget() != null || !npcAction.Disabled) throw new InvalidDataException("NPC approach bypassed the closed final gate.");
             SelectObject(gate); int approach = Approach(gate.Source.Header.Tile); Walk(approach);
             if (speechAction.Visible) throw new InvalidDataException("Non-NPC selection displayed a Speech consultation.");
             if (!_hud.SelectionDetails.Contains("Porta final do templo") || _doors!.CanLockpick(gate.Source.Key, approach, 2, false) != DoorUseStatus.ScriptRequired)
@@ -40,7 +42,8 @@ public partial class TemplePreview
                 throw new InvalidDataException("Occupied initial gate allowed closing.");
             CheckpointFile.Write(CheckpointPath, _campaign.Capture(_mapCatalog.Source.Sha256)); LoadCheckpoint();
             if (_walker!.CurrentHex != 19928 || !_doors!.Get(gate.Source.Key)!.IsOpen) throw new InvalidDataException("Initial gate checkpoint failed on former blocker.");
-            int near = Approach(actor.Source.Header.Tile); Walk(near); SelectObject(_layout!.Objects.Single(o => o.Source.Key == actor.Source.Key));
+            int near = Approach(actor.Source.Header.Tile);
+            await CheckTempleNpcApproach(near);
             _focus = Point(actor.Position, 0); _camera.Size = 20; UpdateCamera();
             if (near != 13928 || _campaign.Experience != baseline.Areas.Sum(a => a.Session.Experience) || _campaign.CarriedCount != 2)
                 throw new InvalidDataException("Source NPC approach changed items/XP or arrived elsewhere.");

@@ -29,9 +29,14 @@ public partial class TemplePreview
     private void RefreshSpeechAction()
     {
         _hud.SpeechRequested = OpenSpeechConsultation;
+        _hud.NpcApproachRequested = ApproachTempleNpc;
         bool actor = _selected?.Source.Offset == 425776 && _map?.Source.Sha256 == TempleBarrierEffectProposal.MapHash;
         string? blocked = SpeechBlockedReason();
         _hud.SpeechAction(actor, blocked == null && !InspectorOpen, blocked ?? "Consultar cinco escolhas originais em um ensaio separado da partida.");
+        int? target = TempleNpcApproachTarget();
+        _hud.NpcApproachAction(actor, target.HasValue && target != _walker?.CurrentHex,
+            target.HasValue ? "Caminhar até um hex ao lado do NPC. A conversa é aberta separadamente."
+                : "Requer a elevação 2, caminho livre, nenhuma caminhada ou janela aberta. Abra a porta final antes de se aproximar.");
     }
     private void CloseSpeechConsultation()
     {

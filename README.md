@@ -126,7 +126,8 @@ dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do
 6. Use **Ver efeito → Aplicar no cenário** para conferir e abrir a passagem.
    Cancelar mantém o evento pendente. **K/R** salvam/restauram prazo e cenário.
 7. Atravesse para a elevação 2. A porta final pode ser aberta com U antes do
-   desafio; depois, caminhe até um hex do NPC e selecione-o. **Conversa · ensaio**
+   desafio; depois, selecione o NPC e use **Chegar ao NPC** para caminhar até um
+   hex ao lado dele. **Conversa · ensaio**
    consulta cinco escolhas com INT 5/Speech marcado, em um estado separado.
    Fechar ou recomeçar preserva a partida. Conversa ativa e duelo ainda não estão disponíveis.
 8. Ao concluir as cinco escolhas, **Salvar resultado** grava apenas o ensaio.
