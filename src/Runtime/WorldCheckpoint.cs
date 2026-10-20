@@ -33,7 +33,7 @@ public static class CheckpointFile
         string full = Path.GetFullPath(path), directory = Path.GetDirectoryName(full)!;
         Directory.CreateDirectory(directory);
         string temporary = Path.Combine(directory, $"checkpoint-{Guid.NewGuid():N}.tmp");
-        try { File.WriteAllBytes(temporary, bytes); File.Move(temporary, full, true); }
+        try { File.WriteAllBytes(temporary, bytes); AtomicFileReplacement.Replace(temporary, full); }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
     public static WorldCheckpoint Read(string path)

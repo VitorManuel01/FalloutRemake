@@ -44,6 +44,29 @@ internal static class VisualPreferencesTests
             Assert(before.SequenceEqual(File.ReadAllBytes(path)));
             Assert(Directory.GetFiles(Path.GetDirectoryName(path)!).Length == 1);
         });
+        check("transient Windows replacement denials retry only the rename and preserve the prior file until success", () =>
+        {
+            string source = Path.Combine(root, "transient.tmp"), target = Path.Combine(root, "transient.json");
+            File.WriteAllText(source, "new"); File.WriteAllText(target, "old");
+            var delays = new List<int>(); int attempts = 0;
+            AtomicFileReplacement.Replace(source, target, (from, to, overwrite) => {
+                attempts++; Assert(File.ReadAllText(to) == "old" && File.ReadAllText(from) == "new");
+                if (attempts < 3) throw new IOException("Synthetic sharing violation", unchecked((int)0x80070020));
+                File.Move(from, to, overwrite);
+            }, delays.Add);
+            Assert(attempts == 3 && delays.SequenceEqual(new[] { 10, 25 }) && File.ReadAllText(target) == "new" && !File.Exists(source));
+        });
+        check("replacement retry is bounded and unrelated filesystem errors fail immediately", () =>
+        {
+            foreach (int code in new[] { 5, 32, 33, 3 })
+            {
+                int attempts = 0; var delays = new List<int>();
+                Reject(() => AtomicFileReplacement.Replace("unused", "unused", (_, _, _) => {
+                    attempts++; throw new IOException("Synthetic filesystem denial", unchecked((int)0x80070000) | code);
+                }, delays.Add));
+                Assert(attempts == (code == 3 ? 1 : 4) && delays.Sum() == (code == 3 ? 0 : 85));
+            }
+        });
     }
     private static void Assert(bool value) { if (!value) throw new Exception("Visual preference assertion failed."); }
     private static void Reject(Action action)
