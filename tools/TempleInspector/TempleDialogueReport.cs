@@ -59,6 +59,11 @@ internal static class TempleDialogueReport
         ScriptListEntry actorMetadata = ScriptListMetadata.Read(scriptList, binding.Index), gateMetadata = ScriptListMetadata.Read(scriptList, gateBinding.Index);
         if (actorMetadata.ProgramPath != program.Source.Path || gateMetadata.ProgramPath != gateProgram.Source.Path)
             throw new InvalidDataException("Script metadata index no longer matches the MAP binding.");
+        object[] OutOfRange(IntProgram inspected, ScriptListEntry metadata) => IntVariableReads.Inspect(inspected)
+            .Where(r => r.Scope == IntVariableScope.ScriptLocal && (r.Index < 0 || r.Index >= metadata.DeclaredLocals))
+            .Select(r => (object)new { r.Offset, r.Index, DeclaredCount = metadata.DeclaredLocals,
+                Procedures = r.OwningProcedures.Select(i => inspected.Procedures[i].Name).ToArray() }).ToArray();
+        object[] actorOutside = OutOfRange(program, actorMetadata), gateOutside = OutOfRange(gateProgram, gateMetadata);
         Expect(gateProgram, (5530, 0xC001, 5596), (5536, 0xC001, 3), (5542, 0x80C1, null),
             (5544, 0xC001, 0), (5550, 0x8033, null), (5552, 0x802F, null),
             (5554, 0xC001, 3), (5560, 0xC001, 1), (5566, 0x80C2, null),
@@ -100,6 +105,10 @@ internal static class TempleDialogueReport
                 SourceActorLocalCount = map.ActiveScripts.Single(s => s.Sid == actor.Header.Sid).LocalVariablesCount,
                 SourceGateLocalCount = map.ActiveScripts.Single(s => s.Sid == gate.Header.Sid).LocalVariablesCount,
                 EngineAllocation = "On first local access CE takes the scripts.lst count, allocates map locals and zero-fills them; no execution performed here" },
+            LocalReferenceAudit = new { ActorOutsideDeclaredRange = actorOutside, GateOutsideDeclaredRange = gateOutside,
+                RequiresInvestigation = actorOutside.Length > 0 || gateOutside.Length > 0, AutomaticCorrection = false,
+                Scope = "Adjacent literal getters only; computed accesses and setters may add more. A static reference does not prove execution or a crash.",
+                RuntimeAdapterEnabled = false },
             RuntimeAdapterEnabled = false,
             RequiredBeforeEnabling = new[] { "actor local-variable initialization and conversation entry conditions", "effective intelligence and tagged-skill profile",
                 "map/global variable ownership and compatible checkpoint", "NPC movement and gate script lifecycle" },

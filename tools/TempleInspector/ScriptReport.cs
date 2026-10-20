@@ -18,6 +18,8 @@ internal static class ScriptReport
             DialogueOptionPatterns = IntDialogueOptions.Inspect(program),
             ConstantVariableWrites = IntVariableWrites.Inspect(program).Select(w => new { w.Offset, w.OwningProcedures,
                 Scope = w.Scope.ToString(), w.Index, w.Value }).ToArray(),
+            LiteralVariableReads = IntVariableReads.Inspect(program).Select(r => new { r.Offset, r.OwningProcedures,
+                Scope = r.Scope.ToString(), r.Index }).ToArray(),
             Procedures = program.Procedures.Select(p => new
             {
                 Procedure = p,

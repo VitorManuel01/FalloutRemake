@@ -167,7 +167,7 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 seguidos de saída com código 0.
 Prefira `tools/Validate-Temple.ps1 -GodotExe $godotExe -DataDirectory <pasta-local>`
 para conferir também os marcadores atuais e os logs: **15 etapas**, incluindo
-239 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
+249 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
 vazados são recusados mesmo quando o processo retorna zero. O manifesto fica em `.local/`.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo
@@ -227,6 +227,7 @@ intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem 
 - [Leitor INT: referências de opções de diálogo e limites](docs/int-dialogue-options-2026-10-20.md)
 - [Porta final: escritas constantes, entrada e atualização de estado](docs/temple-gate-state-evidence-2026-10-20.md)
 - [Scripts.lst: metadados de locais e alocação inicial](docs/script-local-metadata-2026-10-20.md)
+- [Locais do NPC: referências fora da contagem declarada](docs/temple-local-reference-audit-2026-10-20.md)
 - [Adaptador de arrombamento: regras e validação](docs/door-adapter-2026-10-18.md)
 - [Arrombamento na prévia: perfil e controles](docs/lockpick-preview-2026-10-18.md)
 - [Passagens internas: destinos e estado do personagem](docs/travel-2026-10-18.md)

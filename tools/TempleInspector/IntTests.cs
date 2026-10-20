@@ -6,6 +6,27 @@ internal static class IntTests
 {
     public static void Run(Action<string, Action> check)
     {
+        check("INT literal getters distinguish all three variable spaces and retain aliases once without reading state", () =>
+        {
+            foreach (var (opcode, scope) in new[] { ((ushort)0x80C1, IntVariableScope.ScriptLocal), ((ushort)0x80C3, IntVariableScope.Map), ((ushort)0x80C5, IntVariableScope.GameGlobal) })
+            {
+                var p = DialogueFixture((0xC001, 16), (opcode, null)); byte[] before = p.CopySourceBytes();
+                var read = IntVariableReads.Inspect(p).Single();
+                Assert(read.Scope == scope && read.Index == 16 && read.OwningProcedures.SequenceEqual(new[] { 0, 1 }) && before.SequenceEqual(p.CopySourceBytes()));
+            }
+        });
+        check("INT getter evidence retains negative indices but does not invent string or computed indices", () =>
+        {
+            Assert(IntVariableReads.Inspect(DialogueFixture((0xC001, -1), (0x80C1, null))).Single().Index == -1);
+            Assert(IntVariableReads.Inspect(DialogueFixture((0x9001, 16), (0x80C1, null))).Length == 0);
+            Assert(IntVariableReads.Inspect(DialogueFixture((0xC001, 16), (0x8000, null), (0x80C1, null))).Length == 0);
+            Assert(IntVariableReads.Inspect(DialogueFixture((0xC001, 16), (0x8012, null))).Length == 0);
+        });
+        check("INT getter patterns do not borrow an index from another physical procedure", () =>
+        {
+            var p = DialogueFixture((0xC001, 16), (0x80C1, null)); byte[] split = p.CopySourceBytes();
+            I32(split, 86, p.Instructions.Last().Offset); Assert(IntVariableReads.Inspect(Read(split)).Length == 0);
+        });
         check("INT literal setters distinguish script-local map and game-global spaces without alias duplication", () =>
         {
             foreach (var (opcode, scope) in new[] { ((ushort)0x80C2, IntVariableScope.ScriptLocal), ((ushort)0x80C4, IntVariableScope.Map), ((ushort)0x80C6, IntVariableScope.GameGlobal) })
