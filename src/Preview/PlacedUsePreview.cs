@@ -79,6 +79,8 @@ public partial class TemplePreview
             MapObject item = _campaign.Current.Items.Contents(owner.Key).Single(i => i.Source.Header.Id == 364 && i.Source.Header.Pid == 85).Source;
             Walk(Approach(owner));
             if (_campaign.TakeItem(owner.Key, item.Key, 1, false) != ItemTakeStatus.Ready) throw new InvalidDataException("Explosive preview audit original collection failed.");
+            SetNavigationGrid(false);
+            await CheckBarrierPlacementGuidance();
             int placement = Enumerable.Range(1, 39999).Where(t => _reachable!.Distance(t) >= 0 && !_navigation!.IsExit(t) && FalloutGrid.Distance(t, 14322) <= 3)
                 .OrderBy(t => FalloutGrid.Distance(t, 14322)).ThenBy(t => _reachable!.Distance(t)).ThenBy(t => t).First();
             Walk(placement);

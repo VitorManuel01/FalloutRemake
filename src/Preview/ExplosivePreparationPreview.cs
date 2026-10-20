@@ -16,16 +16,17 @@ public partial class TemplePreview
     {
         if (_campaign == null || _elevation != _campaign.Location.Elevation) return new(ExplosiveProposalStatus.Unavailable);
         // Explicit rehearsal profile; never invent a live Traps roll or advance a real-time clock.
-        return ExplosiveUseProposal.Create(_campaign, item, seconds, SkillRollOutcome.Success, _walker?.Moving == true);
+        var proposed = ExplosiveUseProposal.Create(_campaign, item, seconds, SkillRollOutcome.Success, _walker?.Moving == true);
+        return proposed.Status == ExplosiveProposalStatus.Ready && !RehearsalPlacementInRange() ? new(ExplosiveProposalStatus.Unavailable) : proposed;
     }
     private void OpenExplosivePreparation(CarriedItem item)
     {
         ExplosiveProposal proposal = ProposeExplosivePreparation(item, ExplosiveTimer.DefaultSeconds);
-        if (proposal.Status != ExplosiveProposalStatus.Ready) { NavigationStatus(ExplosivePreparationWindow.Hint(proposal.Status)); RefreshBag(); return; }
+        if (proposal.Status != ExplosiveProposalStatus.Ready) { NavigationStatus(PreparationHint(proposal.Status)); RefreshBag(); return; }
         CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseBag(); CloseLoot(); CloseInventory(); ClearRouteHover();
         GetTree().Root.GuiEmbedSubwindows = true;
         var dialog = new ExplosivePreparationWindow { Size = new(580, 320), Theme = _hud.GetChild<Control>(0).Theme,
-            Propose = seconds => ProposeExplosivePreparation(item, seconds) };
+            Propose = seconds => ProposeExplosivePreparation(item, seconds), Explain = PreparationHint };
         _explosivePreparation = dialog;
         dialog.SubmitRequested = plan =>
         {

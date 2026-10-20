@@ -12,6 +12,7 @@ public partial class ExplosivePreparationWindow : ConfirmationDialog
         Rounded = true, CustomMinimumSize = new(130, 0), Suffix = "s" };
     private readonly Label _status = new() { Name = "ExplosivePreparationStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     public Func<int, ExplosiveProposal>? Propose;
+    public Func<ExplosiveProposalStatus, string>? Explain;
     public Action<ExplosiveUsePlan?>? SubmitRequested;
     public ExplosiveUsePlan? Plan { get; private set; }
     public string StatusText => _status.Text;
@@ -36,7 +37,7 @@ public partial class ExplosivePreparationWindow : ConfirmationDialog
     {
         ExplosiveProposal proposal = Propose?.Invoke((int)_seconds.Value) ?? new(ExplosiveProposalStatus.Unavailable);
         Plan = proposal.Plan; GetOkButton().Disabled = proposal.Status != ExplosiveProposalStatus.Ready;
-        _status.Text = Plan != null ? $"Prazo escolhido: {Plan.Schedule.SelectedSeconds} s. Cancelar mantém o item na bolsa." : Hint(proposal.Status);
+        _status.Text = Plan != null ? $"Prazo escolhido: {Plan.Schedule.SelectedSeconds} s. Local dentro do alcance da barreira. Cancelar mantém o item na bolsa." : Explain?.Invoke(proposal.Status) ?? Hint(proposal.Status);
     }
     public void Reject(string hint) { Plan = null; _status.Text = hint; GetOkButton().Disabled = true; }
     public static string Hint(ExplosiveProposalStatus status) => status switch

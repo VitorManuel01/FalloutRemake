@@ -35,13 +35,14 @@ public partial class TemplePreview
         dialog.ReturnRequested = ReturnFromBag;
         dialog.ApproachRequested = ApproachBagOrigin;
         dialog.PrepareExplosiveRequested = OpenExplosivePreparation;
+        dialog.BarrierApproachRequested = ApproachBarrierForPlacement;
         RefreshBag(); dialog.PopupCenteredClamped(new Vector2I(960, 680), .92f);
     }
     private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName, _campaign.CarriedWeight, _campaign.CarryCapacity,
         item => _campaign.UnitWeight(item.Map, item.Source),
         (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true),
         item => ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true), item => InventoryTexture(item.Map, item.Source),
-        item => ProposeExplosivePreparation(item, ExplosiveTimer.DefaultSeconds).Status);
+        item => ProposeExplosivePreparation(item, ExplosiveTimer.DefaultSeconds).Status, PreparationHint, item => BarrierPlacementApproach(item).HasValue);
     private void ApproachBagOrigin(CarriedItem item)
     {
         if (_campaign == null) return;
