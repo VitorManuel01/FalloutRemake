@@ -2,6 +2,7 @@
 
 [Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
 [Bateria mais recente: conversa ativa, saída do NPC e chegada a Arroyo](docs/temple-active-batch-2026-10-21.md).
+[Primeiros modelos Nature importados e renderização compartilhada](docs/nature-models-2026-10-21.md).
 [Bateria atual: saída restaurável do NPC e vista 3D isolada](docs/temple-npc-batch-2026-10-20.md).
 [Bateria anterior: estados, porta final e consulta de Speech](docs/temple-state-batch-2026-10-20.md).
 [Bateria anterior: doze incrementos e validações](docs/continuation-batch-2026-10-20.md).
@@ -28,6 +29,9 @@ avanço automático opcional e **Percurso NPC** para consultar o trecho atual.
 Depois, siga até a porta de Arroyo, abra com **U**, caminhe até a saída e use
 **Enter** para atravessar. **K/R** preserva esse progresso, inclusive na vila.
 Os scripts e recompensas de entrada da vila ainda não são executados.
+As rochas compatíveis no exterior e na vila já usam os modelos locais de
+**Assets/Nature**, com materiais PBR e três lotes de malha por área. **Nature 3D**
+compara com as formas provisórias. Os assets proprietários permanecem fora do Git.
 
 **Correção do primeiro marco:** o interior é `maps/arcaves.map`, ID 3.
 `maps/artemple.map`, ID 126, é a área externa com Klint. O inspetor agora usa o interior

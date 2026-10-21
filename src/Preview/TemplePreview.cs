@@ -72,6 +72,7 @@ public partial class TemplePreview : Node3D
 			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
 			_hud.CharacterFocusRequested = FocusCharacter;
 			_hud.OriginalFloorRequested = ChangeOriginalFloor;
+			_hud.NatureModelsRequested = SetNatureModels;
 			_hud.StopRequested = StopWalking;
 			_hud.RevealActorRequested = ChangeRevealActor;
 			_hud.InventoryRequested = OpenInventory;
@@ -87,6 +88,7 @@ public partial class TemplePreview : Node3D
 				if (args[i] == "--data-dir" && i + 1 < args.Length) _directory = args[++i];
 				else if (args[i] == "--capture" && i + 1 < args.Length) _capture = args[++i];
 				else if (args[i] == "--preview-test") _test = true;
+				else if (args[i] == "--nature-test") { _test = true; _natureTest = true; }
 				else if (args[i] == "--explosive-preparation-test") { _test = true; _explosivePreparationTest = true; }
                 else if (args[i] == "--scene-review-test") { _test = true; _sceneReviewTest = true; }
 				else if (args[i] == "--visual-preferences-smoke") { _test = true; _preferencesStartupTest = true; }
@@ -106,6 +108,7 @@ public partial class TemplePreview : Node3D
 				await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 				if (_preferencesStartupTest) { await CheckVisualPreferencesStartup(); await Shutdown(0); return; }
+				if (_natureTest) { await CheckNatureModels(); await Shutdown(0); return; }
 				if (_explosivePreparationTest) { await CheckPlacedUsePreview(); await Shutdown(0); return; }
                 if (_sceneReviewTest) { await CheckEntityReadability(); await Shutdown(0); return; }
 				if (_test) await CheckPreview();
@@ -233,6 +236,7 @@ public partial class TemplePreview : Node3D
 			_world.AddChild(new Label3D { Text = "ENTRADA", Position = new Vector3(0, 1.45f, 0), FontSize = 40, PixelSize = .012f,
 				Modulate = new Color("b6edb4"), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, NoDepthTest = true });
 		}
+		BuildNatureModels();
 		ClearSelection();
 		ApplyFilters();
 		BuildNavigation();
@@ -297,6 +301,7 @@ public partial class TemplePreview : Node3D
 		_occlusionDirty = true; UpdateWallOcclusion();
 		RefreshContainerLocator();
         RefreshNpcRouteView();
+		ApplyNatureModels();
 	}
 
 	public override void _Process(double delta)

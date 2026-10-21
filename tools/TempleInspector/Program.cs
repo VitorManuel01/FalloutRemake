@@ -36,6 +36,11 @@ try
         Console.WriteLine(JsonSerializer.Serialize(ArroyoEntryAudit.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
+    if (args.Length == 3 && args[2] == "--nature-source-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(NatureSourceReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
     if (args.Length == 3 && args[2] == "--temple-aftermath-report")
     {
         Console.WriteLine(JsonSerializer.Serialize(TempleSpeechAftermathReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));

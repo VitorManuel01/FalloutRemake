@@ -8,6 +8,8 @@
 /.local/
 /work/
 /imports/
+# Imported proprietary assets remain local; code and mapping metadata are versioned.
+/Assets/
 *.local.json
 *.[dD][aA][tT]
 *.[mM][aA][pP]
