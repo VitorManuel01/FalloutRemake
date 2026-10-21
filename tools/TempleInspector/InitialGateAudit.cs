@@ -38,7 +38,7 @@ internal static class InitialGateAudit
         if (!before.SequenceEqual(State(original)) || gate.State["openFlags"] != 0) throw new InvalidDataException("Detached initial gate audit changed its source.");
         MapLayoutWriter.Verify(map);
         return new { Status = "INITIAL_GATE_AUDIT_OK", Gate = gate.Key, GateApproach = approach, ClosedReachable = beforeReach,
-            OpenReachable = openReach, NpcApproach = nearActor, WalkingSteps = steps, CheckpointVersion = 5,
+            OpenReachable = openReach, NpcApproach = nearActor, WalkingSteps = steps, CheckpointVersion = world.Capture(catalog.Source.Sha256).Version,
             SourceAndCallerUnchanged = true, DialogueOrCombatExecuted = false, LockpickEnabled = false };
     }
 }

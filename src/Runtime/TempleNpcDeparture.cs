@@ -65,6 +65,9 @@ public sealed class TempleNpcDepartureProfile
     internal int[] Route(NpcDeparturePhase phase) => _routes[phase switch
     { NpcDeparturePhase.ToGate => 0, NpcDeparturePhase.ToMiddle => 1, NpcDeparturePhase.ToExit => 2, _ => throw new InvalidDataException("Not a movement phase.") }];
     public int[] RouteSteps => _routes.Select(r => r.Length - 1).ToArray();
+    internal bool Matches(MapDocument map) => map.Prefix.Header.MapIndex == 3 && map.Source.Sha256 == Speech.MapKey
+        && map.ObjectLayers.SelectMany(l => l.Objects).Count(o => o.Key == ActorKey && o.Header == _actor.Header) == 1
+        && map.ObjectLayers.SelectMany(l => l.Objects).Count(o => o.Key == GateKey && o.Header == _gate.Header) == 1;
     internal void Validate(NpcDepartureSnapshot? state)
     {
         if (state == null || state.Version != 1 || state.Profile != Fingerprint || !Enum.IsDefined(state.Phase))

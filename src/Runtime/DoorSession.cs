@@ -32,6 +32,8 @@ public sealed class DoorSession
     private long _revision;
     private bool _resolving;
     internal Func<string, bool>? IsSceneryReplaced { get; set; }
+    internal Func<MapObject, MapObject>? ProjectObject { get; set; }
+    internal Func<string, DoorState?>? ProjectDoor { get; set; }
     public TempleDoorSnapshot? TempleDoor => _temple?.Snapshot;
     public static bool SupportsTempleDoorAdapter(MapDocument map) => TempleDoorAdapter.Match(map) != null;
     public static DoorSession FromMap(MapDocument map, bool enableTempleDoorAdapter = false)
@@ -51,8 +53,8 @@ public sealed class DoorSession
     {
         _roots = roots.ToArray(); _scriptedPrototypes = new(scriptedPrototypes ?? Array.Empty<int>()); Reset();
     }
-    public DoorState? Get(string key) => _doors.GetValueOrDefault(key);
-    public SavedDoorSession Capture() => new(_doors.Values.OrderBy(d => d.Source.Key, StringComparer.Ordinal)
+    public DoorState? Get(string key) => ProjectDoor?.Invoke(key) ?? _doors.GetValueOrDefault(key);
+    public SavedDoorSession Capture() => new(_doors.Keys.Select(key => Get(key)!).OrderBy(d => d.Source.Key, StringComparer.Ordinal)
         .Select(d => new SavedDoor(d.Source.Key, d.Flags, d.OpenFlags)).ToArray(), _temple?.Snapshot.Locals.ToArray(), _temple?.Snapshot.Experience ?? 0);
     public void Restore(SavedDoorSession saved, bool allowInitialGateChanges = true)
     {
@@ -110,10 +112,13 @@ public sealed class DoorSession
         if (_temple == null) return;
         _doors[_temple.SourceKey] = _temple.EnterMap(_doors[_temple.SourceKey]); _revision++;
     }
-    public HexNavigation Navigation(int elevation) => new(_roots, elevation, obj =>
+    public HexNavigation Navigation(int elevation) => NavigationCore(elevation, null);
+    internal HexNavigation NavigationForNpc(int elevation, string actorKey) => NavigationCore(elevation, actorKey);
+    private HexNavigation NavigationCore(int elevation, string? excludeActor) => new(_roots.Select(o => ProjectObject?.Invoke(o) ?? o).Where(o => o.Key != excludeActor), elevation, obj =>
         IsSceneryReplaced?.Invoke(obj.Key) == true ? new(obj.Header.Flags | HexNavigation.Hidden, null)
-            : _doors.TryGetValue(obj.Key, out DoorState? state) ? new(state.Flags, state.OpenFlags)
-            : new(obj.Header.Flags, obj.State.TryGetValue("openFlags", out int open) ? open : null));
+            : Get(obj.Key) is DoorState state ? new(state.Flags, state.OpenFlags)
+            : new(obj.Header.Flags, obj.State.TryGetValue("openFlags", out int open) ? open : null),
+        excludeActor == null ? ExitTraversalPolicy.StopAtExits : ExitTraversalPolicy.ContinueAcrossExits);
 
     public DoorUseStatus CanToggle(string key, int actorHex, int elevation, bool moving)
         => CanInteract(key, actorHex, elevation, moving, false);
@@ -122,6 +127,7 @@ public sealed class DoorSession
 
     private DoorUseStatus CanInteract(string key, int actorHex, int elevation, bool moving, bool lockpick)
     {
+        if (ProjectDoor?.Invoke(key) != null) return DoorUseStatus.ScriptRequired;
         if (!_doors.TryGetValue(key, out DoorState? door)) return DoorUseStatus.NoDoor;
         ObjectHeader h = door.Source.Header;
         if (!HexNavigation.Valid(h.Tile) || !HexNavigation.Valid(actorHex) || h.Elevation != elevation

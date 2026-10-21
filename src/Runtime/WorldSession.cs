@@ -120,9 +120,10 @@ public sealed partial class WorldSession
         if (use.Allocation.RemainingTicks != 0) return ItemUseStatus.InvalidState;
         return _areas[use.SourceMap].Items.Consume(id);
     }
-    public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null)
+    public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
+        Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null)
     {
-        _load = load; _runtimePrototype = runtimePrototype; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
+        _load = load; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
         if (!_allowed.Contains(initialMap)) throw new ArgumentException("Initial map must belong to the supported area profile.");
         EnsureArea(initialMap); CurrentMap = initialMap;
     }
@@ -134,6 +135,7 @@ public sealed partial class WorldSession
         if (map.Prefix.Header.MapIndex != id) throw new InvalidDataException("Loaded MAP ID does not match the requested destination.");
         DoorSession doors = DoorSession.FromMap(map, DoorSession.SupportsTempleDoorAdapter(map));
         var scenery = new ScenerySession(); doors.IsSceneryReplaced = scenery.Replaces;
+        doors.ProjectObject = source => EffectiveObject(id, source); doors.ProjectDoor = key => TempleGate(id, key);
         area = new WorldArea(map, doors, new TempleTravel(map, doors), new ItemTransferSession(map), scenery);
         _areas.Add(id, area); return area;
     }
@@ -174,6 +176,7 @@ public sealed partial class WorldSession
     }
     public void Reset()
     {
+        _templeProgress = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
         foreach (WorldArea area in _areas.Values) { area.Scenery.Reset(); area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
     }
@@ -182,15 +185,17 @@ public sealed partial class WorldSession
     public WorldCheckpoint Capture(string catalogHash)
     {
         ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses();
-        return new(5, "neutral-v5", catalogHash, InitialMap, CurrentMap,
+        return new(6, "neutral-v6", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
-                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray());
+                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray(), _templeProgress?.Capture());
     }
-    public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null)
+    public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
+        Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null)
     {
         if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2"
             || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
-            || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5") || checkpoint.CatalogHash != catalogHash
+            || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5" || checkpoint.Version == 6 && checkpoint.Profile == "neutral-v6") || checkpoint.CatalogHash != catalogHash
+            || checkpoint.Version < 6 && checkpoint.Temple != null
             || checkpoint.InitialMap != initialMap || checkpoint.Areas is not { Length: > 0 and <= 16 })
             throw new InvalidDataException("Checkpoint version, profile or catalog is incompatible.");
         var allowed = allowedMaps.ToHashSet();
@@ -198,7 +203,7 @@ public sealed partial class WorldSession
             || checkpoint.Areas.Select(a => a.Map).Distinct().Count() != checkpoint.Areas.Length
             || !checkpoint.Areas.Any(a => a.Map == initialMap) || !checkpoint.Areas.Any(a => a.Map == checkpoint.CurrentMap))
             throw new InvalidDataException("Checkpoint area set is invalid.");
-        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype);
+        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile);
         foreach (SavedArea saved in checkpoint.Areas)
         {
             WorldArea area = candidate.EnsureArea(saved.Map);
@@ -215,6 +220,7 @@ public sealed partial class WorldSession
         var scenes = checkpoint.Areas.Select(a => (Area: candidate._areas[a.Map], Records: a.Replacements ?? Array.Empty<SceneryReplacement>())).ToArray();
         candidate.ValidateScenery(scenes);
         foreach (var scene in scenes) scene.Area.Scenery.ApplyPrepared(ScenerySession.Prepare(scene.Records));
+        candidate.RestoreTempleProgress(checkpoint.Temple);
         candidate.ValidateUses();
         foreach (SavedArea saved in checkpoint.Areas) candidate._areas[saved.Map].Travel.Arrive(saved.Location);
         candidate.CurrentMap = checkpoint.CurrentMap;
