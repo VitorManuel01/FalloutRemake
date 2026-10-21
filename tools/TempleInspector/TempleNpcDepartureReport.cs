@@ -27,7 +27,7 @@ internal static class TempleNpcDepartureReport
         for (int guard = 0; session.Capture().Phase != NpcDeparturePhase.Hidden && guard < 200; guard++)
         {
             var saved = session.Capture(); var previous = session.Location;
-            var restored = profile.Restore(saved);
+            var restored = TempleNpcDepartureFile.Decode(profile, TempleNpcDepartureFile.Encode(session));
             Require(restored.Capture() == saved && restored.Location == previous && restored.SessionToken != session.SessionToken,
                 "Complete NPC pose/event did not restore."); restores++;
             if (session.Walking)
@@ -50,7 +50,7 @@ internal static class TempleNpcDepartureReport
                 Require(saved.Phase == NpcDeparturePhase.GateDelay && saved.RemainingTicks == 20 && previous.Hex == 19728
                     && profile.Gate(saved).IsOpen, "Gate arrival and timer were not a single transition.");
                 Require(session.AdvanceDelay(7, session.SessionToken, session.Revision).AppliedTicks == 7, "Partial timer advance failed.");
-                session = profile.Restore(session.Capture()); restores++;
+                session = TempleNpcDepartureFile.Decode(profile, TempleNpcDepartureFile.Encode(session)); restores++;
                 var advance = session.AdvanceDelay(99, session.SessionToken, session.Revision);
                 Require(advance.AppliedTicks == 13 && advance.UnusedTicks == 86 && session.Location == previous,
                     "Timer overshoot moved the NPC or replayed time.");
