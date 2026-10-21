@@ -42,6 +42,8 @@ confirma a preferência Nature desativada sendo lida em um novo processo.
 Capturas e testes gráficos foram executados somente no desktop isolado.
 As instâncias e janelas do usuário não foram alteradas. Sem push.
 
-Próximo marco recomendado: auditar o estado original de entrada de Arroyo
+Continuação posterior: [nove marcos de entrada e anciã](arroyo-elder-batch-2026-10-21.md).
+
+Próximo marco recomendado nesta bateria: auditar o estado original de entrada de Arroyo
 necessário ao ramo inicial da anciã, antes de habilitar uma conversa ativa adicional.
 **GPT-6.1 Sol, esforço Alto**.
