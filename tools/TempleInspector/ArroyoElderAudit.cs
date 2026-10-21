@@ -75,6 +75,7 @@ internal static class ArroyoElderAudit
                 TextSource=messages.Source,ValidatedMessageIds=messageIds},
             OutOfRangeLocalReads=reads.Where(r => r.Scope==IntVariableScope.ScriptLocal && r.Index>=metadata.DeclaredLocals).ToArray(),
             DetachedConsultation=new {TextSource=consultationText.Source,ValidatedMessageIds=consultation.MessageIds,Nodes=4,LiveEffectsApplied=false},
+            NeutralReaction=ArroyoElderReactionAudit.Create(program,stats,globals,entry.EntryGlobals()),
             RuntimeDialogueEnabled=false,SourceTextExported=false,OriginalReconstruction="verified" };
     }
 }

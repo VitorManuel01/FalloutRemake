@@ -1,5 +1,6 @@
 # Fallout Remake — prévia 3D do templo
 
+[Auditoria da reação inicial da anciã](docs/arroyo-elder-neutral-reaction-2026-10-21.md).
 [Atributos originais da anciã e leitura de PRO](docs/arroyo-elder-prototype-stats-2026-10-21.md).
 [Consulta dos textos originais da anciã](docs/arroyo-elder-consultation-2026-10-21.md).
 [Caminhada até a anciã de Arroyo](docs/arroyo-elder-approach-2026-10-21.md).
