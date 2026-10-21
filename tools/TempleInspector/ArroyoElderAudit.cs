@@ -56,6 +56,7 @@ internal static class ArroyoElderAudit
         var consultation=ArroyoElderConsultationProfile.Create(map,data.Read);
         var consultationText=new ArroyoElderText(consultation,messages,language);
         var stats=CritterPrototypeData.Read(map.Prototypes.Single(p=>p.Pid==actor.Header.Pid));
+        var stateProfile=ArroyoElderStateProfile.Create(map,data.Read);
         int[] messageIds = {103,104,105,106};
         if (messageIds.Any(id => !messages.Entries.TryGetValue(id,out var row) || string.IsNullOrWhiteSpace(row.Text)))
             throw new InvalidDataException("Elder opening messages are incomplete.");
@@ -76,6 +77,9 @@ internal static class ArroyoElderAudit
             OutOfRangeLocalReads=reads.Where(r => r.Scope==IntVariableScope.ScriptLocal && r.Index>=metadata.DeclaredLocals).ToArray(),
             DetachedConsultation=new {TextSource=consultationText.Source,ValidatedMessageIds=consultation.MessageIds,Nodes=4,LiveEffectsApplied=false},
             NeutralReaction=ArroyoElderReactionAudit.Create(program,stats,globals,entry.EntryGlobals()),
+            DetachedStates=new {stateProfile.Fingerprint,Opening=stateProfile.Project(Array.Empty<int>()),
+                Direct=stateProfile.Project(new[] {11868,16348}),Bridge=stateProfile.Project(new[] {11804,14664,16348}),
+                Alternative=stateProfile.Project(new[] {11804,14696,17510}),AppliedToWorld=false},
             RuntimeDialogueEnabled=false,SourceTextExported=false,OriginalReconstruction="verified" };
     }
 }

@@ -1,5 +1,6 @@
 # Fallout Remake — prévia 3D do templo
 
+[Ensaio separado dos efeitos do diálogo da anciã](docs/arroyo-elder-detached-state-2026-10-21.md).
 [Auditoria da reação inicial da anciã](docs/arroyo-elder-neutral-reaction-2026-10-21.md).
 [Atributos originais da anciã e leitura de PRO](docs/arroyo-elder-prototype-stats-2026-10-21.md).
 [Consulta dos textos originais da anciã](docs/arroyo-elder-consultation-2026-10-21.md).

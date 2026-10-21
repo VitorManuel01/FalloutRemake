@@ -173,6 +173,7 @@ internal static class SelfTests
             WorldEntryTests.Run(Check);
             ArroyoElderApproachTests.Run(Check);
             ArroyoElderConsultationTests.Run(Check);
+            ArroyoElderStateTests.Run(Check);
             CharacterSkillTests.Run(Check);
             TravelTests.Run(Check);
             ExitPreviewTests.Run(Check);
