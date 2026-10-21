@@ -123,6 +123,7 @@ internal static class SelfTests
                 Reject(() => MapPrefix.Read(bytes[..^5]));
             });
             StructuralTests.Run(Check);
+            CritterPrototypeTests.Run(Check);
             GeometryTests.Run(Check);
             EntityPresentationTests.Run(Check);
             FramingTests.Run(Check);

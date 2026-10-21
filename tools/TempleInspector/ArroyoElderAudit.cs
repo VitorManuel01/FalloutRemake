@@ -55,12 +55,16 @@ internal static class ArroyoElderAudit
         var messages = MessageTextFile.Read(data.Read($"text/{language}/dialog/ahelder.msg"));
         var consultation=ArroyoElderConsultationProfile.Create(map,data.Read);
         var consultationText=new ArroyoElderText(consultation,messages,language);
+        var stats=CritterPrototypeData.Read(map.Prototypes.Single(p=>p.Pid==actor.Header.Pid));
         int[] messageIds = {103,104,105,106};
         if (messageIds.Any(id => !messages.Entries.TryGetValue(id,out var row) || string.IsNullOrWhiteSpace(row.Text)))
             throw new InvalidDataException("Elder opening messages are incomplete.");
         var reads = IntVariableReads.Inspect(program);
         return new { Status = "ARROYO_ELDER_AUDIT_OK", Map = map.Source, Actor = new {actor.Key,actor.Header},
             Program = program.Source, Metadata = metadata, EntryProfile = entry.Fingerprint,
+            PrototypeStats=new {stats.Source,stats.HeadFid,stats.AiPacket,stats.Team,stats.Flags,stats.BodyType,stats.Experience,stats.KillType,stats.DamageType,
+                Special=Enumerable.Range(0,7).Select(i=>new {Index=i,Base=stats.BaseStat(i),Bonus=stats.BonusStat(i)}).ToArray(),
+                Scope="Serialized original PRO values only; effective stats and character modifiers are not calculated"},
             InitialGlobals = new[] {0,1,10,11,37,38,39,40,41,42,43,44,45,47,531,619}.Select(i => globals.Entries[i]).ToArray(),
             FirstEntry = new {KarmaDelta=15,ArroyoReputationDelta=15,SourceOffsets=new[] {2462,3026},
                 Prerequisite="first actual village entry; original neutral GAM values; other map effects remain outside this audit"},

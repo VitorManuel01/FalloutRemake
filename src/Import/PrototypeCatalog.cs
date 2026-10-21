@@ -15,7 +15,7 @@ public sealed record Prototype(int Pid, int Type, int? Subtype, int Fid, int? Sc
     public int? InventoryFid => Type == 0 ? BinaryPrimitives.ReadInt32BigEndian(RawBytes.AsSpan(52, 4)) : null;
 }
 
-/// <summary>Validates PRO layout/length and reads identity/subtype; stats stay raw.</summary>
+/// <summary>Validates PRO layout/length and reads identity/subtype. CritterPrototypeData provides an optional source-only stat view.</summary>
 public sealed class PrototypeCatalog
 {
     private static readonly string[] Types = { "items", "critters", "scenery", "walls", "tiles", "misc" };
