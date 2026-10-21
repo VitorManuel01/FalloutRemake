@@ -10,6 +10,7 @@ public partial class TemplePreview
         var campaign=_campaign;
         var token=campaign?.TempleToken;
         bool visible=campaign?.CurrentMap==4 && campaign.Location.Elevation==0 && _elevation==0;
+        RefreshElderConsultationAction(visible);
         var route=visible ? campaign!.InspectArroyoElderApproach(_walker?.Moving==true) : new(TempleWorldStatus.Unavailable);
         bool arrived=route.TargetHex==campaign?.Location.Hex;
         string label=route.Status switch {

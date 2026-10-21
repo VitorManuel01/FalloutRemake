@@ -15,6 +15,8 @@ public partial class PreviewHud
     public Action? TempleVillageRequested;
     private readonly Button _arroyoElder = new() {Name="ArroyoElderApproachAction",Text="Ir até a anciã",Visible=false};
     public Action? ArroyoElderRequested;
+    private readonly Button _elderConsultation = new() {Name="ElderConsultationAction",Text="Anciã · conversa em consulta",Visible=false};
+    public Action? ElderConsultationRequested;
     private readonly Button _templeStep = new() { Name = "TempleWorldStep", Text = "Um passo" },
         _templeLeg = new() { Name = "TempleWorldLeg", Text = "Próxima parada" },
         _templeWait = new() { Name = "TempleWorldWait", Text = "Esperar", TooltipText = "Avançar até o evento pendente, sem iniciar o próximo trecho" },
@@ -35,6 +37,8 @@ public partial class PreviewHud
         _templeProgress.AddChild(_templeMovement); _templeProgress.AddChild(_templeVillage);
         _templeProgress.AddChild(_arroyoElder);
         _arroyoElder.Pressed += () => {if (!_arroyoElder.Disabled) ArroyoElderRequested?.Invoke();};
+        _templeProgress.AddChild(_elderConsultation);
+        _elderConsultation.Pressed += () => {if (!_elderConsultation.Disabled) ElderConsultationRequested?.Invoke();};
         foreach (var button in new[] { _templeStep, _templeLeg, _templeTick, _templeWait, _templeFocus }) _templeMovement.AddChild(button);
         _templeStep.Pressed += () => { if (!_templeStep.Disabled) TempleStepRequested?.Invoke(); };
         _templeLeg.Pressed += () => { if (!_templeLeg.Disabled) TempleLegRequested?.Invoke(); };
@@ -75,4 +79,7 @@ public partial class PreviewHud
     public void ArroyoElderAction(bool visible,bool enabled,string text)
     { _arroyoElder.Visible=visible; _arroyoElder.Disabled=!enabled; _arroyoElder.Text=text;
         _arroyoElder.TooltipText="Caminha até um hex vizinho da anciã original. A conversa ainda não é iniciada."; }
+    public void ElderConsultationAction(bool visible,bool enabled,string? blocked)
+    { _elderConsultation.Visible=visible; _elderConsultation.Disabled=!enabled;
+        _elderConsultation.TooltipText=blocked ?? "Consultar os textos originais sem alterar a partida."; }
 }

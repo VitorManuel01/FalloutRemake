@@ -53,6 +53,8 @@ internal static class ArroyoElderAudit
             (11868,(int?)4,11,106,(string?)"Node008",50)})) throw new InvalidDataException("Elder first reply options changed.");
         var language = new PrototypeTextCatalog(data.Read,data.FindPaths("pro_")).Language;
         var messages = MessageTextFile.Read(data.Read($"text/{language}/dialog/ahelder.msg"));
+        var consultation=ArroyoElderConsultationProfile.Create(map,data.Read);
+        var consultationText=new ArroyoElderText(consultation,messages,language);
         int[] messageIds = {103,104,105,106};
         if (messageIds.Any(id => !messages.Entries.TryGetValue(id,out var row) || string.IsNullOrWhiteSpace(row.Text)))
             throw new InvalidDataException("Elder opening messages are incomplete.");
@@ -68,6 +70,7 @@ internal static class ArroyoElderAudit
                 ReputationDependency=$"G47>=0 contributes G47/2 (integer division) to reaction; GAM starts at {globals.Entries[47].Value}; native first entry yields {globals.Entries[47].Value+15}/2={(globals.Entries[47].Value+15)/2}",
                 TextSource=messages.Source,ValidatedMessageIds=messageIds},
             OutOfRangeLocalReads=reads.Where(r => r.Scope==IntVariableScope.ScriptLocal && r.Index>=metadata.DeclaredLocals).ToArray(),
+            DetachedConsultation=new {TextSource=consultationText.Source,ValidatedMessageIds=consultation.MessageIds,Nodes=4,LiveEffectsApplied=false},
             RuntimeDialogueEnabled=false,SourceTextExported=false,OriginalReconstruction="verified" };
     }
 }

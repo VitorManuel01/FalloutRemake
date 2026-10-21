@@ -27,6 +27,8 @@ public partial class TemplePreview
         var button=(Button)_hud.FindChild("ArroyoElderApproachAction",true,false);
         if (!button.Visible || button.Disabled || button.Text!="Ir até a anciã")
             throw new InvalidDataException("Elder approach is not offered after arrival in Arroyo.");
+        OpenElderConsultation();
+        if (_elderWindow!=null) throw new InvalidDataException("Elder consultation opened before actual approach.");
         byte[] before=CheckpointFile.Encode(world.Capture(_mapCatalog!.Source.Sha256)); var old=_hud.ArroyoElderRequested!;
         button.EmitSignal(Button.SignalName.Pressed);
         if (!_walker!.Moving || !_committedRoute.SequenceEqual(route.Tiles) || _selected?.Source.Key!=source.Key
@@ -34,6 +36,8 @@ public partial class TemplePreview
             throw new InvalidDataException("Elder approach skipped its actual walk or selected the duplicate ID.");
         old();
         if (!_committedRoute.SequenceEqual(route.Tiles)) throw new InvalidDataException("Busy elder action replaced the walk.");
+        OpenElderConsultation();
+        if (_elderWindow!=null) throw new InvalidDataException("Elder consultation opened during the approach walk.");
         FrameRoute();
         if (_capture!=null) await Capture(Path.ChangeExtension(_capture,"arroyo-elder-route.png"));
         _walker.Advance(.05); UpdateWalkerPosition(); int next=_walker.NextHex;
@@ -65,5 +69,6 @@ public partial class TemplePreview
         if (_capture!=null) await Capture(Path.ChangeExtension(_capture,"arroyo-elder-arrival.png"));
         foreach (var area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
         GD.Print("ARROYO_ELDER_APPROACH_OK: original offset 126588/SID67108867 despite duplicate Id20, real adjacent walk, busy guard, Esc partial-step stop, K/R replan, stale callback refusal, exact reach, unchanged 625 XP/65 reputation/items/Temple/source; no automatic dialogue.");
+        await CheckArroyoElderConsultation();
     }
 }
