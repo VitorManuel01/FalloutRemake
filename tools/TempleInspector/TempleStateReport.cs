@@ -42,7 +42,7 @@ internal static class TempleStateReport
         var restoredSpeech = TempleSpeechStateFile.Decode(speech, savedSpeech);
         if (speech.Classify(restoredSpeech.Capture()) != TempleSpeechState.Accepted || restoredSpeech.SessionToken == speechState.SessionToken)
             throw new InvalidDataException("Detached Speech persistence failed.");
-        return new { Status = "TEMPLE_STATE_PROFILE_OK", Map = map.Source, configuration.Source, GlobalEntry = configuration.Entries[10],
+        return new { Status = "TEMPLE_STATE_PROFILE_OK", Map = map.Source, configuration.Source, GlobalEntry = configuration.Entries[10], ArroyoEntry = ArroyoEntryAudit.Create(data),
             ActorMetadata = actorMeta, GateMetadata = gateMeta, ExitDoor = new { exitDoor.Key, exitDoor.InitialGlobal, Unlock = "M20=2 and G369=0; audited aitemdor span 5912..6014" }, State = state.Capture(), InitialGateWrites = "Verified entry subset applied to detached storage only",
             SpeechRehearsal = new { Profile = speech.Fingerprint, EffectiveIntelligence = 5, SpeechTagged = true, TextSource = speechText.Source,
                 Result = "Accepted in detached rehearsal; no active world, VM, NPC movement or original RNG replay", State = speechState.Capture(), SourceMapVariable20 = 0,

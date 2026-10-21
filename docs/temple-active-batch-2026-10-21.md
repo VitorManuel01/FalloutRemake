@@ -11,6 +11,7 @@ Branch `codex/temple-active-speech`, baseada em `codex/temple-npc-departure`.
 | Visualização do percurso | Traçado lilás do trecho atual, primeira obstrução em vermelho, enquadramento seguro e filtros; consulta sem efeitos na partida. |
 | Porta da vila e checkpoint v7 | Instância 100 validada pela condição original; aproximação real, U manual, persistência e migração restrita de versões anteriores. |
 | Caminhada e viagem a Arroyo | Marcadores originais, Enter explícito, restauração em Arroyo e preservação do templo inativo, itens, XP e fontes. |
+| Auditoria da recompensa de entrada | Guarda original de primeira entrada e três ramos de XP verificados; Speech corresponde a 600 XP base, ainda sem concessão na partida. |
 
 O conjunto possui **309 grupos sintéticos**. As verificações gráficas foram
 feitas somente no desktop isolado; o desktop de entrada permaneceu `Default`.
@@ -25,7 +26,8 @@ Detalhes e evidências por etapa:
 [viagem](temple-active-travel-audit-2026-10-21.md),
 [avanço automático](temple-npc-playback-2026-10-21.md),
 [percurso](temple-npc-route-view-2026-10-21.md),
-[porta e vila](temple-village-exit-2026-10-21.md).
+[porta e vila](temple-village-exit-2026-10-21.md),
+[recompensa de entrada](arroyo-entry-reward-audit-2026-10-21.md).
 
 Arte final, combate geral, desafio do baú e execução completa dos scripts da
 vila continuam pendentes. A entrada na vila ainda não concede a recompensa
