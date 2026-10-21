@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace FalloutRemake.Runtime;
 
-public sealed record VisualPreferences(bool ShowNavigationGrid, bool UseOriginalFloor, bool RevealActor)
+public sealed record VisualPreferences(bool ShowNavigationGrid, bool UseOriginalFloor, bool RevealActor, bool ShowNatureModels = true)
 {
     public static VisualPreferences Defaults { get; } = new(true, false, true);
 }
@@ -34,21 +34,25 @@ public static class VisualPreferencesFile
         {
             using var doc = JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = 4 });
             JsonElement root = doc.RootElement;
-            string[] names = { "Version", "ShowNavigationGrid", "UseOriginalFloor", "RevealActor" };
-            if (root.ValueKind != JsonValueKind.Object || root.EnumerateObject().Count() != names.Length
+            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("Version",out var schema)
+                || !schema.TryGetInt32(out int version) || version is not (1 or 2))
+                throw new InvalidDataException("Unsupported visual preferences version.");
+            string[] names = version == 1 ? new[] { "Version", "ShowNavigationGrid", "UseOriginalFloor", "RevealActor" }
+                : new[] { "Version", "ShowNavigationGrid", "UseOriginalFloor", "RevealActor", "ShowNatureModels" };
+            if (root.EnumerateObject().Count() != names.Length
                 || names.Any(n => !root.TryGetProperty(n, out _))
-                || !root.GetProperty("Version").TryGetInt32(out int version) || version != 1
                 || names.Skip(1).Any(n => root.GetProperty(n).ValueKind is not (JsonValueKind.True or JsonValueKind.False)))
                 throw new InvalidDataException("Unsupported visual preferences schema.");
-            return new(root.GetProperty(names[1]).GetBoolean(), root.GetProperty(names[2]).GetBoolean(), root.GetProperty(names[3]).GetBoolean());
+            return new(root.GetProperty(names[1]).GetBoolean(), root.GetProperty(names[2]).GetBoolean(), root.GetProperty(names[3]).GetBoolean(),
+                version == 1 || root.GetProperty("ShowNatureModels").GetBoolean());
         }
         catch (JsonException error) { throw new InvalidDataException("Malformed visual preferences JSON.", error); }
         catch (InvalidOperationException error) { throw new InvalidDataException("Invalid visual preferences types.", error); }
     }
     public static void Write(string path, VisualPreferences preferences)
     {
-        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(new { Version = 1, preferences.ShowNavigationGrid,
-            preferences.UseOriginalFloor, preferences.RevealActor }, new JsonSerializerOptions { WriteIndented = true });
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(new { Version = 2, preferences.ShowNavigationGrid,
+            preferences.UseOriginalFloor, preferences.RevealActor, preferences.ShowNatureModels }, new JsonSerializerOptions { WriteIndented = true });
         string full = Path.GetFullPath(path), directory = Path.GetDirectoryName(full)!;
         Directory.CreateDirectory(directory);
         string temporary = Path.Combine(directory, $"visual-preferences-{Guid.NewGuid():N}.tmp");

@@ -28,6 +28,7 @@ public partial class TemplePreview
         SetNavigationGrid(_visualPreferences.ShowNavigationGrid);
         SetOriginalFloor(_visualPreferences.UseOriginalFloor);
         SetRevealActor(_visualPreferences.RevealActor);
+        SetNatureModels(_visualPreferences.ShowNatureModels);
         return notice;
     }
     private void SaveVisualPreferences(VisualPreferences preferences)
@@ -48,6 +49,8 @@ public partial class TemplePreview
     { SetOriginalFloor(enabled); SaveVisualPreferences(_visualPreferences with { UseOriginalFloor = enabled }); }
     private void ChangeRevealActor(bool enabled)
     { SetRevealActor(enabled); SaveVisualPreferences(_visualPreferences with { RevealActor = enabled }); }
+    private void ChangeNatureModels(bool enabled)
+    { SetNatureModels(enabled); SaveVisualPreferences(_visualPreferences with { ShowNatureModels = enabled }); }
 
     private async Task CheckVisualPreferences()
     {
@@ -57,31 +60,34 @@ public partial class TemplePreview
             ResetWalker(); ToggleWalkMode();
             var location = _campaign!.Location; var doors = _doors!.Capture(); int reach = _reachable!.Count;
             _visualPreferences = VisualPreferences.Defaults;
-            SetNavigationGrid(true); SetOriginalFloor(false); SetRevealActor(true);
+            SetNavigationGrid(true); SetOriginalFloor(false); SetRevealActor(true); SetNatureModels(true);
             foreach (Key code in new[] { Key.G, Key.O, Key.V })
             { using var key = new InputEventKey { Pressed = true, PhysicalKeycode = code }; _UnhandledInput(key); }
-            var expected = new VisualPreferences(false, true, false);
+            var nature = (CheckButton)_hud.FindChild("NatureModelsAction",true,false);
+            nature.EmitSignal(BaseButton.SignalName.Toggled,false);
+            var expected = new VisualPreferences(false, true, false,false);
             if (VisualPreferencesFile.Read(VisualPreferencesPath) != expected) throw new InvalidDataException("Keys did not save all visual choices.");
             byte[] saved = File.ReadAllBytes(VisualPreferencesPath);
-            SetNavigationGrid(true); SetOriginalFloor(false); SetRevealActor(true);
+            SetNavigationGrid(true); SetOriginalFloor(false); SetRevealActor(true); SetNatureModels(true);
             if (RestoreVisualPreferences() != null || _showNavigationGrid || !_useOriginalFloor || _revealActor
-                || _navigationOverlay!.Visible || !_originalFloor!.Visible)
+                || _navigationOverlay!.Visible || !_originalFloor!.Visible || _natureEnabled)
                 throw new InvalidDataException("Restored preferences did not reach scene visuals.");
             var grid = (CheckButton)_hud.FindChild("NavigationGridAction", true, false);
             var floor = (Button)_hud.FindChild("OriginalFloorAction", true, false);
             var reveal = (Button)_hud.FindChild("WallOcclusionAction", true, false);
-            if (grid.ButtonPressed || !floor.ButtonPressed || reveal.ButtonPressed) throw new InvalidDataException("Restored HUD differs from saved preferences.");
+            if (grid.ButtonPressed || !floor.ButtonPressed || reveal.ButtonPressed || nature.ButtonPressed) throw new InvalidDataException("Restored HUD differs from saved preferences.");
             if (_campaign.Location != location || _walker!.Moving || _reachable.Count != reach || !_doors.Capture().Doors.SequenceEqual(doors.Doors))
                 throw new InvalidDataException("Visual preferences changed world or navigation state.");
             SaveCheckpoint(); LoadCheckpoint();
-            if (_showNavigationGrid || !_useOriginalFloor || _revealActor || !saved.SequenceEqual(File.ReadAllBytes(VisualPreferencesPath)))
+            if (_showNavigationGrid || !_useOriginalFloor || _revealActor || _natureEnabled || !saved.SequenceEqual(File.ReadAllBytes(VisualPreferencesPath)))
                 throw new InvalidDataException("Checkpoint restoration replaced visual preferences.");
             ChangeElevation(1); ResetWalker();
-            if (_showNavigationGrid || !_useOriginalFloor || _revealActor || !saved.SequenceEqual(File.ReadAllBytes(VisualPreferencesPath)))
+            if (_showNavigationGrid || !_useOriginalFloor || _revealActor || _natureEnabled || !saved.SequenceEqual(File.ReadAllBytes(VisualPreferencesPath)))
                 throw new InvalidDataException("Rebuild/reset changed preferences or rewrote their file.");
             grid.EmitSignal(BaseButton.SignalName.Toggled, true);
             floor.EmitSignal(BaseButton.SignalName.Toggled, false);
             reveal.EmitSignal(BaseButton.SignalName.Toggled, true);
+            nature.EmitSignal(BaseButton.SignalName.Toggled,true);
             if (VisualPreferencesFile.Read(VisualPreferencesPath) != VisualPreferences.Defaults) throw new InvalidDataException("HUD toggles did not save visual choices.");
             using (var locked = new FileStream(VisualPreferencesPath, FileMode.Open, System.IO.FileAccess.Read, FileShare.Read))
             {
@@ -106,9 +112,10 @@ public partial class TemplePreview
     }
     private async Task CheckVisualPreferencesStartup()
     {
-        var expected = new VisualPreferences(false, true, false);
+        var expected = new VisualPreferences(false, true, false,false);
         if (_visualPreferences != expected || _showNavigationGrid || !_useOriginalFloor || _revealActor
-            || _originalFloor?.Visible != true || _floor?.Visible != false
+            || _originalFloor?.Visible != true || _floor?.Visible != false || _natureEnabled
+            || ((CheckButton)_hud.FindChild("NatureModelsAction",true,false)).ButtonPressed
             || ((CheckButton)_hud.FindChild("NavigationGridAction", true, false)).ButtonPressed
             || !((Button)_hud.FindChild("OriginalFloorAction", true, false)).ButtonPressed
             || ((Button)_hud.FindChild("WallOcclusionAction", true, false)).ButtonPressed)
@@ -119,6 +126,6 @@ public partial class TemplePreview
             throw new InvalidDataException("Startup changed movement, the grid choice or the preference file.");
         MapLayoutWriter.Verify(_map!);
         if (_capture != null) await Capture(Path.ChangeExtension(_capture, "preferences-startup.png"));
-        GD.Print("VISUAL_PREFERENCES_STARTUP_OK: fresh Godot process restored non-default grid/floor/reveal before map load; HUD, floor visibility, walking and unchanged test file/source verified.");
+        GD.Print("VISUAL_PREFERENCES_STARTUP_OK: fresh Godot process restored non-default grid/floor/reveal/Nature before map load; HUD, floor visibility, walking and unchanged test file/source verified.");
     }
 }

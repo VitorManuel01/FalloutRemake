@@ -13,14 +13,29 @@ internal static class VisualPreferencesTests
         });
         check("all visual choices survive independent reads and atomic replacement without carrying world data", () =>
         {
-            for (int flags = 0; flags < 8; flags++)
+            for (int flags = 0; flags < 16; flags++)
             {
-                var expected = new VisualPreferences((flags & 1) != 0, (flags & 2) != 0, (flags & 4) != 0);
+                var expected = new VisualPreferences((flags & 1) != 0, (flags & 2) != 0, (flags & 4) != 0,(flags & 8) != 0);
                 VisualPreferencesFile.Write(path, expected);
                 Assert(VisualPreferencesFile.Read(path) == expected);
             }
             Assert(Directory.GetFiles(Path.GetDirectoryName(path)!).Length == 1);
-            Assert(File.ReadAllText(path).Contains("\"Version\": 1"));
+            Assert(File.ReadAllText(path).Contains("\"Version\": 2"));
+        });
+        check("legacy visual choices preserve their original file and enable Nature by default without rewriting on read",() =>
+        {
+            string original = "{\"Version\":1,\"ShowNavigationGrid\":false,\"UseOriginalFloor\":true,\"RevealActor\":false}";
+            File.WriteAllText(path,original);
+            Assert(VisualPreferencesFile.Read(path) == new VisualPreferences(false,true,false,true) && File.ReadAllText(path) == original);
+        });
+        check("visual v2 requires an explicit boolean Nature choice and rejects duplicate unknown and missing fields",() =>
+        {
+            string valid = "{\"Version\":2,\"ShowNavigationGrid\":true,\"UseOriginalFloor\":false,\"RevealActor\":true,\"ShowNatureModels\":false}";
+            Assert(!VisualPreferencesFile.Decode(Encoding.UTF8.GetBytes(valid)).ShowNatureModels);
+            foreach (string bad in new[] {valid.Replace(",\"ShowNatureModels\":false",""),valid.Replace("\"ShowNatureModels\":false","\"ShowNatureModels\":null"),
+                valid.Replace("\"ShowNatureModels\":false","\"ShowNatureModels\":\"false\""),valid.Replace("\"ShowNatureModels\":false","\"RevealActor\":false"),
+                valid.Replace("}",",\"Unexpected\":false}"),valid.Replace("\"Version\":2","\"Version\":3")})
+                Reject(() => VisualPreferencesFile.Decode(Encoding.UTF8.GetBytes(bad)));
         });
         check("invalid or incompatible visual preferences are refused without rewriting the source", () =>
         {

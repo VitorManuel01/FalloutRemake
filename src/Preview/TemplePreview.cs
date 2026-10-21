@@ -72,7 +72,7 @@ public partial class TemplePreview : Node3D
 			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
 			_hud.CharacterFocusRequested = FocusCharacter;
 			_hud.OriginalFloorRequested = ChangeOriginalFloor;
-			_hud.NatureModelsRequested = SetNatureModels;
+			_hud.NatureModelsRequested = ChangeNatureModels;
 			_hud.StopRequested = StopWalking;
 			_hud.RevealActorRequested = ChangeRevealActor;
 			_hud.InventoryRequested = OpenInventory;
