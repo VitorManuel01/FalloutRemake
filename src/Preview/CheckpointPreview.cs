@@ -18,6 +18,7 @@ public partial class TemplePreview
     {
         if (_campaign == null || _mapCatalog == null) return;
         if (_walker?.Moving == true) { NavigationStatus("Aguarde terminar o percurso para salvar."); return; }
+        SetTemplePlayback(false);
         try
         {
             CheckpointFile.Write(CheckpointPath, _campaign.Capture(_mapCatalog.Source.Sha256));
@@ -29,6 +30,7 @@ public partial class TemplePreview
     private void LoadCheckpoint()
     {
         if (_campaign == null || _directory == null) return;
+        _skipTempleFrame = true;
         try
         {
             WorldCheckpoint saved = CheckpointFile.Read(CheckpointPath);

@@ -22,21 +22,29 @@ public partial class TemplePreview
     }
     private void RefreshActiveTempleHud()
     {
+        SynchronizeTemplePlayback();
         var progress = _campaign?.TempleProgress;
         bool present = progress != null; bool current = present && _campaign!.CurrentMap == 3 && _campaign.Location.Elevation == 2 && _elevation == 2;
         bool enabled = current && _walker?.Moving == false && !InspectorOpen;
         var phase = progress?.Departure.Phase;
         string text = phase switch { NpcDeparturePhase.ToGate => "Indo até a porta", NpcDeparturePhase.GateDelay => $"Junto à porta · espera {progress!.Departure.RemainingTicks / 10.0:0.0} s",
             NpcDeparturePhase.ToMiddle => "Trecho intermediário", NpcDeparturePhase.ToExit => "Indo até a saída", NpcDeparturePhase.Hidden => "Saída concluída · NPC oculto", _ => "" };
-        text += current ? "\nAvanço manual · K salva a partida" : "\nSequência pausada · volte à elevação 2 do templo";
+        text += current ? _templeAutomatic ? "\nAutomático · K pausa e salva" : "\nAvanço manual · K salva a partida" : "\nSequência pausada · volte à elevação 2 do templo";
         _hud.TempleProgress(present,text,phase is NpcDeparturePhase.ToGate or NpcDeparturePhase.ToMiddle or NpcDeparturePhase.ToExit,
-            phase == NpcDeparturePhase.GateDelay,enabled,current && phase != NpcDeparturePhase.Hidden && !InspectorOpen);
+            phase == NpcDeparturePhase.GateDelay,enabled && !_templeAutomatic,current && phase != NpcDeparturePhase.Hidden && !InspectorOpen);
+        _hud.TemplePlayback(_templeAutomatic,enabled && phase != NpcDeparturePhase.Hidden);
         var campaign = _campaign; Guid token = campaign?.TempleToken ?? Guid.Empty; long revision = campaign?.TempleRevision ?? 0;
+        _hud.TempleAutoRequested = value =>
+        {
+            if (_campaign != campaign || campaign?.TempleToken != token || campaign.TempleRevision != revision) { RefreshActiveTempleHud(); return; }
+            SetTemplePlayback(value);
+        };
         bool Valid() => campaign != null && _campaign == campaign && campaign.TempleToken == token && campaign.TempleRevision == revision
             && campaign.CurrentMap == 3 && campaign.Location.Elevation == 2 && _elevation == 2 && !InspectorOpen;
         void Move(bool leg)
         {
             if (!Valid()) return;
+            if (_templeAutomatic) return;
             var originalPhase = campaign!.TempleProgress?.Departure.Phase;
             long beforeRevision = campaign.TempleRevision;
             TempleWorldStatus status;
@@ -49,6 +57,7 @@ public partial class TemplePreview
         void Wait(bool full)
         {
             if (!Valid()) return;
+            if (_templeAutomatic) return;
             var result = campaign!.AdvanceTempleNpcTime(full ? campaign.TempleProgress?.Departure.RemainingTicks ?? 0 : 10,token,revision,_walker?.Moving == true);
             if (result.Status == TempleWorldStatus.Ready) RefreshActiveTempleProjection();
             NavigationStatus(TempleActionText(result.Status));

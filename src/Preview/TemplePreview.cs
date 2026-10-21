@@ -302,6 +302,7 @@ public partial class TemplePreview : Node3D
 		if (_map == null) return;
 		RefreshContainerVisuals();
 		if (InspectorOpen) return;
+        AdvanceTemplePlayback(delta);
 		AdvanceWalker(delta);
 		float x = (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
 		float z = (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0);
