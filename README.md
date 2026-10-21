@@ -3,7 +3,7 @@
 [Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
 [Bateria mais recente: conversa ativa, saída do NPC e chegada a Arroyo](docs/temple-active-batch-2026-10-21.md).
 [Bateria atual: saída restaurável do NPC e vista 3D isolada](docs/temple-npc-batch-2026-10-20.md).
-[Bateria mais recente: estados, porta final e consulta de Speech](docs/temple-state-batch-2026-10-20.md).
+[Bateria anterior: estados, porta final e consulta de Speech](docs/temple-state-batch-2026-10-20.md).
 [Bateria anterior: doze incrementos e validações](docs/continuation-batch-2026-10-20.md).
 
 Projeto pessoal em Godot 4 .NET/C#, começando por Fallout 2. A direção visual futura é
@@ -84,7 +84,7 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 - **K / Salvar:** checkpoint local quando estiver parado. **R / Carregar:**
   recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
   Os atalhos usam letras para evitar conflito com os controles do editor Godot.
-  O schema atual é v5; checkpoints v1/v2/v3/v4 continuam carregando. Itens posicionados,
+  O schema atual é v7; checkpoints v1–v6 continuam carregando. Itens posicionados,
   consumidos e substituições de cenário têm estado próprio. Ao carregar, o modo
   e a seleção ainda válida são preservados.
 - **C / Personagem:** reenquadra e acompanha o personagem. WASD ou arrasto retomam
@@ -140,7 +140,7 @@ dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do
    desafio; depois, selecione o NPC e use **Chegar ao NPC** para caminhar até um
    hex ao lado dele. **Conversa · ensaio**
    consulta cinco escolhas com INT 5/Speech marcado, em um estado separado.
-   Fechar ou recomeçar preserva a partida. Conversa ativa e duelo ainda não estão disponíveis.
+   Fechar ou recomeçar preserva a partida. O duelo ainda não está disponível.
 8. Ao concluir as cinco escolhas, **Salvar resultado** grava apenas o ensaio.
    **Carregar ensaio** restaura esse arquivo separado; não carrega a partida.
    Escolhas incompletas precisam ser concluídas ou recomeçadas para salvar.
@@ -149,6 +149,14 @@ dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do
    **Ver em 3D** mostra o NPC destacado no cenário de referência.
    **Salvar saída / Carregar saída** preservam inclusive a espera parcial, em
    outro arquivo. **Voltar à conversa** conserva o resultado Speech aceito.
+10. Para continuar na partida, use **Aplicar à partida** após aceitar a conversa.
+    Em **Saída do NPC**, avance manualmente ou ative **Avançar automaticamente**.
+    **Percurso NPC** mostra o trecho e a primeira obstrução. K pausa e salva;
+    R restaura em pausa, inclusive durante a espera.
+11. Ao terminar, use **Ir à porta de Arroyo**, aguarde e abra com U. Depois use
+    **Ir à saída de Arroyo** e confirme com Enter. Esc permite parar e retomar
+    o percurso; K/R conserva o progresso e a porta aberta. A recompensa da
+    primeira entrada está auditada, mas ainda não é concedida.
 
 O efeito deste ensaio altera somente a barreira validada; não há dano a personagens
 ou combate geral. A preparação fora desse alcance fica indisponível. Baús com
