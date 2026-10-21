@@ -161,7 +161,7 @@ public partial class TemplePreview : Node3D
 		var catalog = new MapCatalog(data.Read("data/maps.txt"));
         var runtimePrototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
 		var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 }, runtimePrototype: runtimePrototypes.Get,
-            templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read));
+			templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read));
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
 		_floorArt = new FloorArtCatalog(data.Read);
 		_inventoryArt = new InventoryArtCatalog(data.Read); _unavailableItemArt.Clear();

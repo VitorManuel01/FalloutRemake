@@ -78,7 +78,7 @@ internal static class WorldTempleSpeechAudit
             && !world.Current.Doors.Navigation(2).BlockersAt(28715).Any(b => b.Key == profile.ActorKey),"Real active NPC final state failed.");
         Require(before.SequenceEqual(State(original)),"Detached world audit mutated its caller.");
         foreach (var area in world.Areas) MapLayoutWriter.Verify(area.Map);
-        return new { Status = "WORLD_TEMPLE_SPEECH_AUDIT_OK", WorldCheckpointVersion = 6, Steps = steps, WholeWorldResumes = resumes,
+        return new { Status = "WORLD_TEMPLE_SPEECH_AUDIT_OK", WorldCheckpointVersion = world.Capture(catalog.Source.Sha256).Version, Steps = steps, WholeWorldResumes = resumes,
             PausedAcrossRealStairs = pausedOnStairs, CarriedUnits = world.CarriedCount, Experience = world.Experience,
             FinalNpc = profile.Location(world.TempleProgress.Departure), Hidden = true, ItemsAndSceneryPreserved = true, CallerUnchanged = true };
     }

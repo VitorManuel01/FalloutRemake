@@ -9,6 +9,7 @@ internal static class ArroyoEntryAudit
         MapLayoutWriter.Verify(map);
         var program = IntProgram.Read(data.Read("scripts/arvillag.int"));
         var globals = GameGlobalFile.Read(data.Read("data/vault13.gam"));
+        var runtimeProfile = FalloutRemake.Runtime.ArroyoRewardProfile.Create(map,data.Read);
         const string hash = "DB21D0CEA597C67D8597D7B98FEB252823DDF27D747FE9C710DB17720E319D48";
         if (map.Source is not { Size:216200,Sha256:"0EDCDFF2AFB6FAC7E8203CE9EAE8BA4663D37F3BE112D3EF4713AF3093D8D52A" }
             || map.Prefix.Header.MapIndex != 4 || map.Prefix.Header.ScriptIndex != 27 || map.MapProgram?.Sha256 != hash
@@ -32,7 +33,7 @@ internal static class ArroyoEntryAudit
         Span(3262,(0xC001,3318),(0x8004,null),(0xC001,300),(0x80A1,null));
         int[] calls = program.Instructions.Where(i => i.Opcode == 0x80A1).Select(i => i.Offset).ToArray();
         if (!calls.SequenceEqual(new[] { 3112,3218,3276 })) throw new InvalidDataException("Arroyo XP call census changed.");
-        return new { Status = "ARROYO_ENTRY_AUDIT_OK", Map = map.Source, Program = program.Source,
+        return new { Status = "ARROYO_ENTRY_AUDIT_OK", Map = map.Source, Program = program.Source, RuntimeProfile = runtimeProfile.Fingerprint,
             TrialGlobal = globals.Entries[10], FirstRunGuard = new { Offset = 2370, Rule = 14, FalseTarget = 3318,
                 NativeMeaning = "METARULE_FIRST_RUN: (gMapHeader.flags & MAP_SAVED) == 0" },
             Branches = new[] {
@@ -42,6 +43,6 @@ internal static class ArroyoEntryAudit
             LaterEntry = "guard skips all three reward calls; must persist first-entry lifecycle independently of G10",
             OtherFirstRunEffects = "movie 3, global/reputation initialization, display messages; not executed by this audit",
             Scope = "Audited source branches and base operands only; pcAddExperience character modifiers/level effects require separate validation",
-            RuntimeRewardEnabled = false, SourceReconstruction = "verified; no game assets written" };
+            AuditAppliesReward = false, RuntimeRewardAdapter = "Optional source-bound Speech first-entry reward; neutral character below level two only", SourceReconstruction = "verified; no game assets written" };
     }
 }

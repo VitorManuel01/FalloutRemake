@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 namespace FalloutRemake.Runtime;
 
 public sealed record SavedArea(int Map, string SourceHash, string DependenciesHash, ActorLocation Location, SavedDoorSession Session, TakenItem[]? Taken = null, ItemUseAllocation[]? Uses = null, SceneryReplacement[]? Replacements = null);
-public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null);
+public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null, SavedWorldEntries? Entries = null);
 
 /// <summary>Small project-local checkpoint, not an original Fallout SAV and never an asset archive.</summary>
 public static class CheckpointFile
@@ -32,6 +32,8 @@ public static class CheckpointFile
             var checkpoint = document.Deserialize<WorldCheckpoint>(Options) ?? throw new InvalidDataException("Empty checkpoint.");
             if (checkpoint.Version >= 6 && !document.RootElement.TryGetProperty("Temple", out _))
                 throw new InvalidDataException("Checkpoint v6 requires an explicit Temple field.");
+            if (checkpoint.Version >= 8 && !document.RootElement.TryGetProperty("Entries",out _))
+                throw new InvalidDataException("Checkpoint v8 requires an explicit Entries field.");
             return checkpoint;
         }
         catch (JsonException error) { throw new InvalidDataException("Malformed checkpoint JSON.", error); }

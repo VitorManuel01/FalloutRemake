@@ -3,6 +3,7 @@
 [Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
 [Bateria mais recente: conversa ativa, saída do NPC e chegada a Arroyo](docs/temple-active-batch-2026-10-21.md).
 [Primeiros modelos Nature importados e renderização compartilhada](docs/nature-models-2026-10-21.md).
+[Primeira entrada em Arroyo e recompensa única, checkpoint v8](docs/arroyo-first-entry-v8-2026-10-21.md).
 [Bateria atual: saída restaurável do NPC e vista 3D isolada](docs/temple-npc-batch-2026-10-20.md).
 [Bateria anterior: estados, porta final e consulta de Speech](docs/temple-state-batch-2026-10-20.md).
 [Bateria anterior: doze incrementos e validações](docs/continuation-batch-2026-10-20.md).
@@ -28,7 +29,8 @@ traçado e vista 3D própria. Na partida, **Saída do NPC** oferece passos manua
 avanço automático opcional e **Percurso NPC** para consultar o trecho atual.
 Depois, siga até a porta de Arroyo, abra com **U**, caminhe até a saída e use
 **Enter** para atravessar. **K/R** preserva esse progresso, inclusive na vila.
-Os scripts e recompensas de entrada da vila ainda não são executados.
+A primeira chegada à vila após o Speech concede os 600 XP originais uma única
+vez. Os demais efeitos do script de entrada da vila ainda não são executados.
 As rochas compatíveis no exterior e na vila já usam os modelos locais de
 **Assets/Nature**, com materiais PBR e três lotes de malha por área. **Nature 3D**
 compara com as formas provisórias. Os assets proprietários permanecem fora do Git.
@@ -88,7 +90,7 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 - **K / Salvar:** checkpoint local quando estiver parado. **R / Carregar:**
   recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
   Os atalhos usam letras para evitar conflito com os controles do editor Godot.
-  O schema atual é v7; checkpoints v1–v6 continuam carregando. Itens posicionados,
+  O schema atual é v8; checkpoints v1–v7 continuam carregando. Itens posicionados,
   consumidos e substituições de cenário têm estado próprio. Ao carregar, o modo
   e a seleção ainda válida são preservados.
 - **C / Personagem:** reenquadra e acompanha o personagem. WASD ou arrasto retomam
@@ -160,7 +162,8 @@ dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do
 11. Ao terminar, use **Ir à porta de Arroyo**, aguarde e abra com U. Depois use
     **Ir à saída de Arroyo** e confirme com Enter. Esc permite parar e retomar
     o percurso; K/R conserva o progresso e a porta aberta. A recompensa da
-    primeira entrada está auditada, mas ainda não é concedida.
+    primeira entrada concede 600 XP uma única vez; retornar ou carregar não
+    repete o prêmio. Saves antigos com Arroyo já carregado não ganham XP retroativo.
 
 O efeito deste ensaio altera somente a barreira validada; não há dano a personagens
 ou combate geral. A preparação fora desse alcance fica indisponível. Baús com

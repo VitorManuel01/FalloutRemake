@@ -42,7 +42,7 @@ internal static class ItemUseCheckpointTests
             var world = World(); var items = world.Current.Items; items.Restore(new[] { new TakenItem("owner", "item", 4) });
             items.Place(ItemUseTests.Use()); items.Place(ItemUseTests.Use(2)); items.Consume(ItemUseTests.Use(2).Id);
             var saved = RoundTrip(world.Capture("catalog")); var restored = Restore(saved);
-            Assert(saved.Version == 7 && saved.Profile == "neutral-v7" && restored.CarriedCount == 2 && restored.CarriedWeight == 8 && restored.ItemUses.Length == 2);
+            Assert(saved.Version == 8 && saved.Profile == "neutral-v8" && restored.CarriedCount == 2 && restored.CarriedWeight == 8 && restored.ItemUses.Length == 2);
             Assert(restored.Current.Items.Balance("owner", "item") == new ItemBalance(5, 1, 2, 1, 1));
             Assert(CheckpointFile.Encode(restored.Capture("catalog")).SequenceEqual(CheckpointFile.Encode(saved)));
             var before = world.ItemUses[0]; saved.Areas[0].Uses![0] = saved.Areas[0].Uses![0] with { RemainingTicks = 1 };
@@ -64,9 +64,10 @@ internal static class ItemUseCheckpointTests
             {
                 JsonNode document = JsonNode.Parse(CheckpointFile.Encode(world.Capture("catalog")))!;
                 document["Version"] = version; document["Profile"] = $"neutral-v{version}";
+                document.AsObject().Remove("Entries");
                 var area = document["Areas"]![0]!.AsObject(); area.Remove("Uses"); area.Remove("Replacements"); if (version == 1) area.Remove("Taken");
                 var legacy = CheckpointFile.Decode(Encoding.UTF8.GetBytes(document.ToJsonString())); var restored = Restore(legacy);
-                Assert(restored.ItemUses.Length == 0 && restored.CarriedCount == (version == 1 ? 0 : 2) && restored.Capture("catalog").Version == 7);
+                Assert(restored.ItemUses.Length == 0 && restored.CarriedCount == (version == 1 ? 0 : 2) && restored.Capture("catalog").Version == 8);
                 Reject(() => Restore(legacy with { Areas = legacy.Areas.Select(a => a with { Uses = Array.Empty<ItemUseAllocation>() }).ToArray() }));
             }
         });
