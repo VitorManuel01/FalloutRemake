@@ -1,5 +1,6 @@
 # Fallout Remake — prévia 3D do templo
 
+[Caminhada até a anciã de Arroyo](docs/arroyo-elder-approach-2026-10-21.md).
 [Entrada de Arroyo: karma/reputação e checkpoint v9](docs/arroyo-entry-globals-v9-2026-10-21.md).
 [Auditoria das guardas do primeiro diálogo da anciã](docs/arroyo-elder-opening-audit-2026-10-21.md).
 [Bateria atual: Nature, árvores, primeira entrada e retorno de Arroyo](docs/nature-and-arroyo-batch-2026-10-21.md).

@@ -6,6 +6,7 @@ public partial class TemplePreview
 {
     private void RefreshTempleVillageGuidance()
     {
+        RefreshArroyoElderGuidance();
         if (_campaign == null) return;
         bool returning = _campaign.CurrentMap == 4;
         var route = returning ? _campaign.InspectArroyoReturnRoute(_walker?.Moving == true) : _campaign.InspectTempleVillageRoute(_walker?.Moving == true);

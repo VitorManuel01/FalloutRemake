@@ -170,6 +170,7 @@ internal static class SelfTests
             TempleExitDoorTests.Run(Check);
             NaturePresentationTests.Run(Check);
             WorldEntryTests.Run(Check);
+            ArroyoElderApproachTests.Run(Check);
             CharacterSkillTests.Run(Check);
             TravelTests.Run(Check);
             ExitPreviewTests.Run(Check);

@@ -13,6 +13,8 @@ public partial class PreviewHud
     private readonly HFlowContainer _templeMovement = new();
     private readonly Button _templeVillage = new() { Name = "TempleVillageExitAction", Text = "Ir à saída de Arroyo", Visible = false };
     public Action? TempleVillageRequested;
+    private readonly Button _arroyoElder = new() {Name="ArroyoElderApproachAction",Text="Ir até a anciã",Visible=false};
+    public Action? ArroyoElderRequested;
     private readonly Button _templeStep = new() { Name = "TempleWorldStep", Text = "Um passo" },
         _templeLeg = new() { Name = "TempleWorldLeg", Text = "Próxima parada" },
         _templeWait = new() { Name = "TempleWorldWait", Text = "Esperar", TooltipText = "Avançar até o evento pendente, sem iniciar o próximo trecho" },
@@ -31,6 +33,8 @@ public partial class PreviewHud
         _templeProgress.AddChild(_templeState);
         _templeProgress.AddChild(_templeAuto); _templeAuto.Toggled += value => TempleAutoRequested?.Invoke(value);
         _templeProgress.AddChild(_templeMovement); _templeProgress.AddChild(_templeVillage);
+        _templeProgress.AddChild(_arroyoElder);
+        _arroyoElder.Pressed += () => {if (!_arroyoElder.Disabled) ArroyoElderRequested?.Invoke();};
         foreach (var button in new[] { _templeStep, _templeLeg, _templeTick, _templeWait, _templeFocus }) _templeMovement.AddChild(button);
         _templeStep.Pressed += () => { if (!_templeStep.Disabled) TempleStepRequested?.Invoke(); };
         _templeLeg.Pressed += () => { if (!_templeLeg.Disabled) TempleLegRequested?.Invoke(); };
@@ -68,4 +72,7 @@ public partial class PreviewHud
     { _templeRoute.Visible = visible; _templeRoute.Disabled = !enabled; _templeRoute.SetPressedNoSignal(pressed); _templeRoute.TooltipText = hint; }
     public void TempleVillageAction(bool visible,bool enabled,string text,string hint)
     { _templeVillage.Visible = visible; _templeVillage.Disabled = !enabled; _templeVillage.Text = text; _templeVillage.TooltipText = hint; }
+    public void ArroyoElderAction(bool visible,bool enabled,string text)
+    { _arroyoElder.Visible=visible; _arroyoElder.Disabled=!enabled; _arroyoElder.Text=text;
+        _arroyoElder.TooltipText="Caminha até um hex vizinho da anciã original. A conversa ainda não é iniciada."; }
 }
