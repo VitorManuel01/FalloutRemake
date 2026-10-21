@@ -24,6 +24,7 @@ public partial class TemplePreview
                 BindCurrentArea(); ChangeElevation(0);
                 byte[] before = CheckpointFile.Encode(_campaign.Capture(_mapCatalog!.Source.Sha256));
                 var source = _layout!.Objects.Where(o => NaturePresentation.Resolve(id,o.Source) != null).ToArray();
+                if (id == 126) await CheckNatureAssetFallback(source);
                 if (_natureCount != source.Length || _natureCount == 0 || _natureBatches.Count is < 1 or > 4
                     || _natureTreeCount != (id == 126 ? 88 : 0))
                     throw new InvalidDataException($"Nature batch/instance counts disagree with original map {id}: {_natureCount}/{source.Length} in {_natureBatches.Count} batches.");

@@ -1,5 +1,6 @@
 # Fallout Remake — prévia 3D do templo
 
+[Bateria atual: Nature, árvores, primeira entrada e retorno de Arroyo](docs/nature-and-arroyo-batch-2026-10-21.md).
 [Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
 [Bateria mais recente: conversa ativa, saída do NPC e chegada a Arroyo](docs/temple-active-batch-2026-10-21.md).
 [Primeiros modelos Nature importados e renderização compartilhada](docs/nature-models-2026-10-21.md).

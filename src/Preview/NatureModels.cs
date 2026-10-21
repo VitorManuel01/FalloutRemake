@@ -17,16 +17,23 @@ public partial class TemplePreview
     private readonly List<NatureBatch> _natureBatches = new();
     private readonly Dictionary<Node3D,bool> _natureOriginals = new();
     private bool _natureEnabled = true, _natureTest;
-    private int _natureCount, _natureTreeCount;
+    private int _natureCount, _natureTreeCount, _natureMissingObjects;
+    private Func<string,bool> _natureAssetAvailable = path => ResourceLoader.Exists(path);
     private static string NaturePath(string name) => name switch {
         "RiverRock1" or "RockS01" or "BlastedForestBoulder01" or "BlastedForestCliff01" or "BlastedForestBurntTreeStump01"
             => $"res://Assets/Nature/{name}.glb",
         _ => throw new InvalidDataException("Only the local Nature category is supported.") };
     private NatureAsset? LoadNatureAsset(string name)
     {
-        if (_natureAssets.TryGetValue(name,out var existing)) return existing;
         string path = NaturePath(name);
-        if (!ResourceLoader.Exists(path)) { _natureAssets.Add(name,null); GD.Print($"NATURE_ASSET_UNAVAILABLE: {name}; provisional geometry retained."); return null; }
+        bool cached = _natureAssets.TryGetValue(name,out var existing);
+        if (existing != null) return existing;
+        if (!_natureAssetAvailable(path))
+        {
+            _natureAssets[name] = null;
+            if (!cached) GD.Print($"NATURE_ASSET_UNAVAILABLE: {name}; provisional geometry retained.");
+            return null;
+        }
         var scene = _resources.Own(ResourceLoader.Load<PackedScene>(path));
         Node root = scene.Instantiate(); var parts = new List<NaturePart>();
         Vector3 min = new(float.PositiveInfinity,float.PositiveInfinity,float.PositiveInfinity), max = -min;
@@ -48,20 +55,20 @@ public partial class TemplePreview
                 throw new InvalidDataException("Nature scene has no bounded mesh geometry.");
         }
         finally { root.Free(); }
-        var asset = new NatureAsset(scene,parts.ToArray(),new(min,max-min)); _natureAssets.Add(name,asset);
+        var asset = new NatureAsset(scene,parts.ToArray(),new(min,max-min)); _natureAssets[name] = asset;
         GD.Print($"NATURE_ASSET_READY: {name}; {parts.Count} shared mesh parts; bounds {asset.Bounds.Size}.");
         return asset;
     }
     private void BuildNatureModels()
     {
-        _natureBatches.Clear(); _natureOriginals.Clear(); ResetNaturePicking(); _natureCount = _natureTreeCount = 0;
+        _natureBatches.Clear(); _natureOriginals.Clear(); ResetNaturePicking(); _natureCount = _natureTreeCount = _natureMissingObjects = 0;
         if (_layout == null || _campaign == null) return;
         using var resources = new ResourceScope();
         var groups = _layout.Objects.Select(o => (Object:o,Model:NaturePresentation.Resolve(_campaign.CurrentMap,o.Source)))
             .Where(pair => pair.Model != null).GroupBy(pair => pair.Model!.Name);
         foreach (var group in groups)
         {
-            var asset = LoadNatureAsset(group.Key); if (asset == null) continue;
+            var asset = LoadNatureAsset(group.Key); if (asset == null) { _natureMissingObjects += group.Count(); continue; }
             var placements = new List<NatureInstance>();
             foreach (var pair in group)
             {
@@ -111,7 +118,7 @@ public partial class TemplePreview
             batch.Node.Multimesh.VisibleInstanceCount = index;
             batch.Node.Visible = index > 0;
         }
-        _hud.NatureModelsState(_natureEnabled,_natureCount,_natureTreeCount);
+        _hud.NatureModelsState(_natureEnabled,_natureCount,_natureTreeCount,_natureMissingObjects);
     }
 }
 
@@ -124,10 +131,11 @@ public partial class PreviewHud
         controls.AddChild(_nature); _nature.Toggled += enabled => NatureModelsRequested?.Invoke(enabled);
         _nature.TooltipText = "Comparar os modelos Nature com as formas provisórias. IDs e caminhos permanecem iguais.";
     }
-    public void NatureModelsState(bool enabled,int count,int trees)
+    public void NatureModelsState(bool enabled,int count,int trees,int missing)
     {
         _nature.SetPressedNoSignal(enabled); _nature.Disabled = count == 0;
         _nature.Text = count == 0 ? "Nature 3D" : $"Nature 3D · {count} objetos";
         _nature.TooltipText = $"{count-trees} rochas e {trees} árvores queimadas. Compare com as formas provisórias; IDs e caminhos permanecem iguais.";
+        if (missing > 0) _nature.TooltipText += $" {missing} objetos mantêm a forma provisória porque falta o modelo local.";
     }
 }
