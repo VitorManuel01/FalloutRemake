@@ -13,6 +13,11 @@ public partial class TemplePreview
 {
     private async Task CheckTempleVillageGuidance()
     {
+        // Start beyond a single step so interruption exercises a real remaining route.
+        var retreat = _navigation!.FindRoute(_walker!.CurrentHex,19728);
+        if (retreat.Tiles.Length < 7) throw new InvalidDataException("Village recovery audit needs a reachable original interior segment.");
+        if (!_walkMode) ToggleWalkMode();
+        RequestWalk(retreat.Tiles[6]); CompleteReadabilityWalk();
         var approach = _campaign!.InspectTempleVillageRoute(false);
         if (approach.Status != TempleWorldStatus.DoorRequired || approach.DoorKey == null || approach.TargetHex == null)
             throw new InvalidDataException("Village guidance must first respect the closed source door 100.");
@@ -21,8 +26,26 @@ public partial class TemplePreview
         if (door.Source.Header.Id != 100 || door.Source.Header.Tile != 13528 || door.IsOpen)
             throw new InvalidDataException("Village guidance picked a foreign door.");
         doorAction.EmitSignal(Button.SignalName.Pressed);
-        if (!_walker!.Moving || !_committedRoute.SequenceEqual(approach.Tiles!) || _doors.Get(approach.DoorKey)!.IsOpen)
+        if (!_walker!.Moving || !_committedRoute.SequenceEqual(approach.Tiles!) || _doors.Get(approach.DoorKey)!.IsOpen
+            || !doorAction.Disabled || !doorAction.Text.StartsWith("Caminhando",StringComparison.Ordinal))
             throw new InvalidDataException("Village approach skipped walking or opened its door automatically.");
+        var oldApproach = _hud.TempleVillageRequested!;
+        _walker.Advance(.05); UpdateWalkerPosition(); int next = _walker.NextHex;
+        StopWalking();
+        if (!_walker.StopRequested || !_walker.Moving) throw new InvalidDataException("Village approach did not keep the current step while stopping.");
+        CompleteReadabilityWalk();
+        if (_campaign.Location.Hex != next || _doors.Get(approach.DoorKey)!.IsOpen || _campaign.CurrentMap != 3)
+            throw new InvalidDataException("Stopped village guidance jumped hexes or opened/travelled early.");
+        SaveCheckpoint(); var stopped = CheckpointFile.Encode(_campaign.Capture(_mapCatalog!.Source.Sha256)); LoadCheckpoint();
+        oldApproach();
+        if (_walker!.Moving || !stopped.SequenceEqual(CheckpointFile.Encode(_campaign.Capture(_mapCatalog.Source.Sha256))))
+            throw new InvalidDataException("Stale village approach resumed after checkpoint load.");
+        var remaining = _campaign.InspectTempleVillageRoute(false);
+        if (remaining.Status != TempleWorldStatus.DoorRequired || remaining.Tiles![0] != next || remaining.Tiles.Length >= approach.Tiles!.Length)
+            throw new InvalidDataException("Village approach did not replan from the stopped authoritative hex.");
+        doorAction.EmitSignal(Button.SignalName.Pressed);
+        if (!_walker.Moving || !_committedRoute.SequenceEqual(remaining.Tiles!))
+            throw new InvalidDataException($"Restored village guidance did not restart its exact remaining walk: moving {_walker.Moving}, disabled {doorAction.Disabled}, current {_campaign.Location.Hex}, expected {string.Join(',',remaining.Tiles!)}, actual {string.Join(',',_committedRoute)}.");
         CompleteReadabilityWalk();
         using (var use = new InputEventKey { Pressed = true,PhysicalKeycode = Key.U }) _UnhandledInput(use);
         if (!_doors.Get(approach.DoorKey)!.IsOpen || _campaign.Experience != 25 || _campaign.CarriedCount != 2)
@@ -70,6 +93,6 @@ public partial class TemplePreview
             throw new InvalidDataException("Old Temple guidance changed the loaded Arroyo session.");
         foreach (var area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
         if (_capture != null) await Capture(Path.ChangeExtension(_capture,"arroyo-after-speech.png"));
-        GD.Print("TEMPLE_VILLAGE_ROUTE_OK: source door 100 approach and explicit U, open-door v7 restoration, source exits to map 4/0/20517, exact real walk, explicit Enter travel, busy/stale guards, Arroyo checkpoint with inactive Temple progress, original source bytes/items/25 XP preserved.");
+        GD.Print("TEMPLE_VILLAGE_ROUTE_OK: source door 100 approach, mid-step stop and v7 load/replan, stale approach refusal, explicit U, open-door restoration, source exits to map 4/0/20517, exact real walk, explicit Enter travel, busy/stale guards, Arroyo checkpoint with inactive Temple progress, original source bytes/items/25 XP preserved.");
     }
 }

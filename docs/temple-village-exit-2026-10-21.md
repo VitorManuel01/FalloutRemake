@@ -5,6 +5,9 @@ oferece **Ir à porta de Arroyo**. O personagem percorre os hexes alcançáveis,
 seleciona a porta e aguarda **U**. Depois, **Ir à saída de Arroyo** guia até
 um marcador original; **Enter** confirma a viagem. Não há abertura ou viagem
 automática. Ocupação, movimento e callbacks de uma sessão anterior são recusados.
+**Esc** conclui apenas o passo em andamento. Depois, K/R conserva esse hex;
+a orientação calcula o restante a partir dele. O painel distingue caminhada,
+porta próxima, saída alcançada e passagem sem caminho.
 
 A primeira tentativa com os dados reais revelou uma passagem ainda fechada:
 porta **100**, offset **423748**, hex **13528**, elevação **2**. Ela usa
@@ -38,6 +41,9 @@ conserva os dois itens e 25 XP do cenário de teste e reconstrói os MAPs origin
 Evidência da condição: `.local/temple-exit-door-proof.json` (apenas local).
 Bateria completa **18/18** aprovada:
 `.local/temple-validation-20261021-041247-b8f5fee8/manifest.json`.
+Recuperação de percurso e mensagens verificadas depois em
+`.local/temple-validation-20261021-041959-c91e5809/manifest.json` (**18/18**)
+e `.local/village-recovery-isolated.json` (aprovado, 1280×800, desktop preservado).
 
 Limitação observada: `arvillag.int` possui recompensas na primeira entrada;
 elas ainda não são executadas. A ausência de XP adicional nesta prévia não

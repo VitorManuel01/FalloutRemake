@@ -32,6 +32,9 @@ O [ciclo de gravação do mapa](https://github.com/alexbatalov/fallout2-ce/blob/
 marca o bit 1. O [cálculo de experiência](https://github.com/alexbatalov/fallout2-ce/blob/e97087b9582f37075db347a89898887320753f8b/src/stat.cc#L686)
 inclui Swift Learner, limites e efeitos de nível. Essas referências explicam
 por que a guarda não pode ser substituída simplesmente por “G10 deixou de ser 2”.
+Pela fórmula nativa de nível, a passagem de nível 1 para 2 exige 1000 XP:
+o cenário controlado atual, sem perks, iria de 25 para 625 XP sem cruzar esse
+limiar. Isso delimita um primeiro adaptador possível, sem implementar níveis.
 
 Plano do próximo incremento:
 

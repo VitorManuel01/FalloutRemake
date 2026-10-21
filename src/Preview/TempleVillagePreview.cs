@@ -12,8 +12,14 @@ public partial class TemplePreview
         bool visible = complete && _campaign.CurrentMap == 3 && _elevation == 2 && _campaign.Location.Elevation == 2;
         bool arrived = route.TargetHex == _campaign.Location.Hex;
         bool door = route.Status == TempleWorldStatus.DoorRequired;
+        string label = route.Status switch {
+            TempleWorldStatus.DoorRequired => arrived ? "Selecionar porta · U para abrir" : "Ir à porta de Arroyo",
+            TempleWorldStatus.Ready => arrived ? "Na saída · Enter para passar" : "Ir à saída de Arroyo",
+            TempleWorldStatus.Busy => "Caminhando · Esc para parar",
+            TempleWorldStatus.Blocked => "Passagem sem caminho disponível",
+            _ => "Saída de Arroyo indisponível" };
         _hud.TempleVillageAction(visible,(route.Status == TempleWorldStatus.Ready && !arrived || door) && !InspectorOpen,
-            door ? arrived ? "Selecionar porta · U para abrir" : "Ir à porta de Arroyo" : arrived ? "Na saída · Enter para passar" : "Ir à saída de Arroyo",
+            label,
             "Caminhe até a porta e abra com U. Depois siga até a passagem e confirme com Enter.");
         var campaign = _campaign; var token = campaign.TempleToken;
         _hud.TempleVillageRequested = () =>
@@ -27,7 +33,8 @@ public partial class TemplePreview
             if (!_walkMode) ToggleWalkMode();
             RequestWalk(current.TargetHex.Value);
             FrameRoute();
-            NavigationStatus("Caminhando até a saída original de Arroyo · Enter atravessa ao chegar");
+            NavigationStatus(current.DoorKey != null ? "Caminhando até a porta de Arroyo · U abre ao chegar · Esc para parar"
+                : "Caminhando até a saída original de Arroyo · Enter atravessa ao chegar · Esc para parar");
         };
     }
 }

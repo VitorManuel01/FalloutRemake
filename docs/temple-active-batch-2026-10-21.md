@@ -12,6 +12,7 @@ Branch `codex/temple-active-speech`, baseada em `codex/temple-npc-departure`.
 | Porta da vila e checkpoint v7 | Instância 100 validada pela condição original; aproximação real, U manual, persistência e migração restrita de versões anteriores. |
 | Caminhada e viagem a Arroyo | Marcadores originais, Enter explícito, restauração em Arroyo e preservação do templo inativo, itens, XP e fontes. |
 | Auditoria da recompensa de entrada | Guarda original de primeira entrada e três ramos de XP verificados; Speech corresponde a 600 XP base, ainda sem concessão na partida. |
+| Recuperação do percurso da vila | Esc completa só o passo atual; K/R restaura o hex e a orientação retoma o restante. Mensagens distinguem caminhada e falta de caminho. |
 
 O conjunto possui **309 grupos sintéticos**. As verificações gráficas foram
 feitas somente no desktop isolado; o desktop de entrada permaneceu `Default`.
@@ -19,6 +20,11 @@ Capturas locais da última etapa: `.local/village-v7-1280.temple-village-door.pn
 e `.local/village-v7-1280.arroyo-after-speech.png`.
 Bateria completa **18/18**, builds sem avisos/erros:
 `.local/temple-validation-20261021-041247-b8f5fee8/manifest.json`.
+Verificação final, incluindo auditoria nativa da recompensa e recuperação do
+percurso: **18/18**, **309 grupos sintéticos**, builds sem avisos/erros em
+`.local/temple-validation-20261021-041959-c91e5809/manifest.json`.
+A checagem adicional da mensagem de caminhada e da retomada passou também
+em `.local/village-recovery-isolated.json`, 1280×800, entrada `Default` intacta.
 
 Detalhes e evidências por etapa:
 [estado ativo](temple-world-v6-2026-10-21.md),
@@ -31,8 +37,9 @@ Detalhes e evidências por etapa:
 
 Arte final, combate geral, desafio do baú e execução completa dos scripts da
 vila continuam pendentes. A entrada na vila ainda não concede a recompensa
-original. Próximo incremento recomendado: auditar sua condição de primeira
-entrada e os ramos de recompensa antes de integrar XP. **GPT-6.1 Sol, esforço Alto**.
+original. Próximo incremento recomendado: persistir entrada efetiva separada do
+cache de mapas e integrar o prêmio comprovado de forma atômica, com proteção
+contra repetição e migração conservadora. **GPT-6.1 Sol, esforço Alto**.
 
 Arquivos proprietários permanecem fora do Git. Alterações anteriores de
 formatação, `.uid` e `Assets/` são preservadas. Nenhum push foi solicitado.
