@@ -24,15 +24,18 @@ public partial class TemplePreview
     {
         SynchronizeTemplePlayback();
         RefreshNpcRouteView();
+        RefreshTempleVillageGuidance();
         var progress = _campaign?.TempleProgress;
         bool present = progress != null; bool current = present && _campaign!.CurrentMap == 3 && _campaign.Location.Elevation == 2 && _elevation == 2;
         bool enabled = current && _walker?.Moving == false && !InspectorOpen;
         var phase = progress?.Departure.Phase;
         string text = phase switch { NpcDeparturePhase.ToGate => "Indo até a porta", NpcDeparturePhase.GateDelay => $"Junto à porta · espera {progress!.Departure.RemainingTicks / 10.0:0.0} s",
             NpcDeparturePhase.ToMiddle => "Trecho intermediário", NpcDeparturePhase.ToExit => "Indo até a saída", NpcDeparturePhase.Hidden => "Saída concluída · NPC oculto", _ => "" };
-        text += current ? _templeAutomatic ? "\nAutomático · K pausa e salva" : "\nAvanço manual · K salva a partida" : "\nSequência pausada · volte à elevação 2 do templo";
+        text += phase == NpcDeparturePhase.Hidden ? "\nSpeech aceito · K salva a partida"
+            : current ? _templeAutomatic ? "\nAutomático · K pausa e salva" : "\nAvanço manual · K salva a partida" : "\nSequência pausada · volte à elevação 2 do templo";
+        if (present && _campaign!.CurrentMap == 3) _hud.Status(phase == NpcDeparturePhase.Hidden ? "NPC concluiu a saída · passagem para Arroyo disponível" : "Speech aceito · acompanhe a saída do NPC");
         _hud.TempleProgress(present,text,phase is NpcDeparturePhase.ToGate or NpcDeparturePhase.ToMiddle or NpcDeparturePhase.ToExit,
-            phase == NpcDeparturePhase.GateDelay,enabled && !_templeAutomatic,current && phase != NpcDeparturePhase.Hidden && !InspectorOpen);
+            phase == NpcDeparturePhase.GateDelay,enabled && !_templeAutomatic,current && phase != NpcDeparturePhase.Hidden && !InspectorOpen,phase == NpcDeparturePhase.Hidden);
         _hud.TemplePlayback(_templeAutomatic,enabled && phase != NpcDeparturePhase.Hidden);
         var campaign = _campaign; Guid token = campaign?.TempleToken ?? Guid.Empty; long revision = campaign?.TempleRevision ?? 0;
         _hud.TempleAutoRequested = value =>

@@ -22,15 +22,16 @@ public sealed class TempleNpcDepartureProfile
     private readonly int[][] _routes;
     private readonly MapObject _actor, _gate;
     public TempleSpeechProfile Speech { get; }
+    public TempleExitDoorProfile? ExitDoor { get; }
     public string Fingerprint { get; }
     public string ActorKey => _actor.Key;
     public string GateKey => _gate.Key;
     public const int DelayTicks = 20;
     public const string MapProgramHash = "37221604DFD8166E635795FEEF5A72D011F195C9613A9E0DBBCCED7C28DE3CC1";
 
-    internal TempleNpcDepartureProfile(TempleSpeechProfile speech, MapObject[] roots, MapObject actor, MapObject gate)
+    internal TempleNpcDepartureProfile(TempleSpeechProfile speech, MapObject[] roots, MapObject actor, MapObject gate, TempleExitDoorProfile? exitDoor = null)
     {
-        Speech = speech; _roots = roots.ToArray(); _actor = actor; _gate = gate;
+        Speech = speech; _roots = roots.ToArray(); _actor = actor; _gate = gate; ExitDoor = exitDoor;
         int[] targets = { 19728, 22712, 28715 }; int from = actor.Header.Tile;
         _routes = new int[3][];
         for (int i = 0; i < 3; i++)
@@ -60,7 +61,7 @@ public sealed class TempleNpcDepartureProfile
             || map.MapProgram?.Sha256 != MapProgramHash) throw new InvalidDataException("Unknown NPC departure programs.");
         // Full program fingerprints bind the audited movement, timer and visibility instructions.
         // The evidence report also checks their exact opcode spans independently.
-        return new(speech, map.ObjectLayers.SelectMany(l => l.Objects).ToArray(), actor, gate);
+        return new(speech, map.ObjectLayers.SelectMany(l => l.Objects).ToArray(), actor, gate, TempleExitDoorProfile.Create(map, read));
     }
     internal int[] Route(NpcDeparturePhase phase) => _routes[phase switch
     { NpcDeparturePhase.ToGate => 0, NpcDeparturePhase.ToMiddle => 1, NpcDeparturePhase.ToExit => 2, _ => throw new InvalidDataException("Not a movement phase.") }];

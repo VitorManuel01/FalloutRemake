@@ -192,6 +192,7 @@ public partial class TemplePreview
         if (_walker != null && _travel != null && _elevation == _travel.Location.Elevation) _travel.MoveTo(_walker.CurrentHex);
         if (_walkerNode != null && _walker != null && _layout != null) _walkerNode.Position = Point(_walker.Position - _layout.Origin, 0);
         RefreshNpcRouteView();
+        RefreshTempleVillageGuidance();
     }
 
     private string NavigationDetails(PreviewObject obj)

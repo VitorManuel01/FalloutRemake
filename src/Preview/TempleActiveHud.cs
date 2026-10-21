@@ -10,6 +10,9 @@ public partial class PreviewHud
     private readonly Label _templeHeading = new() { Text = "SAÍDA DO NPC · PARTIDA", Modulate = new Color("c2a66d") };
     private readonly CheckButton _templeAuto = new() { Name = "TempleWorldAutomatic", Text = "Avançar automaticamente",
         TooltipText = "Ritmo provisório. Pausa com janelas, caminhada, outra elevação e ao salvar." };
+    private readonly HFlowContainer _templeMovement = new();
+    private readonly Button _templeVillage = new() { Name = "TempleVillageExitAction", Text = "Ir à saída de Arroyo", Visible = false };
+    public Action? TempleVillageRequested;
     private readonly Button _templeStep = new() { Name = "TempleWorldStep", Text = "Um passo" },
         _templeLeg = new() { Name = "TempleWorldLeg", Text = "Próxima parada" },
         _templeWait = new() { Name = "TempleWorldWait", Text = "Esperar", TooltipText = "Avançar até o evento pendente, sem iniciar o próximo trecho" },
@@ -27,14 +30,15 @@ public partial class PreviewHud
         _templeProgress.AddChild(_templeHeading); _templeState.AddThemeFontSizeOverride("font_size",12);
         _templeProgress.AddChild(_templeState);
         _templeProgress.AddChild(_templeAuto); _templeAuto.Toggled += value => TempleAutoRequested?.Invoke(value);
-        var actions = new HFlowContainer(); _templeProgress.AddChild(actions);
-        foreach (var button in new[] { _templeStep, _templeLeg, _templeTick, _templeWait, _templeFocus }) actions.AddChild(button);
+        _templeProgress.AddChild(_templeMovement); _templeProgress.AddChild(_templeVillage);
+        foreach (var button in new[] { _templeStep, _templeLeg, _templeTick, _templeWait, _templeFocus }) _templeMovement.AddChild(button);
         _templeStep.Pressed += () => { if (!_templeStep.Disabled) TempleStepRequested?.Invoke(); };
         _templeLeg.Pressed += () => { if (!_templeLeg.Disabled) TempleLegRequested?.Invoke(); };
         _templeWait.Pressed += () => { if (!_templeWait.Disabled) TempleWaitRequested?.Invoke(); };
         _templeTick.Pressed += () => { if (!_templeTick.Disabled) TempleTickRequested?.Invoke(); };
         _templeFocus.Pressed += () => { if (!_templeFocus.Disabled) TempleFocusRequested?.Invoke(); };
         _templeReveal.Pressed += RevealTempleProgress;
+        _templeVillage.Pressed += () => { if (!_templeVillage.Disabled) TempleVillageRequested?.Invoke(); };
     }
     private async void RevealTempleProgress()
     {
@@ -51,9 +55,10 @@ public partial class PreviewHud
             return _templeHeading.IsVisibleInTree() && Inside(_templeHeading) && Inside(_templeState) && Inside(_templeStep);
         }
     }
-    public void TempleProgress(bool present, string text, bool walking, bool waiting, bool canAct, bool canFocus)
+    public void TempleProgress(bool present, string text, bool walking, bool waiting, bool canAct, bool canFocus, bool complete = false)
     {
         _templeProgress.Visible = _templeReveal.Visible = present; _templeState.Text = text;
+        _templeMovement.Visible = _templeAuto.Visible = !complete;
         _templeStep.Disabled = _templeLeg.Disabled = !canAct || !walking;
         _templeTick.Disabled = _templeWait.Disabled = !canAct || !waiting; _templeFocus.Disabled = !canFocus;
     }
@@ -61,4 +66,6 @@ public partial class PreviewHud
     { _templeAuto.SetPressedNoSignal(enabled); _templeAuto.Disabled = !enabled && !canEnable; }
     public void TempleRouteAction(bool visible,bool enabled,bool pressed,string hint)
     { _templeRoute.Visible = visible; _templeRoute.Disabled = !enabled; _templeRoute.SetPressedNoSignal(pressed); _templeRoute.TooltipText = hint; }
+    public void TempleVillageAction(bool visible,bool enabled,string text,string hint)
+    { _templeVillage.Visible = visible; _templeVillage.Disabled = !enabled; _templeVillage.Text = text; _templeVillage.TooltipText = hint; }
 }

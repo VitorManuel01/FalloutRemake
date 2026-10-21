@@ -136,6 +136,7 @@ public sealed partial class WorldSession
         DoorSession doors = DoorSession.FromMap(map, DoorSession.SupportsTempleDoorAdapter(map));
         var scenery = new ScenerySession(); doors.IsSceneryReplaced = scenery.Replaces;
         doors.ProjectObject = source => EffectiveObject(id, source); doors.ProjectDoor = key => TempleGate(id, key);
+        doors.AllowTempleExitUse = key => id == 3 && CanUseTempleExit(key);
         area = new WorldArea(map, doors, new TempleTravel(map, doors), new ItemTransferSession(map), scenery);
         _areas.Add(id, area); return area;
     }
@@ -184,8 +185,8 @@ public sealed partial class WorldSession
         string.Join("\n", map.Dependencies.OrderBy(d => d.Path, StringComparer.Ordinal).Select(d => $"{d.Path}|{d.Size}|{d.Sha256}")))));
     public WorldCheckpoint Capture(string catalogHash)
     {
-        ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses();
-        return new(6, "neutral-v6", catalogHash, InitialMap, CurrentMap,
+        ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses(); ValidateTempleExit();
+        return new(7, "neutral-v7", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
                 DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray(), _templeProgress?.Capture());
     }
@@ -194,7 +195,8 @@ public sealed partial class WorldSession
     {
         if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2"
             || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
-            || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5" || checkpoint.Version == 6 && checkpoint.Profile == "neutral-v6") || checkpoint.CatalogHash != catalogHash
+            || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5" || checkpoint.Version == 6 && checkpoint.Profile == "neutral-v6"
+            || checkpoint.Version == 7 && checkpoint.Profile == "neutral-v7") || checkpoint.CatalogHash != catalogHash
             || checkpoint.Version < 6 && checkpoint.Temple != null
             || checkpoint.InitialMap != initialMap || checkpoint.Areas is not { Length: > 0 and <= 16 })
             throw new InvalidDataException("Checkpoint version, profile or catalog is incompatible.");
@@ -215,12 +217,13 @@ public sealed partial class WorldSession
                 || checkpoint.Version < 4 && saved.Replacements != null || checkpoint.Version >= 4 && saved.Replacements == null)
                 throw new InvalidDataException("Checkpoint item state does not match its schema version.");
             area.Items.Restore(saved.Taken ?? Array.Empty<TakenItem>(), saved.Uses ?? Array.Empty<ItemUseAllocation>());
-            area.Doors.Restore(saved.Session, checkpoint.Version >= 5);
+            area.Doors.Restore(saved.Session, checkpoint.Version >= 5, checkpoint.Version >= 7 && checkpoint.Temple != null);
         }
         var scenes = checkpoint.Areas.Select(a => (Area: candidate._areas[a.Map], Records: a.Replacements ?? Array.Empty<SceneryReplacement>())).ToArray();
         candidate.ValidateScenery(scenes);
         foreach (var scene in scenes) scene.Area.Scenery.ApplyPrepared(ScenerySession.Prepare(scene.Records));
         candidate.RestoreTempleProgress(checkpoint.Temple);
+        candidate.ValidateTempleExit();
         candidate.ValidateUses();
         foreach (SavedArea saved in checkpoint.Areas) candidate._areas[saved.Map].Travel.Arrive(saved.Location);
         candidate.CurrentMap = checkpoint.CurrentMap;

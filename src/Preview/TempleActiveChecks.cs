@@ -103,6 +103,7 @@ public partial class TemplePreview
             if (_capture != null) await Capture(Path.ChangeExtension(_capture,"active-npc-hidden.png"));
             foreach (var area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
             await CheckTemplePlayback(stepped,CheckPose);
+            await CheckTempleVillageGuidance();
             GD.Print("TEMPLE_ACTIVE_SPEECH_OK: explicit world acceptance, v6 K/R, projected mesh/picking/blocker/approach, open gate retained, occupied/busy/stale action guards, partial event restoration and corrupt-file rollback, three route legs, hidden final state, original MAP/items/25 XP preserved.");
         }
         finally

@@ -1,6 +1,7 @@
 # Fallout Remake — prévia 3D do templo
 
 [Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
+[Bateria mais recente: conversa ativa, saída do NPC e chegada a Arroyo](docs/temple-active-batch-2026-10-21.md).
 [Bateria atual: saída restaurável do NPC e vista 3D isolada](docs/temple-npc-batch-2026-10-20.md).
 [Bateria mais recente: estados, porta final e consulta de Speech](docs/temple-state-batch-2026-10-20.md).
 [Bateria anterior: doze incrementos e validações](docs/continuation-batch-2026-10-20.md).
@@ -18,10 +19,15 @@ O leitor verifica a reconstrução dos bytes do mapa antes de montar a cena.
 O personagem ainda tem apenas as regras mínimas deste teste, sem combate ou arte final.
 A porta final já abre no estado inicial, permitindo chegar perto do NPC;
 o botão **Conversa · ensaio** permite consultar cinco escolhas originais, sem
-alterar a partida. Conversa ativa e duelo permanecem indisponíveis.
+alterar a partida. Ao concluir, **Aplicar à partida** confirma esse resultado no
+cenário ativo. O duelo permanece indisponível.
 Após a aceitação no ensaio, **Saída do NPC · ensaio** permite acompanhar os três
 trechos originais, cumprir a espera, salvar/restaurar a saída e alternar entre
-traçado e vista 3D própria. O cenário ativo permanece no mesmo estado.
+traçado e vista 3D própria. Na partida, **Saída do NPC** oferece passos manuais,
+avanço automático opcional e **Percurso NPC** para consultar o trecho atual.
+Depois, siga até a porta de Arroyo, abra com **U**, caminhe até a saída e use
+**Enter** para atravessar. **K/R** preserva esse progresso, inclusive na vila.
+Os scripts e recompensas de entrada da vila ainda não são executados.
 
 **Correção do primeiro marco:** o interior é `maps/arcaves.map`, ID 3.
 `maps/artemple.map`, ID 126, é a área externa com Klint. O inspetor agora usa o interior

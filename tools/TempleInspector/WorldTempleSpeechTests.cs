@@ -137,7 +137,7 @@ internal static class WorldTempleSpeechTests
                 var legacy = saved with { Version = version, Profile = $"neutral-v{version}", Areas = saved.Areas.Select(a => a with
                     { Taken = version < 2 ? null : a.Taken, Uses = version < 3 ? null : a.Uses, Replacements = version < 4 ? null : a.Replacements }).ToArray() };
                 var restored = WorldSession.Restore(_ => map,new[] { 3,126 },legacy,"catalog");
-                Assert(restored.TempleProgress == null && restored.Capture("catalog").Version == 6 && restored.Current.Doors.Navigation(2).BlockersAt(13728).Any(b => b.Id == 126));
+                Assert(restored.TempleProgress == null && restored.Capture("catalog").Version == 7 && restored.Current.Doors.Navigation(2).BlockersAt(13728).Any(b => b.Id == 126));
             }
         });
         check("NPC departure freezes outside its active elevation and resets invalidate all old actions", () =>
@@ -160,7 +160,7 @@ internal static class WorldTempleSpeechTests
             var missing = JsonNode.Parse(bytes)!; missing.AsObject().Remove("Temple");
             Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes(missing.ToJsonString())));
             string json = Encoding.UTF8.GetString(bytes);
-            Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes(json.Replace("\"Version\": 6", "\"Version\": 6, \"Version\": 6"))));
+            Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes(json.Replace("\"Version\": 7", "\"Version\": 7, \"Version\": 7"))));
             Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes(json.Replace("\"RouteIndex\": 0", "\"RouteIndex\": 0, \"RouteIndex\": 0"))));
             var legacy = world.Capture("catalog") with { Version = 5, Profile = "neutral-v5", Temple = null };
             var old = JsonNode.Parse(CheckpointFile.Encode(legacy))!; old.AsObject().Remove("Temple");

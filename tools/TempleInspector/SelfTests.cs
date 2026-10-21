@@ -166,6 +166,8 @@ internal static class SelfTests
             WorldTempleSpeechTests.Run(Check);
             NpcPlaybackClockTests.Run(Check);
             TempleNpcRouteTests.Run(Check);
+            TempleVillageRouteTests.Run(Check);
+            TempleExitDoorTests.Run(Check);
             CharacterSkillTests.Run(Check);
             TravelTests.Run(Check);
             ExitPreviewTests.Run(Check);

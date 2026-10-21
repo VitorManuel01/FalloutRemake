@@ -11,7 +11,7 @@ namespace FalloutRemake.Runtime;
 
 public sealed record SavedTempleProgress([property: JsonRequired] string Profile, [property: JsonRequired] ScriptStateSnapshot Scripts,
     [property: JsonRequired] NpcDepartureSnapshot Departure, [property: JsonRequired] bool InitialGateOpen);
-public enum TempleWorldStatus { Ready, Unsupported, AlreadyAccepted, Busy, TooFar, Unavailable, Stale, Occupied, Blocked, NotWalking, NotWaiting, Complete, Invalid }
+public enum TempleWorldStatus { Ready, Unsupported, AlreadyAccepted, Busy, TooFar, Unavailable, Stale, Occupied, Blocked, NotWalking, NotWaiting, Complete, Invalid, DoorRequired }
 public sealed record TempleSpeechCommitPlan(Guid WorldToken, Guid TempleToken, long Revision, string WorldStamp,
     TempleNpcDepartureProfile Profile, ScriptStateSnapshot Accepted, int Intelligence, bool SpeechTagged);
 public sealed record TempleSpeechProposal(TempleWorldStatus Status, TempleSpeechCommitPlan? Plan = null);
