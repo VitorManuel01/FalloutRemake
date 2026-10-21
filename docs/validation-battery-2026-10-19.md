@@ -1,7 +1,7 @@
 # Marco 48 — bateria local reproduzível sem janela
 
-`tools/Validate-Temple.ps1` reúne atualmente dezessete etapas: validador de logs,
-build da prévia, build do inspector, testes sintéticos, doze relatórios reais e
+`tools/Validate-Temple.ps1` reúne atualmente dezoito etapas: validador de logs,
+build da prévia, build do inspector, testes sintéticos, treze relatórios reais e
 integração Godot com `--headless`.
 Os caminhos de Godot e dados são obrigatórios; não procura outras instalações.
 

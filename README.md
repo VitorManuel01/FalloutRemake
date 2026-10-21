@@ -1,6 +1,7 @@
 # Fallout Remake — prévia 3D do templo
 
 [Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
+[Bateria atual: saída restaurável do NPC e vista 3D isolada](docs/temple-npc-batch-2026-10-20.md).
 [Bateria mais recente: estados, porta final e consulta de Speech](docs/temple-state-batch-2026-10-20.md).
 [Bateria anterior: doze incrementos e validações](docs/continuation-batch-2026-10-20.md).
 
@@ -18,6 +19,9 @@ O personagem ainda tem apenas as regras mínimas deste teste, sem combate ou art
 A porta final já abre no estado inicial, permitindo chegar perto do NPC;
 o botão **Conversa · ensaio** permite consultar cinco escolhas originais, sem
 alterar a partida. Conversa ativa e duelo permanecem indisponíveis.
+Após a aceitação no ensaio, **Saída do NPC · ensaio** permite acompanhar os três
+trechos originais, cumprir a espera, salvar/restaurar a saída e alternar entre
+traçado e vista 3D própria. O cenário ativo permanece no mesmo estado.
 
 **Correção do primeiro marco:** o interior é `maps/arcaves.map`, ID 3.
 `maps/artemple.map`, ID 126, é a área externa com Klint. O inspetor agora usa o interior
@@ -134,6 +138,11 @@ dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do
 8. Ao concluir as cinco escolhas, **Salvar resultado** grava apenas o ensaio.
    **Carregar ensaio** restaura esse arquivo separado; não carrega a partida.
    Escolhas incompletas precisam ser concluídas ou recomeçadas para salvar.
+9. Abra **Saída do NPC · ensaio**. Use **Um passo / Até a próxima parada** para
+   acompanhar a cópia do percurso; junto à porta, avance a espera pelo botão.
+   **Ver em 3D** mostra o NPC destacado no cenário de referência.
+   **Salvar saída / Carregar saída** preservam inclusive a espera parcial, em
+   outro arquivo. **Voltar à conversa** conserva o resultado Speech aceito.
 
 O efeito deste ensaio altera somente a barreira validada; não há dano a personagens
 ou combate geral. A preparação fora desse alcance fica indisponível. Baús com
@@ -179,8 +188,8 @@ Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
 `VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
 seguidos de saída com código 0.
 Prefira `tools/Validate-Temple.ps1 -GodotExe $godotExe -DataDirectory <pasta-local>`
-para conferir também os marcadores atuais e os logs: **17 etapas**, incluindo
-275 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
+para conferir também os marcadores atuais e os logs: **18 etapas**, incluindo
+285 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
 vazados são recusados mesmo quando o processo retorna zero. O manifesto fica em `.local/`.
 O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
 Durante o uso simultâneo do computador, faça capturas pelo

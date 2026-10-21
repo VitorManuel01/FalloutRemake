@@ -1,7 +1,8 @@
 # Resumo de todos os marcos até 20/10/2026
 
 Retomada posterior: [doze incrementos adicionais e validações](continuation-batch-2026-10-20.md).
-Retomada mais recente: [onze incrementos de estado, porta e consulta do NPC](temple-state-batch-2026-10-20.md).
+Retomada anterior: [onze incrementos de estado, porta e consulta do NPC](temple-state-batch-2026-10-20.md).
+Retomada mais recente: [quatro marcos da saída restaurável do NPC e vista 3D](temple-npc-batch-2026-10-20.md).
 
 O texto abaixo preserva a parada histórica. O estado mais recente e as
 validações atuais estão na última retomada acima.
