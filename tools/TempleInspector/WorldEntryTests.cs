@@ -38,25 +38,27 @@ internal static class WorldEntryTests
         check("entry history distinguishes hover destination loading and actual travel and grants Speech XP exactly once",() =>
         {
             var (world,_,_) = Fixture();
-            Assert(world.EnteredMaps.SequenceEqual(new[] {3}) && world.Areas.Count == 1 && world.Experience == 0);
+            Assert(world.EnteredMaps.SequenceEqual(new[] {3}) && world.Areas.Count == 1 && world.Experience == 0 && world.ArroyoGlobals == null);
             Assert(world.PreviewExitAt(2,13326).Status == ExitStatus.ExternalMap && world.Areas.Count == 1);
             Assert(world.InspectExit(false).Status == ExitStatus.Ready && world.Areas.Count == 2 && world.EnteredMaps.SequenceEqual(new[] {3}) && world.ArroyoReward == null);
             Assert(world.UseExit(true).Status == ExitStatus.Busy && world.Experience == 0);
             Assert(world.UseExit(false).Status == ExitStatus.Ready && world.CurrentMap == 4 && world.Experience == 600 && world.EnteredMaps.SequenceEqual(new[] {3,4}));
+            var globals = world.ArroyoGlobals;
+            Assert(globals == new ArroyoRewardProfile().EntryGlobals() && globals.Karma == 15 && globals.ArroyoReputation == 65 && globals.KarmaTierGlobal == 41);
             Assert(world.UseExit(false).Status == ExitStatus.Ready && world.CurrentMap == 3);
-            Assert(world.UseExit(false).Status == ExitStatus.Ready && world.CurrentMap == 4 && world.Experience == 600);
+            Assert(world.UseExit(false).Status == ExitStatus.Ready && world.CurrentMap == 4 && world.Experience == 600 && world.ArroyoGlobals == globals);
             int[] copy = world.EnteredMaps; copy[0] = -1; Assert(world.EnteredMaps[0] == 3);
         });
-        check("v8 checkpoints preserve unentered cached destinations then retain a single reward through return and reload",() =>
+        check("v9 checkpoints preserve unentered cached destinations then retain one reward and native globals through return and reload",() =>
         {
             var (world,load,profile) = Fixture(); world.InspectExit(false);
             var ready = Restore(CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog"))),load,profile);
             Assert(!ready.EnteredMaps.Contains(4) && ready.UseExit(false).Status == ExitStatus.Ready && ready.Experience == 600);
             byte[] awarded = CheckpointFile.Encode(ready.Capture("catalog"));
             var restored = Restore(CheckpointFile.Decode(awarded),load,profile);
-            Assert(awarded.SequenceEqual(CheckpointFile.Encode(restored.Capture("catalog"))) && restored.Experience == 600);
-            restored.UseExit(false); restored.UseExit(false); Assert(restored.Experience == 600);
-            restored.Reset(); Assert(restored.Experience == 0 && restored.ArroyoReward == null && restored.EnteredMaps.SequenceEqual(new[] {3}));
+            Assert(awarded.SequenceEqual(CheckpointFile.Encode(restored.Capture("catalog"))) && restored.Experience == 600 && restored.ArroyoGlobals == ready.ArroyoGlobals);
+            restored.UseExit(false); restored.UseExit(false); Assert(restored.Experience == 600 && restored.ArroyoGlobals == ready.ArroyoGlobals);
+            restored.Reset(); Assert(restored.Experience == 0 && restored.ArroyoReward == null && restored.ArroyoGlobals == null && restored.EnteredMaps.SequenceEqual(new[] {3}));
         });
         check("Arroyo return guidance owns its source route and cannot load travel or change XP while being inspected",() =>
         {
@@ -92,7 +94,34 @@ internal static class WorldEntryTests
             Assert(world.UseExit(false).Status == ExitStatus.UnavailableMap && world.CurrentMap == 3 && world.Experience == 0
                 && before.SequenceEqual(CheckpointFile.Encode(world.Capture("catalog"))));
         });
-        check("v8 refuses duplicate unknown incomplete entry maps forged reward amounts identities and missing strict JSON",() =>
+        check("v8 receipt migrates exact neutral entry globals once while visited villages without a receipt receive no invented state",() =>
+        {
+            var (world,load,profile) = Fixture(); world.UseExit(false);
+            var old = world.Capture("catalog") with {Version=8,Profile="neutral-v8",Entries=world.Capture("catalog").Entries! with {ArroyoGlobals=null}};
+            var node=JsonNode.Parse(CheckpointFile.Encode(old))!; node["Entries"]!.AsObject().Remove("ArroyoGlobals");
+            var restored=Restore(CheckpointFile.Decode(Encoding.UTF8.GetBytes(node.ToJsonString())),load,profile);
+            Assert(restored.Capture("catalog").Version==9 && restored.Experience==600 && restored.ArroyoGlobals==new ArroyoRewardProfile().EntryGlobals());
+            restored.UseExit(false); restored.UseExit(false); Assert(restored.ArroyoGlobals!.ArroyoReputation==65 && restored.Experience==600);
+            var without=Restore(old with {Entries=old.Entries! with {ArroyoReward=null}},load,profile);
+            Assert(without.ArroyoGlobals==null && without.Experience==0);
+            without.UseExit(false); without.UseExit(false); Assert(without.ArroyoGlobals==null && without.Experience==0);
+        });
+        check("v9 refuses forged karma reputation tier profile null globals and metadata without the matching first-entry receipt",() =>
+        {
+            var (world,load,profile)=Fixture(); world.UseExit(false); var saved=world.Capture("catalog"); var globals=saved.Entries!.ArroyoGlobals!;
+            byte[] before=CheckpointFile.Encode(saved);
+            foreach (var invalid in new SavedArroyoGlobals?[] {null,globals with {Karma=0},globals with {ArroyoReputation=15},
+                globals with {KarmaTierGlobal=45},globals with {Profile="foreign"}})
+                Reject(() => Restore(saved with {Entries=saved.Entries with {ArroyoGlobals=invalid}},load,profile));
+            Reject(() => Restore(saved with {Entries=saved.Entries with {ArroyoReward=null}},load,profile));
+            foreach (string name in new[] {"Profile","Karma","ArroyoReputation","KarmaTierGlobal"})
+            {
+                var node=JsonNode.Parse(before)!; node["Entries"]!["ArroyoGlobals"]!.AsObject().Remove(name);
+                Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes(node.ToJsonString())));
+            }
+            Assert(before.SequenceEqual(CheckpointFile.Encode(world.Capture("catalog"))));
+        });
+        check("v9 refuses duplicate unknown incomplete entry maps forged reward amounts identities and missing strict JSON",() =>
         {
             var (world,load,profile) = Fixture(); world.UseExit(false); var saved = world.Capture("catalog");
             foreach (int[] maps in new[] {Array.Empty<int>(),new[] {3,3,4},new[] {3,999},new[] {3},new[] {4}})
@@ -100,7 +129,7 @@ internal static class WorldEntryTests
             foreach (var reward in new[] {saved.Entries!.ArroyoReward! with {Experience = 601},saved.Entries.ArroyoReward! with {Profile = "foreign"}})
                 Reject(() => Restore(saved with {Entries = saved.Entries with {ArroyoReward = reward}},load,profile));
             Reject(() => Restore(saved with {Temple = null},load,profile));
-            foreach (string name in new[] {"Entries","EnteredMaps","ArroyoReward"})
+            foreach (string name in new[] {"Entries","EnteredMaps","ArroyoReward","ArroyoGlobals"})
             {
                 var node = JsonNode.Parse(CheckpointFile.Encode(saved))!;
                 if (name == "Entries") node.AsObject().Remove(name); else node["Entries"]!.AsObject().Remove(name);

@@ -83,6 +83,7 @@ public partial class TemplePreview
         await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
         if (_campaign.CurrentMap != 4 || _campaign.Location != route.Destination || _campaign.CarriedCount != 2 || _campaign.Experience != 625
             || _campaign.ArroyoReward?.Experience != 600 || !_campaign.EnteredMaps.Contains(4)
+            || _campaign.ArroyoGlobals is not {Karma:15,ArroyoReputation:65,KarmaTierGlobal:41}
             || progress != JsonSerializer.Serialize(_campaign.TempleProgress))
             throw new InvalidDataException("Original Arroyo travel lost the completed Temple world state.");
         SaveCheckpoint(); var saved = CheckpointFile.Encode(_campaign.Capture(_mapCatalog!.Source.Sha256));
@@ -96,6 +97,7 @@ public partial class TemplePreview
         if (_capture != null) await Capture(Path.ChangeExtension(_capture,"arroyo-after-speech.png"));
         await CheckArroyoReturnLoop();
         GD.Print("TEMPLE_VILLAGE_ROUTE_OK: source door 100 approach, mid-step stop and v8 load/replan, stale approach refusal, explicit U, open-door restoration, source exits to map 4/0/20517, exact real walk, explicit Enter travel, busy/stale guards, Arroyo checkpoint with inactive Temple progress, original source bytes/items preserved; verified first entry grants 600 XP (25 to 625).");
-        GD.Print("ARROYO_ENTRY_REWARD_OK: first actual entry marked independently of cached destination, source-bound neutral Speech reward, exactly 600 XP, v8 restoration with source/items/progress preserved.");
+        GD.Print("ARROYO_ENTRY_REWARD_OK: first actual entry marked independently of cached destination, source-bound neutral Speech reward, exactly 600 XP, v9 restoration with source/items/progress preserved.");
+        GD.Print("ARROYO_ENTRY_GLOBALS_OK: real native first entry, karma 0 to 15, Arroyo reputation 50 to 65, Wanderer G41, v9 save/load and actual return/reentry preserve globals and 625 total XP.");
     }
 }

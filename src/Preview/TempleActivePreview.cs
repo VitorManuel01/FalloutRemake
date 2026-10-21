@@ -33,6 +33,8 @@ public partial class TemplePreview
             NpcDeparturePhase.ToMiddle => "Trecho intermediário", NpcDeparturePhase.ToExit => "Indo até a saída", NpcDeparturePhase.Hidden => "Saída concluída · NPC oculto", _ => "" };
         text += phase == NpcDeparturePhase.Hidden ? "\nSpeech aceito · K salva a partida"
             : current ? _templeAutomatic ? "\nAutomático · K pausa e salva" : "\nAvanço manual · K salva a partida" : "\nSequência pausada · volte à elevação 2 do templo";
+        if (_campaign?.CurrentMap == 4 && _campaign.ArroyoGlobals is { } entry)
+            text += $"\nArroyo · karma {entry.Karma} · reputação {entry.ArroyoReputation}";
         if (present && _campaign!.CurrentMap == 3) _hud.Status(phase == NpcDeparturePhase.Hidden ? "NPC concluiu a saída · passagem para Arroyo disponível" : "Speech aceito · acompanhe a saída do NPC");
         _hud.TempleProgress(present,text,phase is NpcDeparturePhase.ToGate or NpcDeparturePhase.ToMiddle or NpcDeparturePhase.ToExit,
             phase == NpcDeparturePhase.GateDelay,enabled && !_templeAutomatic,current && phase != NpcDeparturePhase.Hidden && !InspectorOpen,phase == NpcDeparturePhase.Hidden);

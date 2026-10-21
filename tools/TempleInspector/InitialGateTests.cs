@@ -56,7 +56,7 @@ internal static class InitialGateTests
             var map = Fixture(); var world = new WorldSession(_ => map, new[] { 3 }); world.Current.Doors.Toggle(Key, Adjacent, 2, false);
             world.Current.Travel.Arrive(new(3, 2, 19928, 0)); var saved = world.Capture("catalog");
             var restored = WorldSession.Restore(_ => map, new[] { 3 }, CheckpointFile.Decode(CheckpointFile.Encode(saved)), "catalog");
-            Assert(saved.Version == 8 && restored.Current.Doors.Get(Key)!.IsOpen && restored.Location.Hex == 19928);
+            Assert(saved.Version == 9 && restored.Current.Doors.Get(Key)!.IsOpen && restored.Location.Hex == 19928);
             foreach (int flag in new[] { DoorSession.Locked, DoorSession.Jammed })
                 Reject(() => WorldSession.Restore(_ => map, new[] { 3 }, saved with { Areas = saved.Areas.Select(a => a with {
                     Session = a.Session with { Doors = a.Session.Doors.Select(d => d.Key == Key ? d with { OpenFlags = d.OpenFlags | flag } : d).ToArray() } }).ToArray() }, "catalog"));
@@ -68,7 +68,7 @@ internal static class InitialGateTests
             {
                 var legacy = source with { Entries = null, Version = version, Profile = $"neutral-v{version}", Areas = source.Areas.Select(a => a with {
                     Taken = version == 1 ? null : a.Taken, Uses = version < 3 ? null : a.Uses, Replacements = version < 4 ? null : a.Replacements }).ToArray() };
-                var restored = WorldSession.Restore(_ => map, new[] { 3 }, legacy, "catalog"); Assert(restored.Capture("catalog").Version == 8 && !restored.Current.Doors.Get(Key)!.IsOpen);
+                var restored = WorldSession.Restore(_ => map, new[] { 3 }, legacy, "catalog"); Assert(restored.Capture("catalog").Version == 9 && !restored.Current.Doors.Get(Key)!.IsOpen);
                 var forged = legacy with { Areas = legacy.Areas.Select(a => a with { Session = a.Session with { Doors = a.Session.Doors.Select(d => d.Key == Key
                     ? d with { Flags = DoorSession.OpenDoorMask, OpenFlags = 1 } : d).ToArray() } }).ToArray() };
                 Reject(() => WorldSession.Restore(_ => map, new[] { 3 }, forged, "catalog"));

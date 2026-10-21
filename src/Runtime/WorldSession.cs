@@ -173,19 +173,19 @@ public sealed partial class WorldSession
         ActorLocation destination = option.Destination!;
         if (destination.Map == CurrentMap) return Current.Travel.UseExit(moving);
         WorldArea target = _areas[destination.Map];
-        SavedArroyoReward? reward;
+        (SavedArroyoReward Reward,SavedArroyoGlobals Globals)? reward;
         try { reward = PrepareEntryReward(destination,target); }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or KeyNotFoundException)
         { return option with { Status = ExitStatus.UnavailableMap }; }
         target.Travel.Arrive(destination); CurrentMap = destination.Map;
         _enteredMaps.Add(destination.Map);
-        if (reward != null) _arroyoReward = reward;
+        if (reward is { } entry) { _arroyoReward = entry.Reward; _arroyoGlobals = entry.Globals; }
         return option;
     }
     public void Reset()
     {
         _templeProgress = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
-        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null;
+        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null;
         foreach (WorldArea area in _areas.Values) { area.Scenery.Reset(); area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
     }
@@ -194,7 +194,7 @@ public sealed partial class WorldSession
     public WorldCheckpoint Capture(string catalogHash)
     {
         ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses(); ValidateTempleExit();
-        return new(8, "neutral-v8", catalogHash, InitialMap, CurrentMap,
+        return new(9, "neutral-v9", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
                 DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray(), _templeProgress?.Capture(),CaptureEntries());
     }
@@ -204,9 +204,11 @@ public sealed partial class WorldSession
         if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2"
             || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
             || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5" || checkpoint.Version == 6 && checkpoint.Profile == "neutral-v6"
-            || checkpoint.Version == 7 && checkpoint.Profile == "neutral-v7" || checkpoint.Version == 8 && checkpoint.Profile == "neutral-v8") || checkpoint.CatalogHash != catalogHash
+            || checkpoint.Version == 7 && checkpoint.Profile == "neutral-v7" || checkpoint.Version == 8 && checkpoint.Profile == "neutral-v8"
+            || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9") || checkpoint.CatalogHash != catalogHash
             || checkpoint.Version < 6 && checkpoint.Temple != null
             || checkpoint.Version < 8 && checkpoint.Entries != null
+            || checkpoint.Version < 9 && checkpoint.Entries?.ArroyoGlobals != null
             || checkpoint.InitialMap != initialMap || checkpoint.Areas is not { Length: > 0 and <= 16 })
             throw new InvalidDataException("Checkpoint version, profile or catalog is incompatible.");
         var allowed = allowedMaps.ToHashSet();

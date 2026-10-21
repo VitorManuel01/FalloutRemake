@@ -16,6 +16,7 @@ public partial class TemplePreview
         _ = _campaign!.Capture(_mapCatalog!.Source.Sha256);
         string temple = JsonSerializer.Serialize(_campaign.TempleProgress);
         string inventory = JsonSerializer.Serialize(_campaign.Areas.Select(a => a.Items.Capture()));
+        var globals = _campaign.ArroyoGlobals;
         int[] entries = _campaign.EnteredMaps;
         if (_campaign.CurrentMap != 4 || _campaign.Experience != 625) throw new InvalidDataException("Arroyo return audit requires the first rewarded arrival.");
         var guidance = _campaign.InspectArroyoReturnRoute(false);
@@ -51,6 +52,7 @@ public partial class TemplePreview
         RequestWalk(route.ExitHex.Value); CompleteReadabilityWalk(); UseExit();
         if (_campaign.CurrentMap != 4 || _campaign.Experience != 625 || _campaign.CarriedCount != 2
             || !_campaign.EnteredMaps.SequenceEqual(entries) || JsonSerializer.Serialize(_campaign.TempleProgress) != temple
+            || _campaign.ArroyoGlobals != globals
             || JsonSerializer.Serialize(_campaign.Areas.Select(a => a.Items.Capture())) != inventory)
             throw new InvalidDataException("A second native Arroyo entry repeated its reward or changed inventory/Temple state.");
         SaveCheckpoint(); byte[] valid = CheckpointFile.Encode(_campaign.Capture(_mapCatalog.Source.Sha256));
@@ -59,8 +61,13 @@ public partial class TemplePreview
         CheckpointFile.Write(CheckpointPath,invalid); var live = _campaign; LoadCheckpoint();
         if (_campaign != live || !valid.SequenceEqual(CheckpointFile.Encode(_campaign.Capture(_mapCatalog.Source.Sha256))))
             throw new InvalidDataException("Forged Arroyo XP replaced the live world during a repeated-entry audit.");
+        invalid = _campaign.Capture(_mapCatalog.Source.Sha256);
+        invalid = invalid with {Entries=invalid.Entries! with {ArroyoGlobals=invalid.Entries.ArroyoGlobals! with {ArroyoReputation=80}}};
+        CheckpointFile.Write(CheckpointPath,invalid); LoadCheckpoint();
+        if (_campaign != live || !valid.SequenceEqual(CheckpointFile.Encode(_campaign.Capture(_mapCatalog.Source.Sha256))))
+            throw new InvalidDataException("Forged Arroyo reputation replaced the live world.");
         SaveCheckpoint(); LoadCheckpoint();
-        if (_campaign.Experience != 625) throw new InvalidDataException("Repeated-entry checkpoint failed final XP persistence.");
+        if (_campaign.Experience != 625 || _campaign.ArroyoGlobals != globals) throw new InvalidDataException("Repeated-entry checkpoint failed final XP/globals persistence.");
         foreach (var area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
         if (_capture != null) await Capture(Path.ChangeExtension(_capture,"arroyo-return-no-duplicate.png"));
         GD.Print("ARROYO_RETURN_LOOP_OK: real native village-to-Temple walk and Enter to 3/2/14128, saved open-door return, actual second walk/Enter to Arroyo, XP stays 625, 2 items and NPC progress preserved, v8 return checkpoint, forged 601 XP rejected without replacing the live world.");

@@ -1,5 +1,7 @@
 # Fallout Remake — prévia 3D do templo
 
+[Entrada de Arroyo: karma/reputação e checkpoint v9](docs/arroyo-entry-globals-v9-2026-10-21.md).
+[Auditoria das guardas do primeiro diálogo da anciã](docs/arroyo-elder-opening-audit-2026-10-21.md).
 [Bateria atual: Nature, árvores, primeira entrada e retorno de Arroyo](docs/nature-and-arroyo-batch-2026-10-21.md).
 [Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
 [Bateria mais recente: conversa ativa, saída do NPC e chegada a Arroyo](docs/temple-active-batch-2026-10-21.md).
@@ -95,7 +97,7 @@ A escolha fica salva apenas localmente; não é necessário extrair ou exportar 
 - **K / Salvar:** checkpoint local quando estiver parado. **R / Carregar:**
   recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
   Os atalhos usam letras para evitar conflito com os controles do editor Godot.
-  O schema atual é v8; checkpoints v1–v7 continuam carregando. Itens posicionados,
+  O schema atual é v9; checkpoints v1–v8 continuam carregando. Itens posicionados,
   consumidos e substituições de cenário têm estado próprio. Ao carregar, o modo
   e a seleção ainda válida são preservados.
 - **C / Personagem:** reenquadra e acompanha o personagem. WASD ou arrasto retomam

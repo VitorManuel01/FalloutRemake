@@ -43,7 +43,7 @@ internal static class TempleExitDoorTests
             var saved = world.Capture("catalog");
             WorldSession Load(WorldCheckpoint value) => WorldSession.Restore(_ => map,new[] { 3 },value,"catalog",templeProfile:_ => profile);
             var restored = Load(CheckpointFile.Decode(CheckpointFile.Encode(saved)));
-            Assert(restored.Location.Hex == 13528 && restored.Current.Doors.Get(key)!.IsOpen && restored.Capture("catalog").Version == 8);
+            Assert(restored.Location.Hex == 13528 && restored.Current.Doors.Get(key)!.IsOpen && restored.Capture("catalog").Version == 9);
             Reject(() => Load(saved with { Entries = null, Version = 6,Profile = "neutral-v6" }));
             Reject(() => Load(saved with { Temple = null }));
             Reject(() => Load(saved with { Temple = saved.Temple! with { Profile = "foreign" } }));
@@ -53,7 +53,7 @@ internal static class TempleExitDoorTests
             var (map,profile,world,key) = Fixture(); world.CommitTempleSpeech(WorldTempleSpeechTests.Plan(world,profile),false);
             var saved = world.Capture("catalog") with { Entries = null, Version = 6,Profile = "neutral-v6" };
             var restored = WorldSession.Restore(_ => map,new[] { 3 },saved,"catalog",templeProfile:_ => profile);
-            Assert(!restored.Current.Doors.Get(key)!.IsOpen && restored.TempleProgress!.Profile == saved.Temple!.Profile && restored.Capture("catalog").Version == 8);
+            Assert(!restored.Current.Doors.Get(key)!.IsOpen && restored.TempleProgress!.Profile == saved.Temple!.Profile && restored.Capture("catalog").Version == 9);
         });
         check("exit adapter refuses a changed native instance binding and owner",() =>
         {

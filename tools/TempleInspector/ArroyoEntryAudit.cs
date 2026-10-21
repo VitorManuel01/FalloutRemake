@@ -34,6 +34,7 @@ internal static class ArroyoEntryAudit
         int[] calls = program.Instructions.Where(i => i.Opcode == 0x80A1).Select(i => i.Offset).ToArray();
         if (!calls.SequenceEqual(new[] { 3112,3218,3276 })) throw new InvalidDataException("Arroyo XP call census changed.");
         return new { Status = "ARROYO_ENTRY_AUDIT_OK", Map = map.Source, Program = program.Source, RuntimeProfile = runtimeProfile.Fingerprint,
+            RuntimeEntryGlobals=runtimeProfile.EntryGlobals(),InitialKarma=globals.Entries[0],InitialArroyoReputation=globals.Entries[47],
             TrialGlobal = globals.Entries[10], FirstRunGuard = new { Offset = 2370, Rule = 14, FalseTarget = 3318,
                 NativeMeaning = "METARULE_FIRST_RUN: (gMapHeader.flags & MAP_SAVED) == 0" },
             Branches = new[] {
@@ -43,6 +44,6 @@ internal static class ArroyoEntryAudit
             LaterEntry = "guard skips all three reward calls; must persist first-entry lifecycle independently of G10",
             OtherFirstRunEffects = "movie 3, global/reputation initialization, display messages; not executed by this audit",
             Scope = "Audited source branches and base operands only; pcAddExperience character modifiers/level effects require separate validation",
-            AuditAppliesReward = false, RuntimeRewardAdapter = "Optional source-bound Speech first-entry reward; neutral character below level two only", SourceReconstruction = "verified; no game assets written" };
+            AuditAppliesReward = false, RuntimeRewardAdapter = "Optional source-bound Speech first-entry reward plus neutral karma/reputation globals; below level two only", SourceReconstruction = "verified; no game assets written" };
     }
 }

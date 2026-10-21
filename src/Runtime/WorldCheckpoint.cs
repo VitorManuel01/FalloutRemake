@@ -34,6 +34,9 @@ public static class CheckpointFile
                 throw new InvalidDataException("Checkpoint v6 requires an explicit Temple field.");
             if (checkpoint.Version >= 8 && !document.RootElement.TryGetProperty("Entries",out _))
                 throw new InvalidDataException("Checkpoint v8 requires an explicit Entries field.");
+            if (checkpoint.Version >= 9 && (!document.RootElement.TryGetProperty("Entries",out var entries)
+                || entries.ValueKind != JsonValueKind.Object || !entries.TryGetProperty("ArroyoGlobals",out _)))
+                throw new InvalidDataException("Checkpoint v9 requires explicit ArroyoGlobals entry state.");
             return checkpoint;
         }
         catch (JsonException error) { throw new InvalidDataException("Malformed checkpoint JSON.", error); }
