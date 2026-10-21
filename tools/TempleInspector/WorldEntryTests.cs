@@ -5,7 +5,7 @@ using FalloutRemake.Runtime;
 
 internal static class WorldEntryTests
 {
-    private static (WorldSession World,Func<int,MapDocument> Load,TempleNpcDepartureProfile Profile) Fixture(Func<MapDocument,ArroyoRewardProfile>? reward = null)
+    private static (WorldSession World,Func<int,MapDocument> Load,TempleNpcDepartureProfile Profile) Fixture(Func<MapDocument,ArroyoRewardProfile>? reward = null,bool ambiguousReturn = false)
     {
         var (temple,profile,original) = WorldTempleSpeechTests.Fixture();
         var exit = WorldTests.Map(3,4).ObjectLayers[0].Objects[0];
@@ -18,6 +18,12 @@ internal static class WorldEntryTests
             MapProgram = new("scripts/arvillag.int","synthetic verified profile",5188,ArroyoRewardProfile.ProgramHash),
             ObjectLayers = village.ObjectLayers.Select(l => l with { Objects = l.Objects.Select(o => (o.Header.Pid >> 24) != 5 ? o : o with { Header = o.Header with { Tile = 20517 },
                 State = new Dictionary<string,int> { ["destinationMap"] = 3,["destinationElevation"] = 2,["destinationTile"] = 13326,["destinationRotation"] = 0 } }).ToArray() }).ToArray() };
+        if (ambiguousReturn)
+        {
+            var marker = village.ObjectLayers[0].Objects[0];
+            village = village with {ObjectLayers = village.ObjectLayers.Select(l => l with {Objects = l.Objects.Append(marker with {
+                Key = marker.Key + ":conflicting",State = new Dictionary<string,int>(marker.State) {["destinationMap"] = 126}}).ToArray()}).ToArray()};
+        }
         var source = temple; var destination = village;
         MapDocument Load(int id) => id == 3 ? source : id == 4 ? destination : WorldTests.Map(126,3);
         var world = new WorldSession(Load,new[] {3,4,126},templeProfile:_ => profile,arroyoProfile:reward ?? (_ => new ArroyoRewardProfile()));
@@ -51,6 +57,24 @@ internal static class WorldEntryTests
             Assert(awarded.SequenceEqual(CheckpointFile.Encode(restored.Capture("catalog"))) && restored.Experience == 600);
             restored.UseExit(false); restored.UseExit(false); Assert(restored.Experience == 600);
             restored.Reset(); Assert(restored.Experience == 0 && restored.ArroyoReward == null && restored.EnteredMaps.SequenceEqual(new[] {3}));
+        });
+        check("Arroyo return guidance owns its source route and cannot load travel or change XP while being inspected",() =>
+        {
+            var (world,_,_) = Fixture(); Assert(world.InspectArroyoReturnRoute(false).Status == TempleWorldStatus.Unavailable);
+            world.UseExit(false); byte[] before = CheckpointFile.Encode(world.Capture("catalog"));
+            var route = world.InspectArroyoReturnRoute(false);
+            Assert(route.Status == TempleWorldStatus.Ready && route.ExitHex == 20517 && route.Destination == new ActorLocation(3,2,13326,0)
+                && route.Tiles!.SequenceEqual(new[] {20517}) && route.SourceKeys!.Length == 1);
+            route.Tiles![0] = -1; route.SourceKeys![0] = "foreign";
+            Assert(world.InspectArroyoReturnRoute(false).Tiles![0] == 20517 && world.InspectArroyoReturnRoute(true).Status == TempleWorldStatus.Busy
+                && before.SequenceEqual(CheckpointFile.Encode(world.Capture("catalog"))) && world.Experience == 600);
+        });
+        check("Arroyo return guidance refuses conflicting original exit destinations without changing the awarded world",() =>
+        {
+            var (world,_,_) = Fixture(ambiguousReturn:true); world.UseExit(false);
+            byte[] before = CheckpointFile.Encode(world.Capture("catalog"));
+            Assert(world.CurrentMap == 4 && world.InspectArroyoReturnRoute(false).Status == TempleWorldStatus.Blocked
+                && before.SequenceEqual(CheckpointFile.Encode(world.Capture("catalog"))));
         });
         check("legacy v7 cached Arroyo migrates conservatively without retroactive reward while uncached Arroyo remains eligible",() =>
         {

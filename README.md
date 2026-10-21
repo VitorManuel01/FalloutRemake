@@ -5,6 +5,7 @@
 [Primeiros modelos Nature importados e renderização compartilhada](docs/nature-models-2026-10-21.md).
 [Árvores Nature no exterior do templo](docs/nature-exterior-trees-2026-10-21.md).
 [Primeira entrada em Arroyo e recompensa única, checkpoint v8](docs/arroyo-first-entry-v8-2026-10-21.md).
+[Retorno ao templo e segunda chegada sem repetir XP](docs/arroyo-return-loop-2026-10-21.md).
 [Bateria atual: saída restaurável do NPC e vista 3D isolada](docs/temple-npc-batch-2026-10-20.md).
 [Bateria anterior: estados, porta final e consulta de Speech](docs/temple-state-batch-2026-10-20.md).
 [Bateria anterior: doze incrementos e validações](docs/continuation-batch-2026-10-20.md).
@@ -167,6 +168,9 @@ dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do
     o percurso; K/R conserva o progresso e a porta aberta. A recompensa da
     primeira entrada concede 600 XP uma única vez; retornar ou carregar não
     repete o prêmio. Saves antigos com Arroyo já carregado não ganham XP retroativo.
+12. Na vila, **Voltar ao templo** guia até uma passagem original. Enter confirma
+    o retorno; a porta aberta e o estado do NPC continuam preservados. Visitar
+    Arroyo outra vez mantém a experiência já recebida.
 
 O efeito deste ensaio altera somente a barreira validada; não há dano a personagens
 ou combate geral. A preparação fora desse alcance fica indisponível. Baús com

@@ -9,6 +9,23 @@ public sealed record TempleVillageRoute(TempleWorldStatus Status, int? ExitHex =
 
 public sealed partial class WorldSession
 {
+    public TempleVillageRoute InspectArroyoReturnRoute(bool moving)
+    {
+        if (_templeProgress == null || CurrentMap != 4 || Location.Elevation != 0 || !_allowed.Contains(3)
+            || Current.Map.Source.Sha256 != ArroyoRewardProfile.MapHash) return new(TempleWorldStatus.Unavailable);
+        if (moving) return new(TempleWorldStatus.Busy);
+        var navigation = Current.Doors.Navigation(0); var reach = navigation.ReachableFrom(Location.Hex);
+        var exits = Current.Map.ObjectLayers.SelectMany(l => l.Objects).Where(o => o.Header.Elevation == 0
+            && o.Header.Pid is >= 0x05000010 and <= 0x05000017 && o.State.TryGetValue("destinationMap",out int map) && map == 3)
+            .Select(o => o.Header.Tile).Distinct().Where(h => reach.Distance(h) >= 0).OrderBy(reach.Distance).ThenBy(h => h);
+        foreach (int hex in exits)
+        {
+            var option = PreviewExitAt(0,hex);
+            if (option.Status is (ExitStatus.Ready or ExitStatus.ExternalMap) && option.Destination?.Map == 3)
+                return new(TempleWorldStatus.Ready,hex,reach.PathTo(hex),option.Destination,option.SourceKeys!.ToArray());
+        }
+        return new(TempleWorldStatus.Blocked);
+    }
     // Read-only guidance only. This does not gate existing exits or execute Arroyo map scripts.
     public TempleVillageRoute InspectTempleVillageRoute(bool moving)
     {

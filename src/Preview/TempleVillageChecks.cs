@@ -94,6 +94,7 @@ public partial class TemplePreview
             throw new InvalidDataException("Old Temple guidance changed the loaded Arroyo session.");
         foreach (var area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
         if (_capture != null) await Capture(Path.ChangeExtension(_capture,"arroyo-after-speech.png"));
+        await CheckArroyoReturnLoop();
         GD.Print("TEMPLE_VILLAGE_ROUTE_OK: source door 100 approach, mid-step stop and v8 load/replan, stale approach refusal, explicit U, open-door restoration, source exits to map 4/0/20517, exact real walk, explicit Enter travel, busy/stale guards, Arroyo checkpoint with inactive Temple progress, original source bytes/items preserved; verified first entry grants 600 XP (25 to 625).");
         GD.Print("ARROYO_ENTRY_REWARD_OK: first actual entry marked independently of cached destination, source-bound neutral Speech reward, exactly 600 XP, v8 restoration with source/items/progress preserved.");
     }
