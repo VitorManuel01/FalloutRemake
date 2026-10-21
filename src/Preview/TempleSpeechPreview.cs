@@ -40,6 +40,7 @@ public partial class TemplePreview
     }
     private void CloseSpeechConsultation()
     {
+        CloseNpcDeparture();
         _speechDraft?.Cancel(); _speechDraft = null; _speechState = null; _speechProfile = null;
         if (_speechWindow != null) { _speechWindow.Hide(); _speechWindow.QueueFree(); _speechWindow = null; }
         RefreshSpeechAction();
@@ -58,6 +59,8 @@ public partial class TemplePreview
             Guid worldToken = _campaign!.SessionToken;
             var dialog = new TempleSpeechWindow { Size = new(800, 570), Theme = _hud.GetChild<Control>(0).Theme };
             _speechWindow = dialog; _speechProfile = profile;
+            bool Active() => _speechWindow == dialog && _campaign?.SessionToken == worldToken && _departureWindow == null;
+            dialog.DepartureRequested = () => { if (_speechWindow == dialog && _campaign?.SessionToken == worldToken) OpenNpcDeparture(); };
             void Refresh()
             {
                 var state = profile.Classify(_speechState!.Capture());
@@ -66,7 +69,7 @@ public partial class TemplePreview
             }
             void Restart()
             {
-                if (_speechWindow != dialog || _campaign?.SessionToken != worldToken) return;
+                if (!Active()) return;
                 _speechDraft?.Cancel(); _speechState = profile.CreateInitial();
                 _speechDraft = TempleSpeechDraft.Begin(profile, _speechState, 5, true)!;
                 Refresh();
@@ -74,7 +77,7 @@ public partial class TemplePreview
             dialog.RestartRequested = Restart;
             dialog.ChooseRequested = () =>
             {
-                if (_speechWindow != dialog || _campaign?.SessionToken != worldToken || _speechDraft == null || _speechState == null) return;
+                if (!Active() || _speechDraft == null || _speechState == null) return;
                 if (_speechDraft.ChoicesComplete) return;
                 if (SpeechBlockedReason() != null) { dialog.Message("A sessão mudou. Feche e abra o ensaio novamente."); return; }
                 var result = _speechDraft.Choose(profile.Step(_speechDraft.StepIndex).ChoiceOffset);
@@ -84,7 +87,7 @@ public partial class TemplePreview
             };
             dialog.SaveRequested = () =>
             {
-                if (_speechWindow != dialog || _campaign?.SessionToken != worldToken || _speechState == null
+                if (!Active() || _speechState == null
                     || profile.Classify(_speechState.Capture()) != TempleSpeechState.Accepted) return;
                 try
                 {
@@ -96,7 +99,7 @@ public partial class TemplePreview
             };
             dialog.LoadRequested = () =>
             {
-                if (_speechWindow != dialog || _campaign?.SessionToken != worldToken) return;
+                if (!Active()) return;
                 try
                 {
                     var candidate = TempleSpeechStateFile.Read(SpeechCheckpointPath, profile);
@@ -107,7 +110,8 @@ public partial class TemplePreview
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
                 { dialog.Notice("Arquivo de ensaio indisponível ou incompatível. As escolhas atuais e a partida foram preservadas."); GD.Print("SPEECH_LOAD_REJECTED: " + error.Message); }
             };
-            dialog.Confirmed += CloseSpeechConsultation; dialog.Canceled += CloseSpeechConsultation; dialog.CloseRequested += CloseSpeechConsultation;
+            void Close() { if (_speechWindow == dialog) CloseSpeechConsultation(); }
+            dialog.Confirmed += Close; dialog.Canceled += Close; dialog.CloseRequested += Close;
             _hud.AddChild(dialog); dialog.Inspect(profile, text); Restart();
             dialog.PopupCenteredClamped(new Vector2I(800, 570), .92f); RefreshSpeechAction();
         }

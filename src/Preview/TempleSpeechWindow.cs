@@ -20,7 +20,8 @@ public partial class TempleSpeechWindow : AcceptDialog
     private readonly Label _status = new() { Name = "SpeechStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private TempleSpeechProfile? _profile;
     private TempleSpeechText? _text;
-    public Action? ChooseRequested, RestartRequested, SaveRequested, LoadRequested;
+    private readonly Button _departure = new() { Name = "SpeechDeparture", Text = "Saída do NPC · ensaio", Visible = false };
+    public Action? ChooseRequested, RestartRequested, SaveRequested, LoadRequested, DepartureRequested;
     public string ReplyText => _replies.Text;
     public string ChoiceText => _choice.Text;
     public string StatusText => _status.Text;
@@ -37,17 +38,19 @@ public partial class TempleSpeechWindow : AcceptDialog
         body.AddChild(new Label { Text = "Ensaio separado da partida · INT 5 e Speech marcado. Somente cinco escolhas verificadas estão disponíveis. Nenhuma escolha concede XP, move o NPC ou muda seus itens e progresso.",
             AutowrapMode = TextServer.AutowrapMode.WordSmart, Modulate = new Color("e8c78d") });
         body.AddChild(_speaker); body.AddChild(_progress); body.AddChild(_replies); body.AddChild(_choice); body.AddChild(_status); body.AddChild(_restart);
-        var files = new HFlowContainer(); files.AddChild(_save); files.AddChild(_load); body.AddChild(files);
+        var files = new HFlowContainer(); files.AddChild(_save); files.AddChild(_load); files.AddChild(_departure); body.AddChild(files);
         _choice.Pressed += () => { if (!_choice.Disabled) ChooseRequested?.Invoke(); };
         _restart.Pressed += () => RestartRequested?.Invoke();
         _save.Pressed += () => { if (!_save.Disabled) SaveRequested?.Invoke(); };
         _load.Pressed += () => { if (!_load.Disabled) LoadRequested?.Invoke(); };
+        _departure.Pressed += () => { if (_departure.Visible && !_departure.Disabled) DepartureRequested?.Invoke(); };
     }
     public void Inspect(TempleSpeechProfile profile, TempleSpeechText text)
     { _profile = profile; _text = text; _speaker.Text = "Descrição original: " + text.Speaker; }
     public void Refresh(TempleSpeechDraft? draft, TempleSpeechState state)
     {
         bool done = state == TempleSpeechState.Accepted;
+        _departure.Visible = done;
         _progress.Text = done ? "Ensaio concluído · estado da partida preservado" : $"Escolha {Math.Min(draft!.StepIndex + 1, 5)} de 5";
         _choice.Visible = !done; _choice.Disabled = done;
         if (done)

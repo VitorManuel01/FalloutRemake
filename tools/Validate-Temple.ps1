@@ -67,12 +67,12 @@ try {
     Invoke-ValidationStep 'build-inspector' $dotnetPath @('build', (Join-Path $projectRoot 'tools/TempleInspector/TempleInspector.csproj'))
     $inspector = Join-Path $projectRoot 'tools/TempleInspector/bin/Debug/net8.0/TempleInspector.dll'
     Invoke-ValidationStep 'synthetic' $dotnetPath @($inspector, '--self-test') @('synthetic test groups passed.')
-    foreach ($reportName in @('temple-chest', 'temple-dialogue', 'temple-state', 'temple-aftermath', 'item-origin-route', 'item-art', 'temple-collection', 'temple-barrier', 'explosive-profile', 'item-use-checkpoint', 'barrier-effect', 'barrier-commit')) {
+    foreach ($reportName in @('temple-chest', 'temple-dialogue', 'temple-state', 'temple-aftermath', 'temple-npc-departure', 'item-origin-route', 'item-art', 'temple-collection', 'temple-barrier', 'explosive-profile', 'item-use-checkpoint', 'barrier-effect', 'barrier-commit')) {
         Invoke-ValidationStep $reportName $dotnetPath @($inspector, '--data-dir', $dataPath, ('--' + $reportName + '-report')) -JsonReport
     }
     # No graphical fallback: this command always passes --headless.
     Invoke-ValidationStep 'godot-preview' $godotPath @('--headless', '--path', $projectRoot, '--', '--data-dir', $dataPath, '--preview-test') @(
-        'PREVIEW_TEST_OK', 'ITEM_CHECKPOINT_OK', 'BAG_ORIGIN_OK', 'SCRIPTED_CONTAINER_OK', 'INVENTORY_ART_UI_OK', 'ELEVATION_WALK_GUARD_OK', 'PLACED_USE_PREVIEW_OK', 'BARRIER_PLACEMENT_GUIDANCE_OK', 'EXPLOSIVE_PREPARATION_UI_OK', 'USE_CLOCK_UI_OK', 'BARRIER_EFFECT_UI_OK', 'TEMPLE_EXPLOSIVE_PREVIEW_AUDIT_OK', 'APPLIED_BARRIER_PREVIEW_OK', 'TAKE_ALL_UI_OK', 'RETURN_ALL_UI_OK', 'INITIAL_GATE_PREVIEW_OK', 'TEMPLE_SPEECH_UI_OK', 'TEMPLE_SPEECH_SAVE_UI_OK', 'TEMPLE_NPC_APPROACH_OK', 'ENTITY_READABILITY_OK', 'SCENE_REVIEW_OK', 'CONTAINER_LOCATOR_OK', 'VISUAL_PREFERENCES_OK') -CheckGodotLogs
+        'PREVIEW_TEST_OK', 'ITEM_CHECKPOINT_OK', 'BAG_ORIGIN_OK', 'SCRIPTED_CONTAINER_OK', 'INVENTORY_ART_UI_OK', 'ELEVATION_WALK_GUARD_OK', 'PLACED_USE_PREVIEW_OK', 'BARRIER_PLACEMENT_GUIDANCE_OK', 'EXPLOSIVE_PREPARATION_UI_OK', 'USE_CLOCK_UI_OK', 'BARRIER_EFFECT_UI_OK', 'TEMPLE_EXPLOSIVE_PREVIEW_AUDIT_OK', 'APPLIED_BARRIER_PREVIEW_OK', 'TAKE_ALL_UI_OK', 'RETURN_ALL_UI_OK', 'INITIAL_GATE_PREVIEW_OK', 'TEMPLE_SPEECH_UI_OK', 'TEMPLE_SPEECH_SAVE_UI_OK', 'TEMPLE_NPC_APPROACH_OK', 'TEMPLE_NPC_DEPARTURE_UI_OK', 'ENTITY_READABILITY_OK', 'SCENE_REVIEW_OK', 'CONTAINER_LOCATOR_OK', 'VISUAL_PREFERENCES_OK') -CheckGodotLogs
     $manifest.Passed = $true
 }
 catch { $manifest.Failure = $_.Exception.Message }

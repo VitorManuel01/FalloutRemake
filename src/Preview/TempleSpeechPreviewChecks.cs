@@ -44,6 +44,7 @@ public partial class TemplePreview
         _speechWindow.ChooseRequested!(); Unchanged();
         if (_capture != null) await Capture(Path.ChangeExtension(_capture, "speech-result.png"));
         await CheckSpeechPersistence(Unchanged);
+        await CheckNpcDepartureUi(Unchanged);
         _speechWindow.RestartRequested!();
         if (_speechDraft.StepIndex != 0 || _speechProfile.Classify(_speechState.Capture()) != TempleSpeechState.Initial)
             throw new InvalidDataException("Speech restart did not reset the detached state.");
