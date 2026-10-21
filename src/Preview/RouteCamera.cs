@@ -52,22 +52,7 @@ public partial class TemplePreview
         Vector3 oldFocus = _focus; float oldSize = _camera.Size;
         try
         {
-            Vector3 right = _camera.Basis.X, up = _camera.Basis.Y;
-            Projection projection = _camera.GetCameraProjection();
-            double widthPerSize = 2 / (Math.Abs(projection.X.X) * _camera.Size);
-            double heightPerSize = 2 / (Math.Abs(projection.Y.Y) * _camera.Size);
-            Rect2 safe = _hud.CameraSafeRect; Vector2 viewport = GetViewport().GetVisibleRect().Size;
-            OrthoFrame frame = OrthoFraming.Fit(points.Select(p => new FramePoint(p.Dot(right), p.Dot(up))).ToArray(),
-                viewport.X, viewport.Y, new FrameRect(safe.Position.X, safe.Position.Y, safe.Size.X, safe.Size.Y), widthPerSize, heightPerSize);
-            Vector3 groundUp = new(up.X, 0, up.Z);
-            if (groundUp.LengthSquared() < .0001f) throw new InvalidOperationException("Camera angle cannot be framed from ground focus.");
-            _camera.Size = (float)frame.Size;
-            // UpdateCamera adds its sidebar offset along right; remove it from the solved ground focus.
-            _focus = right * ((float)frame.TargetX - _camera.Size * 145 / viewport.Y)
-                + groundUp * ((float)frame.TargetY / groundUp.LengthSquared());
-            UpdateCamera();
-            if (!FramingPointsVisible(points)) throw new InvalidOperationException("Route did not fit inside the unobscured viewport.");
-            SetCameraFollow(false);
+            FitVisibleRoutePoints(points);
             if (!moving)
             {
                 if (plan.TargetKey != null)
@@ -86,6 +71,24 @@ public partial class TemplePreview
             NavigationStatus("Não foi possível enquadrar este percurso no limite da câmera");
             GD.Print("ROUTE_FRAME_UNAVAILABLE: " + error.Message);
         }
+    }
+    private void FitVisibleRoutePoints(Vector3[] points)
+    {
+        Vector3 right = _camera.Basis.X, up = _camera.Basis.Y;
+        Projection projection = _camera.GetCameraProjection();
+        double widthPerSize = 2 / (Math.Abs(projection.X.X) * _camera.Size);
+        double heightPerSize = 2 / (Math.Abs(projection.Y.Y) * _camera.Size);
+        Rect2 safe = _hud.CameraSafeRect; Vector2 viewport = GetViewport().GetVisibleRect().Size;
+        OrthoFrame frame = OrthoFraming.Fit(points.Select(p => new FramePoint(p.Dot(right),p.Dot(up))).ToArray(),
+            viewport.X,viewport.Y,new FrameRect(safe.Position.X,safe.Position.Y,safe.Size.X,safe.Size.Y),widthPerSize,heightPerSize);
+        Vector3 groundUp = new(up.X,0,up.Z);
+        if (groundUp.LengthSquared() < .0001f) throw new InvalidOperationException("Camera angle cannot be framed from ground focus.");
+        _camera.Size = (float)frame.Size;
+        _focus = right * ((float)frame.TargetX - _camera.Size * 145 / viewport.Y)
+            + groundUp * ((float)frame.TargetY / groundUp.LengthSquared());
+        UpdateCamera();
+        if (!FramingPointsVisible(points)) throw new InvalidOperationException("Route did not fit inside the unobscured viewport.");
+        SetCameraFollow(false);
     }
     private async Task CheckRouteCamera()
     {

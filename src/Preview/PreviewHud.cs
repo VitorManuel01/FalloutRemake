@@ -166,6 +166,7 @@ public partial class PreviewHud : CanvasLayer
         _loot.Pressed += () => LootRequested?.Invoke(); guide.AddChild(_loot);
         _useClock.Pressed += () => UseClockRequested?.Invoke(); guide.AddChild(_useClock);
         guide.AddChild(_templeReveal);
+        guide.AddChild(_templeRoute); _templeRoute.Toggled += value => TempleRouteRequested?.Invoke(value);
 
         var footer = Panel(root, 16, -52, -16, -12, true);
         footer.AnchorTop = 1; footer.AnchorBottom = 1;

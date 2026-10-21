@@ -23,6 +23,7 @@ public partial class TemplePreview
     private void RefreshActiveTempleHud()
     {
         SynchronizeTemplePlayback();
+        RefreshNpcRouteView();
         var progress = _campaign?.TempleProgress;
         bool present = progress != null; bool current = present && _campaign!.CurrentMap == 3 && _campaign.Location.Elevation == 2 && _elevation == 2;
         bool enabled = current && _walker?.Moving == false && !InspectorOpen;

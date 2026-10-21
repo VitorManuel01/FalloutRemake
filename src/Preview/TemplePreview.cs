@@ -181,6 +181,7 @@ public partial class TemplePreview : Node3D
 		if (_map == null) return;
 		CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseLoot(); CloseBag(); CloseInventory();
 		_worldLabels.Clear();
+        ResetNpcRouteView();
 		using var resources = new ResourceScope();
 		_placedUseLayer = null; _placedUseNodes.Clear();
 		_replacementNodes.Clear();
@@ -295,6 +296,7 @@ public partial class TemplePreview : Node3D
 		if (_selected != null && !VisibleObject(_selected)) ClearSelection();
 		_occlusionDirty = true; UpdateWallOcclusion();
 		RefreshContainerLocator();
+        RefreshNpcRouteView();
 	}
 
 	public override void _Process(double delta)

@@ -16,6 +16,7 @@ public sealed record TempleSpeechCommitPlan(Guid WorldToken, Guid TempleToken, l
     TempleNpcDepartureProfile Profile, ScriptStateSnapshot Accepted, int Intelligence, bool SpeechTagged);
 public sealed record TempleSpeechProposal(TempleWorldStatus Status, TempleSpeechCommitPlan? Plan = null);
 public sealed record TempleWorldAdvance(TempleWorldStatus Status, int AppliedTicks = 0, int UnusedTicks = 0);
+public sealed record TempleNpcRouteInfo(TempleWorldStatus Status, int[] Tiles, int? BlockedHex = null, string? TargetKey = null);
 
 internal sealed class TempleWorldProgress
 {
@@ -57,6 +58,22 @@ public sealed partial class WorldSession
     public Guid TempleToken { get; private set; } = Guid.NewGuid();
     public long TempleRevision { get; private set; }
     public SavedTempleProgress? TempleProgress => _templeProgress?.Capture();
+    public TempleNpcRouteInfo InspectTempleNpcRoute()
+    {
+        if (_templeProgress == null || CurrentMap != 3 || Location.Elevation != 2) return new(TempleWorldStatus.Unavailable,Array.Empty<int>());
+        var state = _templeProgress.Departure;
+        if (state.Phase == NpcDeparturePhase.Hidden) return new(TempleWorldStatus.Complete,Array.Empty<int>());
+        if (state.Phase == NpcDeparturePhase.GateDelay) return new(TempleWorldStatus.NotWalking,Array.Empty<int>());
+        int[] tiles = _templeProgress.Profile.Route(state.Phase).Skip(state.RouteIndex).ToArray();
+        string? target = state.Phase == NpcDeparturePhase.ToGate ? _templeProgress.Profile.GateKey : null;
+        var nav = Current.Doors.NavigationForNpc(2,_templeProgress.Profile.ActorKey);
+        foreach (int hex in tiles.Skip(1))
+        {
+            if (hex == Location.Hex) return new(TempleWorldStatus.Occupied,tiles,hex,target);
+            if (!nav.Walkable(hex)) return new(TempleWorldStatus.Blocked,tiles,hex,target);
+        }
+        return new(TempleWorldStatus.Ready,tiles,TargetKey: target);
+    }
     public MapObject EffectiveObject(int map, MapObject source) => map == 3 && _templeProgress?.Profile.ActorKey == source.Key
         ? _templeProgress.Profile.Actor(_templeProgress.Departure) : source;
     private DoorState? TempleGate(int map, string key) => map == 3 && _templeProgress?.Profile.GateKey == key ? _templeProgress.Gate() : null;

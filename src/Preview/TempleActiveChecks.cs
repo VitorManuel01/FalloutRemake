@@ -44,6 +44,7 @@ public partial class TemplePreview
                 throw new InvalidDataException("Speech did not start the active manual departure while preserving the open gate.");
             CheckPose(); byte[] accepted = State(); oldApply();
             if (!accepted.SequenceEqual(State())) throw new InvalidDataException("Old conversation callback reapplied Speech.");
+            await CheckNpcRouteView();
             Press("TempleProgressAction");
             await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame); await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
             if (!_hud.TempleProgressHeadingVisible) throw new InvalidDataException("Active NPC controls scroll past their own heading.");

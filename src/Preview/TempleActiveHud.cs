@@ -18,6 +18,8 @@ public partial class PreviewHud
         _templeReveal = new() { Name = "TempleProgressAction", Text = "Saída do NPC", Visible = false };
     public Action? TempleStepRequested, TempleLegRequested, TempleWaitRequested, TempleTickRequested, TempleFocusRequested;
     public Action<bool>? TempleAutoRequested;
+    public Action<bool>? TempleRouteRequested;
+    private readonly Button _templeRoute = new() { Name = "TempleNpcRouteAction", Text = "Percurso NPC", ToggleMode = true, Visible = false };
     private void AddTempleProgress(VBoxContainer parent)
     {
         parent.AddChild(_templeProgress);
@@ -57,4 +59,6 @@ public partial class PreviewHud
     }
     public void TemplePlayback(bool enabled, bool canEnable)
     { _templeAuto.SetPressedNoSignal(enabled); _templeAuto.Disabled = !enabled && !canEnable; }
+    public void TempleRouteAction(bool visible,bool enabled,bool pressed,string hint)
+    { _templeRoute.Visible = visible; _templeRoute.Disabled = !enabled; _templeRoute.SetPressedNoSignal(pressed); _templeRoute.TooltipText = hint; }
 }
