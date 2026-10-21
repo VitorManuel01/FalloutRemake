@@ -114,6 +114,7 @@ public partial class PreviewHud : CanvasLayer
         _elevation.ItemSelected += index => ElevationRequested?.Invoke((int)index); column.AddChild(_elevation);
         AddContainerLocator(column);
         _counts.AddThemeFontSizeOverride("font_size", 12); _counts.Modulate = new Color("8fa69a"); column.AddChild(_counts);
+        AddTempleProgress(column);
         column.AddChild(new HSeparator());
         _originalFloor.Toggled += enabled => OriginalFloorRequested?.Invoke(enabled); column.AddChild(_originalFloor);
         AddFilter(column, "floor", "Piso", "68766d");
@@ -164,6 +165,7 @@ public partial class PreviewHud : CanvasLayer
         _frameRoute.Pressed += () => FrameRouteRequested?.Invoke(); guide.AddChild(_frameRoute);
         _loot.Pressed += () => LootRequested?.Invoke(); guide.AddChild(_loot);
         _useClock.Pressed += () => UseClockRequested?.Invoke(); guide.AddChild(_useClock);
+        guide.AddChild(_templeReveal);
 
         var footer = Panel(root, 16, -52, -16, -12, true);
         footer.AnchorTop = 1; footer.AnchorBottom = 1;

@@ -50,9 +50,10 @@ public partial class TemplePreview
             _hud.Status("Ao alcance do personagem · consulta da conversa disponível");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "npc-approach.png"));
             await CheckSpeechConsultation();
+            await CheckActiveTempleSpeech();
             CheckpointFile.Write(CheckpointPath, _campaign.Capture(_mapCatalog.Source.Sha256)); LoadCheckpoint();
             if (_campaign.Location.Hex != near || !_doors!.Get(gate.Source.Key)!.IsOpen) throw new InvalidDataException("NPC approach checkpoint lost gate state.");
-            GD.Print("INITIAL_GATE_PREVIEW_OK: original gate 104 open via production interaction, 974->1321 reachable, occupied-close refusal, v5 load on gate, actual walk to NPC at 13928, unchanged XP/items/source, no dialogue/lockpick/combat.");
+            GD.Print("INITIAL_GATE_PREVIEW_OK: original gate 104 open via production interaction, 974->1321 reachable, occupied-close refusal, v6 load on gate, actual walk to NPC at 13928, detached and active Speech fixtures restored, unchanged XP/items/source, no general combat.");
         }
         finally
         {

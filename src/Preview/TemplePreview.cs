@@ -157,7 +157,8 @@ public partial class TemplePreview : Node3D
 		var data = new GameData(directory);
 		var catalog = new MapCatalog(data.Read("data/maps.txt"));
         var runtimePrototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
-        var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 }, runtimePrototype: runtimePrototypes.Get);
+		var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 }, runtimePrototype: runtimePrototypes.Get,
+            templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read));
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
 		_floorArt = new FloorArtCatalog(data.Read);
 		_inventoryArt = new InventoryArtCatalog(data.Read); _unavailableItemArt.Clear();
@@ -187,6 +188,7 @@ public partial class TemplePreview : Node3D
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
 		_lookup.Clear(); _bodies.Clear(); _selected = null;
 		_layout = PreviewLayout.Create(_map, _elevation);
+        _layout = ProjectTempleLayout(_layout);
 		_walls = _layout.Objects.Where(o => o.Kind == PreviewKind.Wall).ToArray();
 		_cutWalls.Clear(); _occlusionDirty = true;
 		var mesh = resources.Own(new BoxMesh { Size = new Vector3((float)FalloutGrid.FloorWidth * .985f, .08f, 1.97f) });
@@ -213,6 +215,7 @@ public partial class TemplePreview : Node3D
 			if (!_shapes.TryGetValue(obj.Kind, out BoxShape3D? shape)) _shapes[obj.Kind] = shape = _resources.Own(new BoxShape3D { Size = size });
 			body.AddChild(new CollisionShape3D { Shape = shape });
 			ConfigureEntityVisual(obj, body);
+            ConfigureActiveTempleBody(obj,body);
 			_world.AddChild(body); _lookup.Add(body.GetInstanceId(), obj); _bodies.Add(obj.Source.Key, body);
 		}
 		_highlight = new MeshInstance3D { Name = "Selection", Mesh = resources.Own(new CylinderMesh { TopRadius = .72f, BottomRadius = .72f, Height = .025f, RadialSegments = 48 }),
@@ -269,6 +272,7 @@ public partial class TemplePreview : Node3D
 	}
 	private bool VisibleObject(PreviewObject obj)
 	{
+        if (_campaign?.TempleProgress is { Departure.Phase: NpcDeparturePhase.Hidden } progress && obj.Source.Key == progress.Scripts.Blocks[0].Key) return false;
 		if (_campaign?.Current.Scenery.Replaces(obj.Source.Key) == true) return false;
 		string filter = obj.Kind switch { PreviewKind.Wall => "wall", PreviewKind.Door or PreviewKind.Exit => "exit",
 			PreviewKind.Critter => "critter", PreviewKind.Marker => "marker", _ => "scenery" };

@@ -14,7 +14,7 @@ public partial class TemplePreview
     {
         if (_selected?.Source.Offset != 425776 || _map?.Source.Sha256 != TempleBarrierEffectProposal.MapHash
             || _campaign?.CurrentMap != 3 || _campaign.Location.Elevation != 2 || _elevation != 2
-            || _walker?.Moving != false || _navigation == null || _reachable == null || InspectorOpen) return null;
+            || _walker?.Moving != false || _navigation == null || _reachable == null || InspectorOpen || !VisibleObject(_selected)) return null;
         int actorHex = _selected.Source.Header.Tile;
         if (FalloutGrid.Distance(_walker.CurrentHex, actorHex) <= 1) return _walker.CurrentHex;
         return Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(actorHex, d))

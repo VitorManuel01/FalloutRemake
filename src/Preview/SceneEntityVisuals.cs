@@ -105,7 +105,8 @@ public partial class TemplePreview
         RefreshContainerLocator();
     }
     private string EntityDescription(PreviewObject obj) => _doors?.InitialTempleGateKey == obj.Source.Key
-        ? "Porta final do templo · pode ser aberta e fechada antes do desafio. A conversa e o duelo ainda não estão disponíveis."
+        ? _campaign?.TempleProgress != null ? "Porta final do templo · controlada pela saída do NPC após Speech. A sequência pode ser salva com K."
+            : "Porta final do templo · pode ser aberta e fechada antes do desafio. Consulte o NPC para o ramo Speech; o duelo ainda está indisponível."
         : EntityPresentation.Role(obj.Source) switch
     {
         EntityVisualRole.Barrier => IsSharedBlockingProxy(obj)

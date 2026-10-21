@@ -58,7 +58,7 @@ public partial class TemplePreview
                 throw new InvalidDataException("Returning to the temple duplicated the original item.");
             foreach (WorldArea area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
             ResetWalker(); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-            GD.Print("ITEM_CHECKPOINT_OK: real pot 330/powder 106 PID 273, take/save/reset/load, v4 exterior checkpoint, legacy v1/v2 upgrade, return, source depletion, repeated take and forged quantities refused atomically, source bytes verified; test slot only.");
+            GD.Print("ITEM_CHECKPOINT_OK: real pot 330/powder 106 PID 273, take/save/reset/load, v6 exterior checkpoint, legacy v1/v2 upgrade, return, source depletion, repeated take and forged quantities refused atomically, source bytes verified; test slot only.");
         }
         finally { _checkingNavigation = false; }
     }

@@ -21,6 +21,7 @@ public partial class TemplePreview
         if (_selected?.Source.Offset != 425776 || _map?.Source.Sha256 != TempleBarrierEffectProposal.MapHash || _campaign?.CurrentMap != 3)
             return "Selecione o personagem do templo.";
         if (_walker == null || _elevation != 2 || _campaign.Location.Elevation != 2) return "Volte à elevação do personagem.";
+        if (_campaign.TempleProgress != null) return "Conversa já aceita nesta partida. Use Saída do NPC para acompanhar a sequência.";
         if (_walker.Moving) return "Termine ou pare a caminhada antes de consultar a conversa.";
         if (FalloutGrid.Distance(_walker.CurrentHex, _selected.Source.Header.Tile) > 1) return "Aproxime o personagem a um hex do NPC para consultar a conversa.";
         if (_directory == null || _objectText == null) return "Os textos originais da instalação não estão disponíveis.";
@@ -28,6 +29,7 @@ public partial class TemplePreview
     }
     private void RefreshSpeechAction()
     {
+        RefreshActiveTempleHud();
         _hud.SpeechRequested = OpenSpeechConsultation;
         _hud.NpcApproachRequested = ApproachTempleNpc;
         bool actor = _selected?.Source.Offset == 425776 && _map?.Source.Sha256 == TempleBarrierEffectProposal.MapHash;
@@ -66,6 +68,7 @@ public partial class TemplePreview
                 var state = profile.Classify(_speechState!.Capture());
                 dialog.Refresh(_speechDraft, state);
                 dialog.PersistenceActions(state == TempleSpeechState.Accepted, File.Exists(SpeechCheckpointPath));
+                dialog.ApplyAction(state == TempleSpeechState.Accepted && _campaign?.TempleProgress == null);
             }
             void Restart()
             {
@@ -75,6 +78,21 @@ public partial class TemplePreview
                 Refresh();
             }
             dialog.RestartRequested = Restart;
+            dialog.ApplyRequested = () =>
+            {
+                if (!Active() || _speechState == null || SpeechBlockedReason() != null) return;
+                try
+                {
+                    var departureProfile = TempleNpcDepartureProfile.Create(_map!,data.Read);
+                    var proposal = _campaign!.PrepareTempleSpeech(departureProfile,_speechState.Capture(),_walker?.Moving == true,5,true);
+                    if (proposal.Status != TempleWorldStatus.Ready || _campaign.CommitTempleSpeech(proposal.Plan,_walker?.Moving == true) != TempleWorldStatus.Ready)
+                    { dialog.Notice("A situação mudou. Feche e consulte novamente antes de aplicar a conversa."); return; }
+                    CloseSpeechConsultation(); RefreshActiveTempleProjection();
+                    NavigationStatus("Speech aceito na partida · saída manual disponível · K para salvar");
+                }
+                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
+                { dialog.Notice("Os dados locais não estão disponíveis para aplicar a conversa. O resultado do ensaio foi preservado."); GD.Print("SPEECH_APPLY_UNAVAILABLE: " + error.Message); }
+            };
             dialog.ChooseRequested = () =>
             {
                 if (!Active() || _speechDraft == null || _speechState == null) return;

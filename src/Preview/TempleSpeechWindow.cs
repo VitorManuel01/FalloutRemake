@@ -21,7 +21,9 @@ public partial class TempleSpeechWindow : AcceptDialog
     private TempleSpeechProfile? _profile;
     private TempleSpeechText? _text;
     private readonly Button _departure = new() { Name = "SpeechDeparture", Text = "Saída do NPC · ensaio", Visible = false };
-    public Action? ChooseRequested, RestartRequested, SaveRequested, LoadRequested, DepartureRequested;
+    private readonly Button _apply = new() { Name = "SpeechApplyWorld", Text = "Aplicar à partida", Visible = false,
+        TooltipText = "Aceita Speech com o perfil de teste e inicia a saída manual do NPC. K salva no checkpoint da partida." };
+    public Action? ChooseRequested, RestartRequested, SaveRequested, LoadRequested, DepartureRequested, ApplyRequested;
     public string ReplyText => _replies.Text;
     public string ChoiceText => _choice.Text;
     public string StatusText => _status.Text;
@@ -38,12 +40,13 @@ public partial class TempleSpeechWindow : AcceptDialog
         body.AddChild(new Label { Text = "Ensaio separado da partida · INT 5 e Speech marcado. Somente cinco escolhas verificadas estão disponíveis. Nenhuma escolha concede XP, move o NPC ou muda seus itens e progresso.",
             AutowrapMode = TextServer.AutowrapMode.WordSmart, Modulate = new Color("e8c78d") });
         body.AddChild(_speaker); body.AddChild(_progress); body.AddChild(_replies); body.AddChild(_choice); body.AddChild(_status); body.AddChild(_restart);
-        var files = new HFlowContainer(); files.AddChild(_save); files.AddChild(_load); files.AddChild(_departure); body.AddChild(files);
+        var files = new HFlowContainer(); files.AddChild(_save); files.AddChild(_load); files.AddChild(_departure); files.AddChild(_apply); body.AddChild(files);
         _choice.Pressed += () => { if (!_choice.Disabled) ChooseRequested?.Invoke(); };
         _restart.Pressed += () => RestartRequested?.Invoke();
         _save.Pressed += () => { if (!_save.Disabled) SaveRequested?.Invoke(); };
         _load.Pressed += () => { if (!_load.Disabled) LoadRequested?.Invoke(); };
         _departure.Pressed += () => { if (_departure.Visible && !_departure.Disabled) DepartureRequested?.Invoke(); };
+        _apply.Pressed += () => { if (_apply.Visible && !_apply.Disabled) ApplyRequested?.Invoke(); };
     }
     public void Inspect(TempleSpeechProfile profile, TempleSpeechText text)
     { _profile = profile; _text = text; _speaker.Text = "Descrição original: " + text.Speaker; }
@@ -55,7 +58,7 @@ public partial class TempleSpeechWindow : AcceptDialog
         _choice.Visible = !done; _choice.Disabled = done;
         if (done)
         {
-            _replies.Text = "A alternativa de Speech foi aceita no ensaio separado. A conversa e o duelo na partida ainda não estão implementados.";
+            _replies.Text = "A alternativa de Speech foi aceita no ensaio separado. Aplicar à partida inicia a saída manual do NPC com esse resultado. O duelo ainda não está disponível.";
             _status.Text = "Você pode fechar ou recomeçar. O personagem permanece no mesmo lugar e os itens continuam com seus donos.";
             return;
         }
@@ -67,4 +70,5 @@ public partial class TempleSpeechWindow : AcceptDialog
     public void Message(string text) { _status.Text = text; _choice.Disabled = true; }
     public void PersistenceActions(bool canSave, bool canLoad) { _save.Disabled = !canSave; _load.Disabled = !canLoad; }
     public void Notice(string text) => _status.Text = text;
+    public void ApplyAction(bool available) { _apply.Visible = available; _apply.Disabled = !available; }
 }

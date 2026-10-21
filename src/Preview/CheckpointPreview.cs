@@ -35,7 +35,8 @@ public partial class TemplePreview
             var data = new GameData(_directory);
             var catalog = new MapCatalog(data.Read("data/maps.txt"));
             var runtimePrototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
-            WorldSession restored = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 }, saved, catalog.Source.Sha256, runtimePrototype: runtimePrototypes.Get);
+            WorldSession restored = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 }, saved, catalog.Source.Sha256, runtimePrototype: runtimePrototypes.Get,
+                templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read));
             bool walking = _walkMode; string? selectedKey = _selected?.Source.Key;
             _campaign = restored; _mapCatalog = catalog; _skills.Reset(); BindCurrentArea();
             ChangeElevation(_travel!.Location.Elevation); if (walking != _walkMode) ToggleWalkMode();
