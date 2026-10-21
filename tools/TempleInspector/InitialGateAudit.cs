@@ -37,8 +37,9 @@ internal static class InitialGateAudit
         if (world.Current.Doors.CanLockpick(key, approach, 2, false) != DoorUseStatus.ScriptRequired) throw new InvalidDataException("Initial gate enabled lockpick.");
         if (!before.SequenceEqual(State(original)) || gate.State["openFlags"] != 0) throw new InvalidDataException("Detached initial gate audit changed its source.");
         MapLayoutWriter.Verify(map);
+        object activeSpeech = WorldTempleSpeechAudit.Create(world,catalog,data);
         return new { Status = "INITIAL_GATE_AUDIT_OK", Gate = gate.Key, GateApproach = approach, ClosedReachable = beforeReach,
             OpenReachable = openReach, NpcApproach = nearActor, WalkingSteps = steps, CheckpointVersion = world.Capture(catalog.Source.Sha256).Version,
-            SourceAndCallerUnchanged = true, DialogueOrCombatExecuted = false, LockpickEnabled = false };
+            SourceAndCallerUnchanged = true, DialogueOrCombatExecuted = false, LockpickEnabled = false, DetachedWorldSpeech = activeSpeech };
     }
 }

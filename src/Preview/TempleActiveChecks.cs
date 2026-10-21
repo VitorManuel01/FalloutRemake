@@ -44,7 +44,10 @@ public partial class TemplePreview
                 throw new InvalidDataException("Speech did not start the active manual departure while preserving the open gate.");
             CheckPose(); byte[] accepted = State(); oldApply();
             if (!accepted.SequenceEqual(State())) throw new InvalidDataException("Old conversation callback reapplied Speech.");
-            Press("TempleProgressAction"); Press("TempleWorldFocus");
+            Press("TempleProgressAction");
+            await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame); await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
+            if (!_hud.TempleProgressHeadingVisible) throw new InvalidDataException("Active NPC controls scroll past their own heading.");
+            Press("TempleWorldFocus");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture,"active-speech.png"));
             int next = profile.Restore(_campaign.TempleProgress.Departure).NextHex!.Value;
             if (_walker!.CurrentHex != next) { RequestWalk(next); CompleteReadabilityWalk(); }
@@ -59,6 +62,15 @@ public partial class TemplePreview
             CompleteReadabilityWalk(); RefreshSpeechAction();
             var oldStep = _hud.TempleStepRequested!; Press("TempleWorldStep"); CheckPose(); byte[] stepped = State(); oldStep();
             if (!stepped.SequenceEqual(State())) throw new InvalidDataException("Stale active NPC callback advanced a second hex.");
+            var stage = _campaign.TempleProgress!.Departure; int later = profile.Route(stage.Phase)[stage.RouteIndex + 3];
+            RequestWalk(later); CompleteReadabilityWalk(); long priorRevision = _campaign.TempleRevision;
+            Press("TempleWorldLeg"); CheckPose();
+            if (_campaign.TempleRevision <= priorRevision || profile.Location(_campaign.TempleProgress!.Departure).Hex == later)
+                throw new InvalidDataException("Partly blocked NPC leg did not commit its valid prefix and stop before the player.");
+            nav = _doors.Navigation(2); reach = nav.ReachableFrom(_walker.CurrentHex);
+            safe = Enumerable.Range(0,40000).Where(t => reach.Distance(t) > 0 && !nav.IsExit(t) && !routes.Contains(t))
+                .OrderBy(reach.Distance).ThenBy(t => t).First();
+            RequestWalk(safe); CompleteReadabilityWalk();
             SaveCheckpoint(); var savedPose = _campaign.TempleProgress!.Departure; ResetWalker(); LoadCheckpoint(); CheckPose();
             if (_campaign.TempleProgress!.Departure != savedPose) throw new InvalidDataException("Active NPC pose failed K/R restoration.");
             SelectObject(_layout.Objects.Single(o => o.Source.Key == profile.ActorKey));

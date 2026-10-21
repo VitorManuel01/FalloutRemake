@@ -42,7 +42,7 @@ internal static class WorldTempleSpeechTests
             Assert(before.SequenceEqual(State(world)) && world.TempleProgress == null);
             Assert(world.CommitTempleSpeech(plan,false) == TempleWorldStatus.Ready && world.TempleProgress!.Departure.Phase == NpcDeparturePhase.ToGate
                 && world.Current.Doors.Get(profile.GateKey)!.IsOpen && world.TempleProgress.InitialGateOpen && world.Experience == 0);
-            var scripts = world.TempleProgress.Scripts; var state = profile.Speech.CreateInitial(); state.Restore(scripts);
+            var scripts = world.TempleProgress!.Scripts; var state = profile.Speech.CreateInitial(); state.Restore(scripts);
             Assert(state.TryRead(ScriptVariableScope.ScriptLocal,profile.ActorKey,14,out int phase) && phase == 0
                 && state.TryRead(ScriptVariableScope.Map,profile.Speech.MapKey,20,out int quest) && quest == 2
                 && !state.TryRead(ScriptVariableScope.ScriptLocal,profile.ActorKey,16,out _));
@@ -165,6 +165,24 @@ internal static class WorldTempleSpeechTests
             var legacy = world.Capture("catalog") with { Version = 5, Profile = "neutral-v5", Temple = null };
             var old = JsonNode.Parse(CheckpointFile.Encode(legacy))!; old.AsObject().Remove("Temple");
             Assert(CheckpointFile.Decode(Encoding.UTF8.GetBytes(old.ToJsonString())).Version == 5);
+        });
+        check("active NPC state survives external area departure save load and return without ticking while away", () =>
+        {
+            var (map,profile,world) = Fixture(); world.CommitTempleSpeech(Plan(world,profile),false);
+            world.StepTempleNpc(world.TempleToken,world.TempleRevision,false); var progress = JsonSerializer.Serialize(world.TempleProgress);
+            world.Current.Travel.MoveTo(28716); Assert(world.UseExit(false).Status == ExitStatus.Ready && world.CurrentMap == 126);
+            byte[] before = State(world);
+            Assert(world.StepTempleNpc(world.TempleToken,world.TempleRevision,false) == TempleWorldStatus.Unavailable
+                && world.AdvanceTempleNpcTime(100,world.TempleToken,world.TempleRevision,false).Status == TempleWorldStatus.Unavailable
+                && before.SequenceEqual(State(world)));
+            var saved = CheckpointFile.Decode(before);
+            var restored = WorldSession.Restore(id => id == 3 ? map : WorldTests.Map(id,3),new[] { 3,126 },saved,"catalog",templeProfile: _ => profile);
+            Assert(restored.CurrentMap == 126 && before.SequenceEqual(State(restored)) && JsonSerializer.Serialize(restored.TempleProgress) == progress);
+            Assert(restored.UseExit(false).Status == ExitStatus.Ready && restored.CurrentMap == 3 && JsonSerializer.Serialize(restored.TempleProgress) == progress);
+            int[] route = profile.Route(NpcDeparturePhase.ToGate); int next = route[2];
+            int safe = Enumerable.Range(0,6).Select(d => FalloutGrid.Neighbor(13728,d)!.Value).First(t => !route.Contains(t) && t != next);
+            restored.Current.Travel.Arrive(new(3,2,safe,0));
+            Assert(restored.StepTempleNpc(restored.TempleToken,restored.TempleRevision,false) == TempleWorldStatus.Ready);
         });
     }
     private static void Assert(bool value) { if (!value) throw new Exception("World Temple Speech assertion failed."); }
