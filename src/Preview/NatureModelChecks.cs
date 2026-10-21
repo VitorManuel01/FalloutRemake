@@ -24,10 +24,11 @@ public partial class TemplePreview
                 BindCurrentArea(); ChangeElevation(0);
                 byte[] before = CheckpointFile.Encode(_campaign.Capture(_mapCatalog!.Source.Sha256));
                 var source = _layout!.Objects.Where(o => NaturePresentation.Resolve(id,o.Source) != null).ToArray();
-                if (_natureCount != source.Length || _natureCount == 0 || _natureBatches.Count is < 1 or > 3)
+                if (_natureCount != source.Length || _natureCount == 0 || _natureBatches.Count is < 1 or > 4
+                    || _natureTreeCount != (id == 126 ? 88 : 0))
                     throw new InvalidDataException($"Nature batch/instance counts disagree with original map {id}: {_natureCount}/{source.Length} in {_natureBatches.Count} batches.");
                 foreach (var asset in _natureAssets.Where(a => a.Value != null))
-                    if (asset.Key is not ("RockS01" or "RiverRock1")) throw new InvalidDataException("An unselected Nature model or another category was loaded.");
+                    if (asset.Key is not ("RockS01" or "RiverRock1" or "BlastedForestBurntTreeStump01")) throw new InvalidDataException("An unselected Nature model or another category was loaded.");
                 SetNatureModels(true);
                 if (_natureOriginals.Keys.Any(n => n.Visible) || !_natureBatches.Any(b => b.Node.Visible))
                     throw new InvalidDataException("Nature models overlapped provisional rock geometry.");
@@ -51,7 +52,22 @@ public partial class TemplePreview
                 MapLayoutWriter.Verify(_map!);
                 _focus = Point(selected.Position,0); _camera.Size = 14; UpdateCamera();
                 if (_capture != null) await Capture(Path.ChangeExtension(_capture,$"nature-map-{id}.png"));
-                GD.Print($"NATURE_MAP_OK: map {id}; {_natureCount} original rocks in {_natureBatches.Count} shared mesh batches; source IDs, picking, filters, comparison and checkpoint preserved.");
+                if (id == 126)
+                {
+                    var tree = source.First(o => NaturePresentation.Resolve(id,o.Source)!.Tree && VisibleObject(o));
+                    SelectObject(tree);
+                    if (_selected?.Source.Key != tree.Source.Key || !_hud.SelectionHeading.Contains("Tree")
+                        || !_hud.SelectionDetails.Contains("Árvore queimada") || _hud.SelectionDetails.Contains("placa vermelha"))
+                        throw new InvalidDataException("Nature tree selection lost original name and identity.");
+                    SetNatureModels(false);
+                    if (!_hud.SelectionDetails.Contains("placa vermelha")) throw new InvalidDataException("Nature comparison left stale inspector appearance.");
+                    SetNatureModels(true);
+                    if (!_hud.SelectionDetails.Contains("Árvore queimada")) throw new InvalidDataException("Nature inspector did not follow the visible tree model.");
+                    _focus = Point(tree.Position,0); _camera.Size = 14; UpdateCamera();
+                    if (_capture != null) await Capture(Path.ChangeExtension(_capture,"nature-exterior-trees.png"));
+                    GD.Print($"NATURE_TREES_OK: 88 original exterior trees, one shared Nature burnt-tree mesh batch, original rotations/IDs/blockers/picking, comparison/filter and unchanged checkpoint verified.");
+                }
+                GD.Print($"NATURE_MAP_OK: map {id}; {_natureCount-_natureTreeCount} rocks and {_natureTreeCount} trees in {_natureBatches.Count} shared mesh batches; source IDs, picking, filters, comparison and checkpoint preserved.");
             }
             GD.Print("NATURE_MODELS_OK: local Nature-only meshes and PBR materials, shared batched rendering, original footprint anchors/rotations, no proprietary assets copied, no navigation or state changes; missing models keep provisional geometry.");
         }

@@ -3,6 +3,7 @@
 [Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
 [Bateria mais recente: conversa ativa, saída do NPC e chegada a Arroyo](docs/temple-active-batch-2026-10-21.md).
 [Primeiros modelos Nature importados e renderização compartilhada](docs/nature-models-2026-10-21.md).
+[Árvores Nature no exterior do templo](docs/nature-exterior-trees-2026-10-21.md).
 [Primeira entrada em Arroyo e recompensa única, checkpoint v8](docs/arroyo-first-entry-v8-2026-10-21.md).
 [Bateria atual: saída restaurável do NPC e vista 3D isolada](docs/temple-npc-batch-2026-10-20.md).
 [Bateria anterior: estados, porta final e consulta de Speech](docs/temple-state-batch-2026-10-20.md).
@@ -33,7 +34,9 @@ A primeira chegada à vila após o Speech concede os 600 XP originais uma única
 vez. Os demais efeitos do script de entrada da vila ainda não são executados.
 As rochas compatíveis no exterior e na vila já usam os modelos locais de
 **Assets/Nature**, com materiais PBR e três lotes de malha por área. **Nature 3D**
-compara com as formas provisórias. Os assets proprietários permanecem fora do Git.
+compara com as formas provisórias. As 88 árvores do exterior usam o modelo
+Nature de árvore queimada, em um lote adicional. Os assets proprietários
+permanecem fora do Git.
 
 **Correção do primeiro marco:** o interior é `maps/arcaves.map`, ID 3.
 `maps/artemple.map`, ID 126, é a área externa com Klint. O inspetor agora usa o interior

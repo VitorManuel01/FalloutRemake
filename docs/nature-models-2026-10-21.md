@@ -21,6 +21,8 @@ O interior do templo tem bancos, não rochas compatíveis. Árvores completas,
 plantas, monumentos e bancos não são substituídos por pedras ou troncos.
 Paredão, pedregulho e tronco ficam disponíveis no inventário técnico, ainda sem
 correspondência visual aprovada nesta etapa. Nenhuma outra categoria é carregada.
+Atualização posterior solicitada: [88 árvores queimadas no exterior](nature-exterior-trees-2026-10-21.md)
+agora usam o modelo de tronco Nature; a descrição acima registra o primeiro marco de pedras.
 
 **Nature 3D**, no painel lateral, compara os modelos com as formas provisórias.
 Filtros também ocultam os lotes; desligar restaura a visibilidade anterior de

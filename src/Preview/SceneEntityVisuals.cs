@@ -104,7 +104,7 @@ public partial class TemplePreview
         if (_selected != null && _containerVisuals.ContainsKey(_selected.Source.Key)) SelectObject(_selected);
         RefreshContainerLocator();
     }
-    private string EntityDescription(PreviewObject obj) => _doors?.InitialTempleGateKey == obj.Source.Key
+    private string EntityDescription(PreviewObject obj) => NatureDescription(obj) ?? (_doors?.InitialTempleGateKey == obj.Source.Key
         ? _campaign?.TempleProgress != null ? "Porta final do templo · controlada pela saída do NPC após Speech. A sequência pode ser salva com K."
             : "Porta final do templo · pode ser aberta e fechada antes do desafio. Consulte o NPC para o ramo Speech; o duelo ainda está indisponível."
         : EntityPresentation.Role(obj.Source) switch
@@ -118,7 +118,7 @@ public partial class TemplePreview
         EntityVisualRole.Container => $"Recipiente · {_campaign!.Current.Items.Contents(obj.Source.Key).Sum(i => (long)i.Quantity)} unidade(s) restante(s). "
             + (_campaign.Current.Items.ContainerStatus(obj.Source.Key) == ItemTakeStatus.Ready ? "Verde: com itens; cinza: vazio. Use Recolher [J] para consultar." : "Roxo: interação especial ou acesso restrito; consulte Recolher [J]."),
         _ => ""
-    };
+    });
 
     private bool IsSharedBlockingProxy(PreviewObject obj) => EntityPresentation.IsBlockingProxy(obj.Source)
         && _layout!.Objects.Any(o => o.Source.Header.Tile == obj.Source.Header.Tile

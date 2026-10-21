@@ -17,7 +17,7 @@ public partial class TemplePreview
     private readonly List<NatureBatch> _natureBatches = new();
     private readonly Dictionary<Node3D,bool> _natureOriginals = new();
     private bool _natureEnabled = true, _natureTest;
-    private int _natureCount;
+    private int _natureCount, _natureTreeCount;
     private static string NaturePath(string name) => name switch {
         "RiverRock1" or "RockS01" or "BlastedForestBoulder01" or "BlastedForestCliff01" or "BlastedForestBurntTreeStump01"
             => $"res://Assets/Nature/{name}.glb",
@@ -54,7 +54,7 @@ public partial class TemplePreview
     }
     private void BuildNatureModels()
     {
-        _natureBatches.Clear(); _natureOriginals.Clear(); _natureCount = 0;
+        _natureBatches.Clear(); _natureOriginals.Clear(); _natureCount = _natureTreeCount = 0;
         if (_layout == null || _campaign == null) return;
         using var resources = new ResourceScope();
         var groups = _layout.Objects.Select(o => (Object:o,Model:NaturePresentation.Resolve(_campaign.CurrentMap,o.Source)))
@@ -73,6 +73,7 @@ public partial class TemplePreview
                 var anchor = asset.Bounds.Position + new Vector3(asset.Bounds.Size.X / 2,0,asset.Bounds.Size.Z / 2);
                 placements.Add(new(obj.Source.Key,new(basis,Point(obj.Position,0) - basis * anchor)));
                 _natureCount++;
+                if (pair.Model.Tree) _natureTreeCount++;
             }
             foreach (var part in asset.Parts)
             {
@@ -87,7 +88,14 @@ public partial class TemplePreview
         ApplyNatureModels();
     }
     private void SetNatureModels(bool enabled)
-    { _natureEnabled = enabled; ApplyNatureModels(); }
+    { _natureEnabled = enabled; ApplyNatureModels(); if (_selected != null) SelectObject(_selected); }
+    private string? NatureDescription(PreviewObject obj)
+    {
+        var model = _campaign == null ? null : NaturePresentation.Resolve(_campaign.CurrentMap,obj.Source);
+        if (!_natureEnabled || model == null || !_natureAssets.TryGetValue(model.Name,out var asset) || asset == null) return null;
+        return (model.Tree ? "Árvore queimada" : "Rocha") + " · modelo Nature. "
+            + (EntityPresentation.Blocks(obj.Source) ? "Mantém o bloqueio original da passagem." : "Não bloqueia a passagem no mapa original.");
+    }
     private void ApplyNatureModels()
     {
         foreach (var pair in _natureOriginals) pair.Key.Visible = !_natureEnabled && pair.Value;
@@ -100,7 +108,7 @@ public partial class TemplePreview
             batch.Node.Multimesh.VisibleInstanceCount = index;
             batch.Node.Visible = index > 0;
         }
-        _hud.NatureModelsState(_natureEnabled,_natureCount);
+        _hud.NatureModelsState(_natureEnabled,_natureCount,_natureTreeCount);
     }
 }
 
@@ -111,8 +119,12 @@ public partial class PreviewHud
     private void AddNatureControls(VBoxContainer controls)
     {
         controls.AddChild(_nature); _nature.Toggled += enabled => NatureModelsRequested?.Invoke(enabled);
-        _nature.TooltipText = "Comparar as rochas Nature importadas com as formas provisórias. IDs e caminhos permanecem iguais.";
+        _nature.TooltipText = "Comparar os modelos Nature com as formas provisórias. IDs e caminhos permanecem iguais.";
     }
-    public void NatureModelsState(bool enabled,int count)
-    { _nature.SetPressedNoSignal(enabled); _nature.Disabled = count == 0; _nature.Text = count == 0 ? "Nature 3D" : $"Nature 3D · {count} rochas"; }
+    public void NatureModelsState(bool enabled,int count,int trees)
+    {
+        _nature.SetPressedNoSignal(enabled); _nature.Disabled = count == 0;
+        _nature.Text = count == 0 ? "Nature 3D" : $"Nature 3D · {count} objetos";
+        _nature.TooltipText = $"{count-trees} rochas e {trees} árvores queimadas. Compare com as formas provisórias; IDs e caminhos permanecem iguais.";
+    }
 }
