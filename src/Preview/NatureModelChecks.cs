@@ -63,6 +63,7 @@ public partial class TemplePreview
                     if (!_hud.SelectionDetails.Contains("placa vermelha")) throw new InvalidDataException("Nature comparison left stale inspector appearance.");
                     SetNatureModels(true);
                     if (!_hud.SelectionDetails.Contains("Árvore queimada")) throw new InvalidDataException("Nature inspector did not follow the visible tree model.");
+                    await CheckNaturePicking(tree);
                     _focus = Point(tree.Position,0); _camera.Size = 14; UpdateCamera();
                     if (_capture != null) await Capture(Path.ChangeExtension(_capture,"nature-exterior-trees.png"));
                     GD.Print($"NATURE_TREES_OK: 88 original exterior trees, one shared Nature burnt-tree mesh batch, original rotations/IDs/blockers/picking, comparison/filter and unchanged checkpoint verified.");

@@ -54,7 +54,7 @@ public partial class TemplePreview
     }
     private void BuildNatureModels()
     {
-        _natureBatches.Clear(); _natureOriginals.Clear(); _natureCount = _natureTreeCount = 0;
+        _natureBatches.Clear(); _natureOriginals.Clear(); ResetNaturePicking(); _natureCount = _natureTreeCount = 0;
         if (_layout == null || _campaign == null) return;
         using var resources = new ResourceScope();
         var groups = _layout.Objects.Select(o => (Object:o,Model:NaturePresentation.Resolve(_campaign.CurrentMap,o.Source)))
@@ -71,7 +71,9 @@ public partial class TemplePreview
                 float scale = pair.Model!.Width / Math.Max(asset.Bounds.Size.X,asset.Bounds.Size.Z);
                 var basis = new Basis(Vector3.Up,obj.Source.Header.Rotation * Mathf.Pi / 3).Scaled(Vector3.One * scale);
                 var anchor = asset.Bounds.Position + new Vector3(asset.Bounds.Size.X / 2,0,asset.Bounds.Size.Z / 2);
-                placements.Add(new(obj.Source.Key,new(basis,Point(obj.Position,0) - basis * anchor)));
+                var placement = new Transform3D(basis,Point(obj.Position,0) - basis * anchor);
+                placements.Add(new(obj.Source.Key,placement));
+                ConfigureNaturePicking(body,asset,placement);
                 _natureCount++;
                 if (pair.Model.Tree) _natureTreeCount++;
             }
@@ -98,6 +100,7 @@ public partial class TemplePreview
     }
     private void ApplyNatureModels()
     {
+        ApplyNaturePicking();
         foreach (var pair in _natureOriginals) pair.Key.Visible = !_natureEnabled && pair.Value;
         foreach (var batch in _natureBatches)
         {
