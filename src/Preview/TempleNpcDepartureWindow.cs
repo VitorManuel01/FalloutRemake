@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using FalloutRemake.Geometry;
+using FalloutRemake.Import;
 using FalloutRemake.Runtime;
 using Godot;
 
@@ -11,6 +12,10 @@ public partial class TempleNpcDepartureWindow : AcceptDialog
     private readonly Label _state = new() { Name = "DepartureState", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Label _notice = new() { Name = "DepartureNotice", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly DepartureRouteView _route = new() { CustomMinimumSize = new(0, 190), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+    private readonly TempleNpcDepartureScene _scene = new() { CustomMinimumSize = new(0, 190), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, Visible = false };
+    private readonly Button _view = new() { Name = "DepartureView", Text = "Ver em 3D" };
+    private const string RouteLegend = "Azul: até a porta · Âmbar: trecho intermediário · Verde: saída\nCírculo: NPC · Quadrado: porta final · Traçado esquemático dos hexes originais";
+    private readonly Label _legend = new() { Text = RouteLegend, AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Button _step = new() { Name = "DepartureStep", Text = "Um passo" },
         _leg = new() { Name = "DepartureLeg", Text = "Até a próxima parada" },
         _tick = new() { Name = "DepartureTick", Text = "Avançar 1 s" },
@@ -21,7 +26,9 @@ public partial class TempleNpcDepartureWindow : AcceptDialog
     public Action? StepRequested, LegRequested, TickRequested, EventRequested, RestartRequested, SaveRequested, LoadRequested;
     public string StateText => _state.Text;
     public string NoticeText => _notice.Text;
-    public bool ReadableLayout => _route.Size.X >= 400 && _route.Size.Y >= 190 && _state.Size.X >= 400;
+    public bool ReadableLayout => (_scene.Visible ? _scene.Size.X >= 400 && _scene.Size.Y >= 190 : _route.Size.X >= 400 && _route.Size.Y >= 190) && _state.Size.X >= 400;
+    public bool SceneMatches(NpcDepartureSnapshot snapshot) => _scene.Matches(snapshot);
+    public void ConfigureScene(MapDocument map, TempleNpcDepartureProfile profile) => _scene.Configure(map, profile);
     public override void _Ready()
     {
         Title = "Saída do NPC · ensaio"; Exclusive = true; Transient = true; MinSize = new(560, 480);
@@ -33,11 +40,10 @@ public partial class TempleNpcDepartureWindow : AcceptDialog
         body.AddThemeConstantOverride("separation", 12); scroll.AddChild(body);
         body.AddChild(new Label { Text = "Acompanhe uma cópia do percurso original após Speech. Os passos e a espera avançam pelos botões; a partida permanece no mesmo estado.",
             AutowrapMode = TextServer.AutowrapMode.WordSmart, Modulate = new Color("e8c78d") });
-        body.AddChild(_state); body.AddChild(_route);
-        body.AddChild(new Label { Text = "Azul: até a porta · Âmbar: trecho intermediário · Verde: saída\nCírculo: NPC · Quadrado: porta final · Traçado esquemático dos hexes originais",
-            AutowrapMode = TextServer.AutowrapMode.WordSmart });
+        body.AddChild(_state); body.AddChild(_route); body.AddChild(_scene);
+        body.AddChild(_legend);
         var movement = new HFlowContainer();
-        foreach (var button in new[] { _step, _leg, _tick, _event }) movement.AddChild(button);
+        foreach (var button in new[] { _step, _leg, _tick, _event, _view }) movement.AddChild(button);
         body.AddChild(movement); body.AddChild(_notice);
         var files = new HFlowContainer(); foreach (var button in new[] { _restart, _save, _load }) files.AddChild(button); body.AddChild(files);
         _step.Pressed += () => { if (!_step.Disabled) StepRequested?.Invoke(); };
@@ -47,6 +53,11 @@ public partial class TempleNpcDepartureWindow : AcceptDialog
         _restart.Pressed += () => RestartRequested?.Invoke();
         _save.Pressed += () => SaveRequested?.Invoke();
         _load.Pressed += () => { if (!_load.Disabled) LoadRequested?.Invoke(); };
+        _view.Pressed += () =>
+        {
+            _scene.Visible = !_scene.Visible; _route.Visible = !_scene.Visible; _view.Text = _scene.Visible ? "Ver traçado" : "Ver em 3D";
+            _legend.Text = _scene.Visible ? "Azul-claro e rótulo: NPC do ensaio · Dourado: portas\nVista 3D separada · Câmera acompanha a posição do ensaio" : RouteLegend;
+        };
     }
     public void Refresh(TempleNpcDeparture session, bool canLoad)
     {
@@ -59,7 +70,7 @@ public partial class TempleNpcDepartureWindow : AcceptDialog
             : "Avance um hex ou caminhe até a próxima parada neste ensaio.";
         _step.Disabled = _leg.Disabled = !session.Walking;
         _tick.Disabled = _event.Disabled = state.Phase != NpcDeparturePhase.GateDelay;
-        _load.Disabled = !canLoad; _route.Inspect(session.Profile, state);
+        _load.Disabled = !canLoad; _route.Inspect(session.Profile, state); _scene.Inspect(state);
     }
     public void Notice(string text) => _notice.Text = text;
 }

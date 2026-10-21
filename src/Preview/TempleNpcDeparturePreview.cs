@@ -82,7 +82,8 @@ public partial class TemplePreview
             };
             void Return() { if (Valid()) CloseNpcDeparture(true); }
             dialog.Confirmed += Return; dialog.Canceled += Return; dialog.CloseRequested += Return;
-            parent.Hide(); _hud.AddChild(dialog); dialog.PopupCenteredClamped(new(780, 620), .92f); Refresh();
+            parent.Hide(); _hud.AddChild(dialog); dialog.ConfigureScene(_map!, profile);
+            dialog.PopupCenteredClamped(new(780, 620), .92f); Refresh();
         }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
         {

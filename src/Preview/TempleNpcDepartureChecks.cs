@@ -16,10 +16,17 @@ public partial class TemplePreview
         string path = ProjectSettings.GlobalizePath($"res://.local/checkpoints/departure-fixture-{Guid.NewGuid():N}.json");
         _departureCheckpointOverride = path;
         string speech = JsonSerializer.Serialize(_speechState!.Capture());
+        var activeActor = _bodies[_speechProfile!.ActorKey]; var activeGate = _bodies[_speechProfile.GateKey];
+        Transform3D actorTransform = activeActor.Transform, gateTransform = activeGate.Transform;
+        var navigation = _navigation;
         void Preserved()
         {
             unchanged();
             if (speech != JsonSerializer.Serialize(_speechState!.Capture())) throw new InvalidDataException("Departure changed the accepted Speech rehearsal.");
+            if (activeActor.Transform != actorTransform || activeGate.Transform != gateTransform || _navigation != navigation)
+                throw new InvalidDataException("Departure projection changed the active scene or navigation.");
+            if (_departureWindow != null && _departure != null && !_departureWindow.SceneMatches(_departure.Capture()))
+                throw new InvalidDataException("Isolated 3D departure does not match its complete logical snapshot.");
         }
         void Press(string name) => ((Button)_departureWindow!.FindChild(name, true, false)).EmitSignal(Button.SignalName.Pressed);
         try
@@ -53,6 +60,12 @@ public partial class TemplePreview
             Press("DepartureSave"); byte[] saved = File.ReadAllBytes(path);
             if (!_departureWindow.NoticeText.Contains("arquivo separado")) throw new InvalidDataException("Departure save did not report its separate file.");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "departure-wait.png"));
+            Press("DepartureView");
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            if (!_departureWindow.ReadableLayout) throw new InvalidDataException("3D departure viewport lost readable bounds.");
+            CheckDialogBounds(_departureWindow); Preserved();
+            if (_capture != null) await Capture(Path.ChangeExtension(_capture, "departure-3d.png"));
             var oldEvent = _departureWindow.EventRequested!;
             Press("DepartureEvent"); var fired = _departure.Capture(); oldEvent();
             if (fired.Phase != NpcDeparturePhase.ToMiddle || _departure.Capture() != fired)
@@ -86,6 +99,7 @@ public partial class TemplePreview
             if (_departure != reopened || _departure.Revision != 0 || !saved.SequenceEqual(File.ReadAllBytes(path)))
                 throw new InvalidDataException("Closed departure callbacks changed a reopened rehearsal or saved file.");
             CloseNpcDeparture(true); Preserved();
+            GD.Print("TEMPLE_NPC_DEPARTURE_3D_OK: separate viewport/world, original source keys and IDs, projected NPC pose/visibility and gate, diagram/3D toggle, partial-wait load and hidden final state, active meshes/transforms/navigation preserved.");
             GD.Print("TEMPLE_NPC_DEPARTURE_UI_OK: accepted Speech entry, diagram/modal bounds, isolated input, adjacent step and leg stops, one-shot timer, separate save/load with partial wait, rejected-file rollback, fresh tokens, old callbacks, return/reopen, unchanged Speech and world verified.");
         }
         finally
