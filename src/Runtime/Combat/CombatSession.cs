@@ -13,6 +13,8 @@ namespace FalloutRemake.Runtime.Combat;
 /// </summary>
 public sealed class CombatSession : ICombatSession
 {
+    /// <summary>CE inventoryOpen in combat: 4 AP without Quick Pockets (the item used inside costs nothing more).</summary>
+    public const int InventoryActionPoints = 4;
     private readonly List<CombatantState> _combatants;
     private readonly List<CombatEvent> _log = new();
     private readonly ICombatRandom _random;
@@ -66,6 +68,10 @@ public sealed class CombatSession : ICombatSession
                 if (path == null) return CombatActionPreview.Refused(CombatActionStatus.Unreachable, ap);
                 int cost = path.Length * CombatMovement.ActionPointsPerHex;
                 return new(cost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready, cost, ap - cost, path, null, null);
+            case CombatActionKind.UseHealing:
+                if (actor.HealingDoses <= 0) return CombatActionPreview.Refused(CombatActionStatus.NoItem, ap);
+                return new(InventoryActionPoints > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready,
+                    InventoryActionPoints, ap - InventoryActionPoints, Array.Empty<int>(), null, null);
             case CombatActionKind.Attack:
                 CombatantState? target = _combatants.FirstOrDefault(c => c.Id == proposal.TargetId);
                 if (target == null || target == actor || !target.Alive) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
@@ -94,6 +100,13 @@ public sealed class CombatSession : ICombatSession
                 int from = actor.Hex;
                 actor.Hex = preview.Path[^1]; actor.ActionPoints -= preview.ActionPointCost;
                 _log.Add(new CombatantMoved(actor.Id, from, actor.Hex, (int[])preview.Path.Clone(), preview.ActionPointCost));
+                break;
+            case CombatActionKind.UseHealing:
+                actor.ActionPoints -= preview.ActionPointCost; actor.HealingDoses--;
+                // CE critterAdjustHitPoints clamps at the maximum: the excess of the roll is lost.
+                int rolled = HealingDrugProfile.RollHealing(_random), healed = Math.Min(rolled, actor.Stats.MaxHitPoints - actor.HitPoints);
+                actor.HitPoints += healed;
+                _log.Add(new HealingUsed(actor.Id, rolled, healed, actor.HitPoints, preview.ActionPointCost));
                 break;
             case CombatActionKind.Attack:
                 CombatantState target = Get(proposal.TargetId!);

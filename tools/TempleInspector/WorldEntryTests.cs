@@ -103,9 +103,9 @@ internal static class WorldEntryTests
         check("legacy v7 cached Arroyo migrates conservatively without retroactive reward while uncached Arroyo remains eligible",() =>
         {
             var (world,load,profile) = Fixture();
-            var old = world.Capture("catalog") with {Version = 7,Profile = "neutral-v7",Entries = null, Combat = null};
+            var old = world.Capture("catalog") with {Version = 7,Profile = "neutral-v7",Entries = null, Combat = null, Areas = world.Capture("catalog").Areas.Select(a => a with { Consumed = null }).ToArray()};
             var fresh = Restore(old,load,profile); fresh.UseExit(false); Assert(fresh.Experience == 600);
-            world.InspectExit(false); old = world.Capture("catalog") with {Version = 7,Profile = "neutral-v7",Entries = null, Combat = null};
+            world.InspectExit(false); old = world.Capture("catalog") with {Version = 7,Profile = "neutral-v7",Entries = null, Combat = null, Areas = world.Capture("catalog").Areas.Select(a => a with { Consumed = null }).ToArray()};
             var conservative = Restore(old,load,profile);
             Assert(conservative.EnteredMaps.Contains(4) && conservative.UseExit(false).Status == ExitStatus.Ready && conservative.Experience == 0);
         });
@@ -119,10 +119,10 @@ internal static class WorldEntryTests
         check("v8 receipt migrates exact neutral entry globals once while visited villages without a receipt receive no invented state",() =>
         {
             var (world,load,profile) = Fixture(); world.UseExit(false);
-            var old = world.Capture("catalog") with {Version=8,Profile="neutral-v8",Combat=null,Entries=world.Capture("catalog").Entries! with {ArroyoGlobals=null}};
+            var old = world.Capture("catalog") with {Version=8,Profile="neutral-v8",Combat=null,Areas=world.Capture("catalog").Areas.Select(a => a with { Consumed = null }).ToArray(),Entries=world.Capture("catalog").Entries! with {ArroyoGlobals=null}};
             var node=JsonNode.Parse(CheckpointFile.Encode(old))!; node["Entries"]!.AsObject().Remove("ArroyoGlobals");
             var restored=Restore(CheckpointFile.Decode(Encoding.UTF8.GetBytes(node.ToJsonString())),load,profile);
-            Assert(restored.Capture("catalog").Version==10 && restored.Experience==600 && restored.ArroyoGlobals==new ArroyoRewardProfile().EntryGlobals());
+            Assert(restored.Capture("catalog").Version==11 && restored.Experience==600 && restored.ArroyoGlobals==new ArroyoRewardProfile().EntryGlobals());
             restored.UseExit(false); restored.UseExit(false); Assert(restored.ArroyoGlobals!.ArroyoReputation==65 && restored.Experience==600);
             var without=Restore(old with {Entries=old.Entries! with {ArroyoReward=null}},load,profile);
             Assert(without.ArroyoGlobals==null && without.Experience==0);

@@ -19,8 +19,8 @@ há uma luta aberta.
   com PID, elevação e o hex onde caíram. O registro do MAP nunca muda; o mundo
   projeta o cadáver.
 - **`Experience`:** XP total das lutas.
-- **`PlayerHitPoints`:** HP depois da última luta. `null` quer dizer intacto. Ainda
-  não existe HP fora do combate.
+- **`PlayerHitPoints`:** HP atual. `null` quer dizer intacto. Desde o v11 também
+  reflete a cura do Healing Powder fora das lutas.
 
 ## Regras de restauração
 
@@ -51,7 +51,7 @@ viva.
 O roadmap reservava o v10 para a CONT-003 (estado da Anciã de Arroyo), que ainda
 não foi iniciada em nenhum worktree. O v10 entrou primeiro com o combate.
 
-- Se a Frente A ainda não tiver criado a própria versão, o estado da Anciã pode entrar como **v11**.
+- O **v11** já foi usado pelo consumo de itens ([Healing Powder](healing-powder-2026-10-31.md)). Se a Frente A ainda não tiver criado a própria versão, o estado da Anciã pode entrar como **v12**.
 - Se as duas frentes forem integradas juntas, os dois campos podem ser somados num mesmo número de versão.
 
 As duas mudanças só tocam campos novos e independentes.

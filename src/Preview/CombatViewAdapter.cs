@@ -14,7 +14,8 @@ namespace FalloutRemake.Preview;
 /// <summary>
 /// First playable fight (roadmap COM-004): exploration hands over to a CombatSession when a Giant Ant notices the
 /// actor. Rules stay in Runtime.Combat; this layer only feeds clicks, shows the preview and mirrors the events.
-/// The outcome lives in WorldSession and is saved by checkpoint v10; saving waits only while a fight is open.
+/// The outcome lives in WorldSession and is saved by the checkpoint (v10+); saving waits only while a fight is open.
+/// H takes a carried Healing Powder for 4 AP (CE inventory access); the powder is used up when the won fight is applied.
 /// </summary>
 public partial class TemplePreview
 {
@@ -109,7 +110,7 @@ public partial class TemplePreview
         CombatActionStatus.NotEnoughActionPoints => "AP insuficientes", CombatActionStatus.OutOfRange => "fora de alcance",
         CombatActionStatus.Unreachable => "sem caminho livre", CombatActionStatus.NotActive => "não é o seu turno",
         CombatActionStatus.AlreadyThere => "você já está aqui", CombatActionStatus.CombatOver => "o combate terminou",
-        CombatActionStatus.OtherElevation => "outra elevação", _ => "alvo inválido"
+        CombatActionStatus.OtherElevation => "outra elevação", CombatActionStatus.NoItem => "sem Healing Powder na bolsa", _ => "alvo inválido"
     };
 
     // Screen proximity rather than a physics ray: tall kit walls must not swallow a click on a creature behind them.
@@ -154,6 +155,7 @@ public partial class TemplePreview
         if (input is InputEventKey { Pressed: true, Echo: false } key)
         {
             if (key.PhysicalKeycode == Key.Space) { EndCombatTurn(); return true; }
+            if (key.PhysicalKeycode == Key.H) { UseCombatHealing(); return true; }
             // Camera, view and inspection keys stay available; anything that would act in the world waits.
             if (key.PhysicalKeycode is Key.Q or Key.E or Key.C or Key.Home or Key.V or Key.G or Key.O or Key.F or Key.R) return false;
             if (key.PhysicalKeycode is Key.M or Key.U or Key.L or Key.Enter or Key.KpEnter or Key.K or Key.J or Key.P or Key.Escape or Key.T)
@@ -179,6 +181,12 @@ public partial class TemplePreview
     {
         if (_combat?.Active is not { IsPlayer: true } player) return;
         ApplyCombatResult(_combat.Execute(CombatActionProposal.EndTurn(player.Id)));
+    }
+
+    private void UseCombatHealing()
+    {
+        if (_combat?.Active is not { IsPlayer: true } player) { NavigationStatus("Aguarde: é o turno da criatura."); return; }
+        ApplyCombatResult(_combat.Execute(CombatActionProposal.UseHealing(player.Id)));
     }
 
     private void RunEnemyTurn()
@@ -209,6 +217,9 @@ public partial class TemplePreview
                     Lunge(_combat.Get(attack.AttackerId), _combat.Get(attack.TargetId));
                     lines.Add($"{CombatName(attack.AttackerId)} ataca {CombatName(attack.TargetId)}: {attack.Roll} em {attack.Chance}% · "
                         + (attack.Hit ? $"acerto, {attack.Damage} de dano ({attack.TargetHitPoints} HP)" : "erro")); break;
+                case HealingUsed used:
+                    lines.Add($"{CombatName(used.CombatantId)} usou Healing Powder: +{used.Healed} HP ({used.HitPoints} HP)"
+                        + (used.Healed < used.Rolled ? $" · {used.Rolled - used.Healed} além do máximo se perderam" : "") + $" · {used.ActionPointsSpent} AP"); break;
                 case CombatantDied died:
                     lines.Add($"{CombatName(died.CombatantId)} morreu" + (died.Experience > 0 ? $" · +{died.Experience} XP" : "")); break;
                 case TurnStarted started when started.CombatantId != "player":
@@ -265,8 +276,9 @@ public partial class TemplePreview
         string foes = string.Join("   ", _combat.Combatants.Where(c => !c.IsPlayer).Select(c => $"{CombatName(c.Id)}: {(c.Alive ? $"{c.HitPoints}/{c.Stats.MaxHitPoints} HP · AC {c.EffectiveArmorClass}" : "morto")}"));
         bool mine = _combat.Active?.IsPlayer == true;
         _hud.Combat(true, $"COMBATE · Rodada {turn.Round} · {(mine ? "seu turno" : $"turno de {CombatName(turn.ActiveId!)}")}",
-            $"Você: {player.HitPoints}/{player.Stats.MaxHitPoints} HP · {player.ActionPoints}/{player.Stats.MaxActionPoints} AP · AC {player.EffectiveArmorClass} · {_combatWeapon.Name}\n{foes}", mine);
-        if (mine && _combatHoverKey.Length == 0) _hud.CombatPreview("Clique no chão para mover (1 AP por hex) ou na criatura para atacar. Espaço encerra o turno.");
+            $"Você: {player.HitPoints}/{player.Stats.MaxHitPoints} HP · {player.ActionPoints}/{player.Stats.MaxActionPoints} AP · AC {player.EffectiveArmorClass} · {_combatWeapon.Name}{(player.HealingDoses > 0 ? $" · Healing Powder ×{player.HealingDoses}" : "")}\n{foes}", mine);
+        if (mine && _combatHoverKey.Length == 0) _hud.CombatPreview("Clique no chão para mover (1 AP por hex) ou na criatura para atacar. Espaço encerra o turno."
+            + (player.HealingDoses > 0 ? $" H usa Healing Powder ({CombatSession.InventoryActionPoints} AP)." : ""));
     }
 
     private void FinishCombat()
@@ -303,6 +315,7 @@ public partial class TemplePreview
     private void DiscardCombat()
     {
         if (_combat == null) return;
+        _campaign?.AbandonCombat();
         _combat = null; _combatLabels.Clear(); _encounterCheckedHex = -1; _combatFinishPending = false; _combatTweens.Clear(); _hud.Combat(false, "", "", false);
     }
 
@@ -332,10 +345,14 @@ public partial class TemplePreview
             RequestWalk(24508); CompleteReadabilityWalk(); UseDoor(_layout!.Objects.Single(o => o.Source.Offset == 244040).Source.Key);
             int xpBefore = _campaign!.Experience;
             if (_campaign.PlayerWeapon().Pid != null) throw new InvalidDataException("An empty bag must fight bare-handed.");
-            // The only weapon of the temple is the spear in a container behind the locked door; carry it as if collected.
+            // The only weapon of the temple is the spear in a container behind the locked door; carry it, and the
+            // Healing Powder ID 106 of pot 206348, as if collected.
             var spear = _campaign.Current.Map.ObjectLayers.SelectMany(l => l.Objects)
                 .SelectMany(o => o.Inventory.Select(e => (Owner: o, Item: e.Object))).Single(p => p.Item.Header.Pid == 7);
-            _campaign.Current.Items.Restore(new[] { new TakenItem(spear.Owner.Key, spear.Item.Key, 1) });
+            MapObject pot = _campaign.Current.Items.Containers.Single(o => o.Offset == 206348);
+            MapObject powder = pot.Inventory.Select(e => e.Object).Single(i => i.Header.Pid == HealingDrugProfile.Pid && i.Header.Id == 106);
+            _campaign.Current.Items.Restore(new[] { new TakenItem(spear.Owner.Key, spear.Item.Key, 1), new TakenItem(pot.Key, powder.Key, 1) });
+            if (_campaign.HealingDoses != 1) throw new InvalidDataException("The original Healing Powder is not a supported dose.");
             var ants = _layout.Objects.Where(o => o.Source.Header.Pid == 0x0100017E && o.Source.Header.Elevation == 0).ToArray();
             // Walk toward the first reachable ant with encounters on: the actor stops on a whole hex once noticed.
             int target = -1;
@@ -387,11 +404,23 @@ public partial class TemplePreview
                 _forceCombatAnimation = false;
                 if (_combatFinishPending) UpdateCombat(0);
             }
-            int rounds = 0;
+            int rounds = 0; bool healed = false;
             for (int guard = 0; guard < 300 && InCombat; guard++)
             {
                 if (_combat!.Active is { IsPlayer: false }) { UpdateCombat(EnemyTurnDelay); continue; }
                 CombatantState player = _combat.Get("player"), foe = _combat.Combatants.First(c => !c.IsPlayer && c.Alive);
+                if (!healed)
+                {
+                    // H takes the dose for 4 AP; a second dose this turn is refused for lack of AP and of powder.
+                    int apBefore = player.ActionPoints; healed = true;
+                    using var heal = new InputEventKey { Pressed = true, PhysicalKeycode = Key.H }; _UnhandledInput(heal);
+                    if (player.ActionPoints != apBefore - CombatSession.InventoryActionPoints || player.HealingDoses != 0 || _combat.Log.OfType<HealingUsed>().Count() != 1
+                        || _campaign.HealingDoses != 1) throw new InvalidDataException("H did not take one dose for 4 AP inside the fight only.");
+                    _UnhandledInput(heal);
+                    if (player.ActionPoints != apBefore - CombatSession.InventoryActionPoints || _combat.Log.OfType<HealingUsed>().Count() != 1)
+                        throw new InvalidDataException("A refused second dose changed the fight.");
+                    continue;
+                }
                 Vector3 foePoint = _bodies[foe.Id].GlobalPosition + Vector3.Up * .2f;
                 await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
                 CombatActionPreview attack = _combat.Preview(CombatActionProposal.Attack("player", foe.Id));
@@ -414,28 +443,31 @@ public partial class TemplePreview
                 throw new InvalidDataException($"The carried spear was not used ({_combatWeapon.Name}).");
             int reward = CritterPrototypeData.Read(_campaign.Current.Map.Prototypes.Single(p => p.Pid == ant.Source.Header.Pid)).Experience;
             if (_campaign.Experience != xpBefore + reward || _campaign.CombatExperience != reward) throw new InvalidDataException("Creature XP was not awarded once.");
+            if (_campaign.HealingDoses != 0 || _campaign.Current.Items.Balance(pot.Key, powder.Key) is not { Consumed: 1, Carried: 0 } || _campaign.PlayerWeapon().Pid != 7)
+                throw new InvalidDataException("The dose taken in the won fight was not used up, or the spear went with it.");
             MapObject corpse = _campaign.EffectiveObject(_campaign.CurrentMap, _campaign.Current.Map.ObjectLayers.SelectMany(l => l.Objects).Single(o => o.Key == ant.Source.Key));
             if (!_navigation!.Walkable(corpse.Header.Tile) || !_bodies[ant.Source.Key].HasMeta("defeated")
                 || _bodies[ant.Source.Key].Position.DistanceTo(Point(FalloutGrid.HexCenter(corpse.Header.Tile) - _layout!.Origin, Dimensions(PreviewKind.Critter).Y / 2)) > .001f)
                 throw new InvalidDataException("Corpse is not shown where it fell or still blocks.");
             if (_hud.FindChild("CombatBar", true, false) is Control { Visible: true }) throw new InvalidDataException("Combat HUD stayed open.");
             if (_capture != null) { _focus = _walkerNode!.Position; _camera.Size = 18; UpdateCamera(); await Capture(Path.ChangeExtension(_capture, "combat-victory.png")); }
-            // Checkpoint v10 keeps the outcome: save, reset (the ant returns), load (the corpse and XP return).
+            // Checkpoint v11 keeps the outcome: save, reset (the ant returns), load (the corpse, XP and used powder return).
             int corpseHex = corpse.Header.Tile; int? hitPoints = _campaign.PlayerHitPoints;
             SaveCheckpoint();
             WorldCheckpoint saved = CheckpointFile.Read(CheckpointPath);
-            if (saved.Version != 10 || saved.Combat is not { } combat || combat.Experience != reward || combat.PlayerHitPoints != hitPoints
-                || combat.Defeated.Single() is not { } dead || dead.Key != ant.Source.Key || dead.Hex != corpseHex)
-                throw new InvalidDataException("Checkpoint v10 did not record the won fight.");
+            if (saved.Version != 11 || saved.Combat is not { } combat || combat.Experience != reward || combat.PlayerHitPoints != hitPoints
+                || combat.Defeated.Single() is not { } dead || dead.Key != ant.Source.Key || dead.Hex != corpseHex
+                || saved.Areas.Single(a => a.Map == _campaign.CurrentMap).Consumed?.SingleOrDefault() != new ConsumedItem(pot.Key, powder.Key, 1))
+                throw new InvalidDataException("Checkpoint v11 did not record the won fight or the used powder.");
             ResetWalker();
             if (_campaign.HasCombatOutcome || _campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key) || InCombat) throw new InvalidDataException("Reset kept the combat outcome.");
             LoadCheckpoint();
             if (!_campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key) || _campaign.Experience != xpBefore + reward || _campaign.PlayerHitPoints != hitPoints
-                || !_bodies[ant.Source.Key].HasMeta("defeated") || !_navigation!.Walkable(corpseHex) || InCombat)
-                throw new InvalidDataException("Loading checkpoint v10 lost the corpse, XP or HP.");
+                || !_bodies[ant.Source.Key].HasMeta("defeated") || !_navigation!.Walkable(corpseHex) || InCombat || _campaign.HealingDoses != 0 || _campaign.PlayerWeapon().Pid != 7)
+                throw new InvalidDataException("Loading checkpoint v11 lost the corpse, XP, HP or the used powder.");
             ResetWalker();
             MapLayoutWriter.Verify(_map!);
-            GD.Print($"COMBAT_SLICE_OK: PID 0x{ant.Source.Header.Pid:X8} {ant.Source.Key} noticed the actor, carried spear wielded, animated creature turn awaited, seeded fight won in {rounds + 1}+ player turns, {reward} XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v10 save/reset/load round trip; source bytes verified.");
+            GD.Print($"COMBAT_SLICE_OK: PID 0x{ant.Source.Header.Pid:X8} {ant.Source.Key} noticed the actor, carried spear wielded, Healing Powder taken with H for 4 AP and used up on commit, animated creature turn awaited, seeded fight won in {rounds + 1}+ player turns, {reward} XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v11 save/reset/load round trip; source bytes verified.");
         }
         finally { _forceCombatAnimation = false; _combatEncounters = encounters; _combatSeed = null; DiscardCombat(); SetNavigationGrid(grid); _checkingNavigation = false; }
     }

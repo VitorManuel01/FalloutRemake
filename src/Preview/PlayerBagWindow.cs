@@ -23,6 +23,9 @@ public partial class PlayerBagWindow : AcceptDialog
     private readonly Dictionary<string, CarriedItem> _lines = new();
     private readonly QuantityTransfer _quantity = new() { Name = "ReturnQuantity", Visible = false };
     private readonly Button _prepareExplosive = new() { Name = "PrepareExplosiveAction", Text = "Posicionar · ensaio", Visible = false, Disabled = true };
+    private readonly Button _useDrug = new() { Name = "UseDrugAction", Text = "Usar (8–18 HP)", Visible = false, Disabled = true };
+    private Func<CarriedItem, DrugUseStatus>? _canUseDrug;
+    public Action<CarriedItem>? UseDrugRequested;
     public Action<CarriedItem>? PrepareExplosiveRequested;
     private Func<CarriedItem, ExplosiveProposalStatus>? _canPrepareExplosive;
     private readonly Button _barrierApproach = new() { Name = "BarrierPlacementApproach", Text = "Ir à barreira", Visible = false, Disabled = true };
@@ -58,8 +61,10 @@ public partial class PlayerBagWindow : AcceptDialog
         detail.AddChild(_art); detail.AddChild(_detail); body.AddChild(detail);
         body.AddChild(_returnStatus); var actions = new HFlowContainer(); body.AddChild(actions); actions.AddChild(_approach); actions.AddChild(_returnOne); actions.AddChild(_returnStack); actions.AddChild(_returnOrigin);
         actions.AddChild(_quantity); _quantity.Requested = qty => { if (SelectedItem != null) ReturnRequested?.Invoke(SelectedItem, qty); };
+        actions.AddChild(_useDrug);
         actions.AddChild(_prepareExplosive);
         actions.AddChild(_barrierApproach);
+        _useDrug.Pressed += () => { if (!_useDrug.Disabled && SelectedItem != null) UseDrugRequested?.Invoke(SelectedItem); };
         _barrierApproach.Pressed += () => { if (!_barrierApproach.Disabled && SelectedItem != null) BarrierApproachRequested?.Invoke(SelectedItem); };
         _prepareExplosive.Pressed += () => { if (!_prepareExplosive.Disabled && SelectedItem != null) PrepareExplosiveRequested?.Invoke(SelectedItem); };
         _approach.Pressed += () => { if (!_approach.Disabled && SelectedItem != null) ApproachRequested?.Invoke(SelectedItem); };
@@ -77,11 +82,11 @@ public partial class PlayerBagWindow : AcceptDialog
         Func<CarriedItem, long?> unitWeight, Func<CarriedItem, int, ItemTakeStatus>? canReturn = null, Func<CarriedItem, ItemOriginPlan?>? originRoute = null,
         Func<CarriedItem, Texture2D?>? artwork = null, Func<CarriedItem, ExplosiveProposalStatus>? canPrepareExplosive = null,
         Func<ExplosiveProposalStatus, string>? preparationHint = null, Func<CarriedItem, bool>? canApproachBarrier = null,
-        Func<CarriedItem, ItemTakeStatus>? canReturnAll = null)
+        Func<CarriedItem, ItemTakeStatus>? canReturnAll = null, Func<CarriedItem, DrugUseStatus>? canUseDrug = null)
     {
         string? selected = SelectedItem == null ? null : RowKey(SelectedItem);
         _text = text; _mapName = mapName; _canReturn = canReturn; _originRoute = originRoute; _canPrepareExplosive = canPrepareExplosive;
-        _preparationHint = preparationHint; _canApproachBarrier = canApproachBarrier; _canReturnAll = canReturnAll;
+        _preparationHint = preparationHint; _canApproachBarrier = canApproachBarrier; _canReturnAll = canReturnAll; _canUseDrug = canUseDrug;
         _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
         TotalQuantity = items.Sum(i => (long)i.Quantity);
         _summary.Text = items.Length == 0 ? "Sua bolsa está vazia." : $"{TotalQuantity} {(TotalQuantity == 1 ? "unidade" : "unidades")} em {items.Length} {(items.Length == 1 ? "pilha" : "pilhas")}";
@@ -100,9 +105,18 @@ public partial class PlayerBagWindow : AcceptDialog
         _returnOne.Disabled = _returnStack.Disabled = _returnOrigin.Disabled = _approach.Disabled = true; _returnOrigin.TooltipText = "";
         _returnStatus.Text = ""; _quantity.Configure(0, "Devolver quantidade", null);
         _prepareExplosive.Visible = false; _prepareExplosive.Disabled = true;
+        _useDrug.Visible = false; _useDrug.Disabled = true;
         _barrierApproach.Visible = false; _barrierApproach.Disabled = true;
         if (select != null) { select.Select(0); ShowSelected(); }
     }
+    public static string DrugHint(DrugUseStatus status) => status switch
+    {
+        DrugUseStatus.Ready => "Tomar uma unidade agora: cura de 8 a 18 HP (sem custo de AP fora do combate). O que passar do máximo se perde.",
+        DrugUseStatus.Busy => "Pare de andar para usar o item.",
+        DrugUseStatus.InCombat => "Em combate, use H (4 AP).",
+        DrugUseStatus.NoItem => "Você já não carrega esta unidade.",
+        _ => "Este item ainda não tem uso modelado."
+    };
     private static string RowKey(CarriedItem item) => $"{item.Map}:{item.Source.Key}";
     private void ShowSelected()
     {
@@ -113,6 +127,10 @@ public partial class PlayerBagWindow : AcceptDialog
         _prepareExplosive.Disabled = preparation != ExplosiveProposalStatus.Ready;
         _prepareExplosive.TooltipText = preparation == ExplosiveProposalStatus.Ready ? "Escolher prazo e posicionar uma unidade em ensaio controlado" : _preparationHint?.Invoke(preparation) ?? ExplosivePreparationWindow.Hint(preparation);
         _barrierApproach.Visible = _prepareExplosive.Visible;
+        DrugUseStatus drug = _canUseDrug?.Invoke(item) ?? DrugUseStatus.Unsupported;
+        _useDrug.Visible = item.Source.Header.Pid == HealingDrugProfile.Pid;
+        _useDrug.Disabled = drug != DrugUseStatus.Ready;
+        _useDrug.TooltipText = DrugHint(drug);
         _barrierApproach.Disabled = _canApproachBarrier?.Invoke(item) != true;
         _art.Texture = selected.GetIcon(0); _art.Visible = _art.Texture != null;
         _detail.Text = $"{text?.Name ?? "Item sem nome"}\n\n{text?.Description ?? "Descrição indisponível."}\n\nEncontrado em {_mapName!(item.Map)}.";

@@ -24,19 +24,21 @@ public sealed class CombatantState
     public int ActionPoints { get; internal set; }
     /// <summary>Unspent AP of the last turn, added to AC until this combatant's next turn starts.</summary>
     public int BonusArmorClass { get; internal set; }
+    /// <summary>Carried healing doses this combatant can take during the fight.</summary>
+    public int HealingDoses { get; internal set; }
     public LifeStatus Status => HitPoints <= 0 ? LifeStatus.Dead : LifeStatus.Active;
     public bool Alive => Status == LifeStatus.Active;
     public int EffectiveArmorClass => Stats.ArmorClass + BonusArmorClass;
 
     public CombatantState(string id, string name, int? pid, int team, bool isPlayer, int hex, int elevation, DerivedCombatStats stats,
-        CombatWeapon weapon, int hitPoints, int experience = 0)
+        CombatWeapon weapon, int hitPoints, int experience = 0, int healingDoses = 0)
     {
         if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Combatant id is required.", nameof(id));
         if (!FalloutRemake.Geometry.HexNavigation.Valid(hex) || elevation is < 0 or > 2) throw new ArgumentOutOfRangeException(nameof(hex));
         ArgumentNullException.ThrowIfNull(stats); ArgumentNullException.ThrowIfNull(weapon);
-        if (hitPoints < 1 || hitPoints > stats.MaxHitPoints || experience < 0) throw new ArgumentOutOfRangeException(nameof(hitPoints));
+        if (hitPoints < 1 || hitPoints > stats.MaxHitPoints || experience < 0 || healingDoses < 0) throw new ArgumentOutOfRangeException(nameof(hitPoints));
         Id = id; Name = name; Pid = pid; Team = team; IsPlayer = isPlayer; Hex = hex; Elevation = elevation;
-        Stats = stats; Weapon = weapon; HitPoints = hitPoints; Experience = experience; ActionPoints = 0;
+        Stats = stats; Weapon = weapon; HitPoints = hitPoints; Experience = experience; ActionPoints = 0; HealingDoses = healingDoses;
     }
 
     /// <summary>Map critter: current HP from its serialized instance ("hp"), team and XP from the PRO/instance, natural attack.</summary>

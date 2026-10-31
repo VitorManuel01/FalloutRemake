@@ -10,7 +10,7 @@ internal static class WorldCombatTests
     static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }
 
     // WorldTests map 3 (entry 20100 = column 99, row 100) with a near ant, a far ant and an ant walled in.
-    static MapDocument Map()
+    internal static MapDocument Map()
     {
         var map = WorldTests.Map(3, 126);
         int walled = Tile(95, 100);
@@ -23,7 +23,7 @@ internal static class WorldCombatTests
         return map with { ObjectLayers = new[] { map.ObjectLayers[0] with { Objects = objects, DeclaredCount = objects.Length } },
             Prototypes = new[] { CombatTests.AntPrototype() } };
     }
-    static CombatWeapon Spear() => CombatWeapon.Primary("Lança", WeaponPrototypeData.Read(CombatTests.Spear()));
+    internal static CombatWeapon Spear() => CombatWeapon.Primary("Lança", WeaponPrototypeData.Read(CombatTests.Spear()));
 
     public static void Run(Action<string, Action> check)
     {
@@ -63,7 +63,25 @@ internal static class WorldCombatTests
             world.Reset();
             Assert(!world.HasCombatOutcome && world.Experience == before && !world.IsDefeated(3, ant.Id) && world.FindEncounter(world.Location) != null, "Reset.");
         });
-        check("checkpoint v10 round-trips won fights, migrates v9 without combat and refuses forged corpses, XP, HP and schema", () =>
+        check("an open fight projects its creatures where they stand, so exploration routes reach their source hexes; one fight at a time", () =>
+        {
+            var world = new WorldSession(_ => Map(), new[] { 3, 126 });
+            int source = Tile(99, 103);
+            var fight = world.BeginCombat(world.FindEncounter(world.Location)!, Spear(), new CombatTests.Scripted(99));
+            Assert(world.InCombat, "Fight registered.");
+            try { world.BeginCombat(world.FindEncounter(world.Location) ?? new CombatEncounter(world.Location, new[] { "map3:near-ant" }, "map3:near-ant"), Spear(), new CombatTests.Scripted()); throw new Exception("Second fight opened."); }
+            catch (InvalidOperationException) { }
+            ProvisionalMeleeBehavior.TakeTurn(fight);
+            var ant = fight.Get("map3:near-ant");
+            var navigation = world.Current.Doors.Navigation(0);
+            Assert(ant.Hex != source && navigation.Walkable(source) && !navigation.Walkable(ant.Hex), "Live position blocks, source hex is free.");
+            int start = Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(source, d)!.Value).First(h => navigation.Walkable(h) && !navigation.IsExit(h) && h != ant.Hex);
+            Assert(navigation.FindRoute(start, source).Status == RouteStatus.Ready, "Exploration route into the creature's source hex.");
+            world.AbandonCombat();
+            Assert(!world.InCombat && !world.Current.Doors.Navigation(0).Walkable(source) && world.CommitCombat(fight) == CombatCommitStatus.NotOver,
+                "Abandoned fight: the creature is back on its source hex and nothing is applied.");
+        });
+        check("checkpoint v10+ round-trips won fights, migrates v9 without combat and refuses forged corpses, XP, HP and schema", () =>
         {
             WorldSession Load(WorldCheckpoint checkpoint) => WorldSession.Restore(_ => Map(), new[] { 3, 126 }, checkpoint, "catalog");
             var world = new WorldSession(_ => Map(), new[] { 3, 126 });
@@ -74,7 +92,7 @@ internal static class WorldCombatTests
             Assert(world.CommitCombat(fight) == CombatCommitStatus.Ready, "Setup fight.");
             WorldCheckpoint saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
             DefeatedCritter dead = saved.Combat!.Defeated.Single();
-            Assert(saved.Version == 10 && saved.Profile == "neutral-v10" && saved.Combat.Experience == 25 && saved.Combat.PlayerHitPoints == 26
+            Assert(saved.Version == 11 && saved.Profile == "neutral-v11" && saved.Combat.Experience == 25 && saved.Combat.PlayerHitPoints == 26
                 && dead.Key == "map3:near-ant" && dead.Hex == fight.Get("map3:near-ant").Hex && dead.Pid == AntPid, "Captured outcome.");
             var restored = Load(saved);
             Assert(restored.IsDefeated(3, dead.Key) && restored.CombatExperience == 25 && restored.Experience == world.Experience && restored.PlayerHitPoints == 26
@@ -82,8 +100,8 @@ internal static class WorldCombatTests
                 && restored.EffectiveObject(3, restored.Current.Map.ObjectLayers[0].Objects.Single(o => o.Key == dead.Key)).Header.Tile == dead.Hex, "Restored outcome.");
             var clean = new WorldSession(_ => Map(), new[] { 3, 126 }).Capture("catalog");
             Assert(clean.Combat is { Defeated.Length: 0, Experience: 0, PlayerHitPoints: null }, "Empty v10 combat block.");
-            var legacy = Load(clean with { Version = 9, Profile = "neutral-v9", Combat = null });
-            Assert(!legacy.HasCombatOutcome && legacy.Capture("catalog").Version == 10, "v9 migrates without combat.");
+            var legacy = Load(clean with { Version = 9, Profile = "neutral-v9", Combat = null, Areas = clean.Areas.Select(a => a with { Consumed = null }).ToArray() });
+            Assert(!legacy.HasCombatOutcome && legacy.Capture("catalog").Version == 11, "v9 migrates without combat.");
             int wall = FalloutGrid.Neighbor(Tile(95, 100), 0)!.Value;
             var forged = new[]
             {

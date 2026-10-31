@@ -5,11 +5,11 @@ namespace FalloutRemake.Runtime.Combat;
 /// <summary>CE damage-type order, shared by weapon PRO damageType and critter DT/DR stat blocks.</summary>
 public enum DamageType { Normal, Laser, Fire, Plasma, Electrical, Emp, Explosion }
 public enum LifeStatus { Active, Dead }
-public enum CombatActionKind { Move, Attack, EndTurn }
+public enum CombatActionKind { Move, Attack, EndTurn, UseHealing }
 public enum CombatActionStatus
 {
     Ready, CombatOver, NotActive, UnknownCombatant, InvalidTarget, AlreadyThere, Unreachable,
-    NotEnoughActionPoints, OutOfRange, OtherElevation
+    NotEnoughActionPoints, OutOfRange, OtherElevation, NoItem
 }
 
 /// <summary>What a combatant wants to do; previewed and executed through the same rules.</summary>
@@ -18,6 +18,8 @@ public sealed record CombatActionProposal(string ActorId, CombatActionKind Kind,
     public static CombatActionProposal Move(string actor, int hex) => new(actor, CombatActionKind.Move, TargetHex: hex);
     public static CombatActionProposal Attack(string actor, string target) => new(actor, CombatActionKind.Attack, TargetId: target);
     public static CombatActionProposal EndTurn(string actor) => new(actor, CombatActionKind.EndTurn);
+    /// <summary>Takes one carried healing dose (Healing Powder) through the inventory.</summary>
+    public static CombatActionProposal UseHealing(string actor) => new(actor, CombatActionKind.UseHealing);
 }
 
 /// <summary>Every term of the hit chance. Raw is the CE value; Chance is the project's 5–95 clamp (roadmap COM-003).</summary>
@@ -39,6 +41,8 @@ public sealed record TurnStarted(int Round, string CombatantId, int ActionPoints
 public sealed record CombatantMoved(string CombatantId, int From, int To, int[] Path, int ActionPointsSpent) : CombatEvent;
 public sealed record AttackResolved(string AttackerId, string TargetId, int Chance, int Roll, bool Hit, int DamageRoll, int Damage,
     int TargetHitPoints, int ActionPointsSpent) : CombatEvent;
+/// <summary>A healing dose taken: the rolled amount, the HP actually restored (capped at the maximum) and the HP after.</summary>
+public sealed record HealingUsed(string CombatantId, int Rolled, int Healed, int HitPoints, int ActionPointsSpent) : CombatEvent;
 public sealed record CombatantDied(string CombatantId, string KillerId, int Experience) : CombatEvent;
 public sealed record TurnEnded(string CombatantId, int UnusedActionPoints, int BonusArmorClass) : CombatEvent;
 public sealed record CombatEnded(int? WinningTeam, int ExperienceAwarded) : CombatEvent;

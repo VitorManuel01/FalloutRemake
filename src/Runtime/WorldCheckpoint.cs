@@ -7,10 +7,11 @@ using System.Text.Json.Serialization;
 
 namespace FalloutRemake.Runtime;
 
-public sealed record SavedArea(int Map, string SourceHash, string DependenciesHash, ActorLocation Location, SavedDoorSession Session, TakenItem[]? Taken = null, ItemUseAllocation[]? Uses = null, SceneryReplacement[]? Replacements = null);
+public sealed record SavedArea(int Map, string SourceHash, string DependenciesHash, ActorLocation Location, SavedDoorSession Session, TakenItem[]? Taken = null, ItemUseAllocation[]? Uses = null, SceneryReplacement[]? Replacements = null,
+    ConsumedItem[]? Consumed = null);
 public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null, SavedWorldEntries? Entries = null,
     SavedCombat? Combat = null);
-/// <summary>v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>
+/// <summary>v11 adds <see cref="SavedArea.Consumed"/> (drugs taken from collected items). v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>
 public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defeated, [property: JsonRequired] int Experience, int? PlayerHitPoints);
 
 /// <summary>Small project-local checkpoint, not an original Fallout SAV and never an asset archive.</summary>

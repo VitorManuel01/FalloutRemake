@@ -42,7 +42,9 @@ elevação 0, essa trava bloqueava a saída para a vila.
   Os valores aparecem, mas não alteram perícias nem dão perks.
 - **Traits e perks que mudam a progressão:** Swift Learner, Lifegiver, Educated,
   Skilled e Gifted não estão modelados.
-- **Cura fora das lutas:** o HP perdido só volta ao subir de nível ou ao reiniciar.
+- **Cura com o tempo:** o HP perdido volta ao subir de nível, com o
+  [Healing Powder](healing-powder-2026-10-31.md) ou ao reiniciar. A cura por descanso
+  depende de um relógio de jogo, que ainda não existe.
 - **Party:** o nível dos companions (`_partyMemberIncLevels`) não existe.
 
 ## Validação

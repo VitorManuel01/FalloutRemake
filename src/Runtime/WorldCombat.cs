@@ -31,20 +31,36 @@ public sealed partial class WorldSession
     public int HitPoints => MaxHitPoints - _playerDamage;
     public int UnspentSkillPoints => CharacterProgression.UnspentSkillPoints(Special.Neutral, Level);
     public int PerksAvailable => CharacterProgression.PerksAvailable(Level);
-    /// <summary>Player HP when hurt; null means unhurt. There is no healing outside the fights yet.</summary>
+    /// <summary>Player HP when hurt; null means unhurt. Healing comes from level-ups and drugs (<see cref="UseDrug"/>).</summary>
     public int? PlayerHitPoints => _playerDamage == 0 ? null : HitPoints;
     public bool HasCombatOutcome => _defeated.Count != 0 || _playerDamage != 0;
     public IReadOnlyList<DefeatedCritter> Defeated => _defeated.Values.OrderBy(d => d.Map).ThenBy(d => d.Key, StringComparer.Ordinal).ToArray();
     public bool IsDefeated(int map, string key) => _defeated.ContainsKey((map, key));
 
-    // A corpse keeps its source identity at the hex where it fell and no longer blocks movement.
-    private MapObject DefeatedObject(int map, MapObject source) => _defeated.TryGetValue((map, source.Key), out DefeatedCritter? dead)
-        ? source with { Header = source.Header with { Tile = dead.Hex, Flags = source.Header.Flags | HexNavigation.NoBlock } } : source;
+    // The open fight (if any): its creatures block where they stand, not on their source hex.
+    private CombatSession? _activeFight;
+    private int _activeFightMap;
+    public bool InCombat => _activeFight is { Turn.Over: false };
+
+    // A corpse keeps its source identity at the hex where it fell and no longer blocks movement;
+    // a creature of the open fight is projected to its current hex, so exploration routes agree with the fight.
+    private MapObject DefeatedObject(int map, MapObject source)
+    {
+        if (_defeated.TryGetValue((map, source.Key), out DefeatedCritter? dead))
+            return source with { Header = source.Header with { Tile = dead.Hex, Flags = source.Header.Flags | HexNavigation.NoBlock } };
+        if (_activeFight != null && map == _activeFightMap && _activeFight.Combatants.FirstOrDefault(c => !c.IsPlayer && c.Id == source.Key) is { } live)
+            return source with { Header = source.Header with { Tile = live.Hex, Flags = live.Alive ? source.Header.Flags : source.Header.Flags | HexNavigation.NoBlock } };
+        return source;
+    }
+
+    /// <summary>Drops the open fight without applying it (load, reset or a refused outcome).</summary>
+    public void AbandonCombat() => _activeFight = null;
 
     public CombatCommitStatus CommitCombat(CombatSession fight)
     {
         ArgumentNullException.ThrowIfNull(fight);
         if (!fight.Turn.Over) return CombatCommitStatus.NotOver;
+        if (ReferenceEquals(fight, _activeFight)) _activeFight = null;
         CombatantState[] players = fight.Combatants.Where(c => c.IsPlayer).ToArray();
         if (players.Length != 1) return CombatCommitStatus.InvalidFight;
         if (!players[0].Alive) return CombatCommitStatus.PlayerDefeated;
@@ -59,13 +75,29 @@ public sealed partial class WorldSession
         }
         int awarded = fight.Log.OfType<CombatantDied>().Sum(d => d.Experience);
         if (awarded != fight.Turn.ExperienceAwarded || awarded < 0) return CombatCommitStatus.InvalidFight;
+        // Doses taken in the fight use up carried Healing Powder units, checked before anything is applied.
+        int doses = fight.Log.OfType<HealingUsed>().Count(h => h.CombatantId == players[0].Id);
+        CarriedItem[] powders = HealingCarried();
+        if (doses > powders.Sum(p => p.Quantity)) return CombatCommitStatus.InvalidFight;
+        foreach (CarriedItem powder in powders)
+        {
+            int take = Math.Min(doses, powder.Quantity);
+            if (take > 0 && _areas[powder.Map].Items.ConsumeCarried(powder.OwnerKey, powder.Source.Key, take) != ItemUseStatus.Ready)
+                throw new InvalidOperationException("Checked Healing Powder could not be used up.");
+            doses -= take;
+        }
         foreach (DefeatedCritter critter in dead) _defeated.Add((critter.Map, critter.Key), critter);
         _combatExperience += awarded;
         _playerDamage = players[0].Stats.MaxHitPoints - players[0].HitPoints;
         return CombatCommitStatus.Ready;
     }
 
-    private void ResetCombat() { _defeated.Clear(); _combatExperience = 0; _playerDamage = 0; }
+    /// <summary>Carried Healing Powder units in a fixed order (map, owner, source key): the order fights use them up.</summary>
+    private CarriedItem[] HealingCarried() => Carried.Where(c => _areas[c.Map].Items.PrototypeOf(c.Source) is var p && HealingDrugProfile.Supported(p))
+        .OrderBy(c => c.Map).ThenBy(c => c.OwnerKey, StringComparer.Ordinal).ThenBy(c => c.Source.Key, StringComparer.Ordinal).ToArray();
+    public int HealingDoses => HealingCarried().Sum(c => c.Quantity);
+
+    private void ResetCombat() { _defeated.Clear(); _combatExperience = 0; _playerDamage = 0; _activeFight = null; }
 
     private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints);
 
@@ -157,7 +189,7 @@ public sealed partial class WorldSession
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
         var stats = DerivedCombatStats.ForCharacter(Special.Neutral, level: Level);
         var combatants = new List<CombatantState> { new("player", "Escolhido", null, 0, true, Location.Hex, Location.Elevation, stats,
-            playerWeapon, HitPoints) };
+            playerWeapon, HitPoints, healingDoses: HealingDoses) };
         foreach (string key in encounter.FoeKeys)
         {
             if (!roots.TryGetValue(key, out MapObject? source) || IsDefeated(CurrentMap, key)) throw new InvalidOperationException("Encounter critter is no longer available.");
@@ -165,6 +197,9 @@ public sealed partial class WorldSession
                 ?? throw new System.IO.InvalidDataException($"Critter prototype {source.Header.Pid:X8} is not part of the map dependencies.");
             combatants.Add(CombatantState.FromMapCritter(source, CritterPrototypeData.Read(prototype), $"PID {source.Header.Pid:X8}"));
         }
-        return new CombatSession(combatants, Current.Doors.Navigation(Location.Elevation), random, encounter.InitiatorKey);
+        if (InCombat) throw new InvalidOperationException("A fight is already open.");
+        var session = new CombatSession(combatants, Current.Doors.Navigation(Location.Elevation), random, encounter.InitiatorKey);
+        _activeFight = session; _activeFightMap = CurrentMap;
+        return session;
     }
 }

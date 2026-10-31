@@ -30,7 +30,8 @@ commitado). Enquanto ele não chega a este branch, siga também estes pontos:
   ou testes executados. Diferencie fato verificado, inferência técnica e desconhecido.
 - **Sem falsos positivos de gameplay:** protótipos e ensaios (`*Preview`,
   `*Consultation`, `*Draft`, `*StateProfile`) e testes de auditoria não são
-  "gameplay integrado". O combate ainda não existe.
+  "gameplay integrado". O combate existe só como fatia jogável do Templo (COM-004):
+  formigas e radscorpions, IA provisória, sem críticos, fuga ou veneno.
 - **Dados originais:** não modificar PIDs, FIDs, SIDs, IDs de mapas, offsets INT,
   MSG, GAM/PRO nem a instalação do Fallout 2 (`master.dat`, `patch000.dat`, `data/*`).
 - **Assets 3D:** não alterar, remover ou regenerar `.glb`/`.import` em `Assets/`
