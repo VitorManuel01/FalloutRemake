@@ -99,13 +99,7 @@ apenas enquanto uma luta está aberta.
 
 ## Limites
 
-- **XP × limite de Arroyo:** a recompensa de entrada em Arroyo (Frente A) só
-  vale para o personagem abaixo do nível 2 (`PrepareEntryReward` exige
-  `Experience < 400`, para que 400 + 600 fique abaixo dos 1000 XP do nível 2). Matar
-  as criaturas da elevação 0 dá até 425 XP (5 formigas e 5 radscorpions). Somado
-  ao arrombamento (25), passa do limite, e a saída para a vila fica indisponível.
-  Resolver isso exige modelar a subida de nível ou rever a regra homologada de
-  Arroyo, e é uma decisão em aberto.
+- **XP e nível:** resolvido pela [progressão de nível](character-progression-2026-10-31.md). A recompensa de Arroyo vale em qualquer nível, e o XP das lutas faz o personagem subir de nível pelas regras do CE.
 - O radscorpion não envenena: veneno, críticos e efeitos de dano não estão modelados.
 - A animação é mínima (deslizar e avançar). Não há animação de morte; o cadáver é
   a cápsula deitada.

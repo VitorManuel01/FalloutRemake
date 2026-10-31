@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory = $true)][string]$CapturePath,
     [ValidateRange(1024, 3840)][int]$Width = 1440,
     [ValidateRange(720, 2160)][int]$Height = 900,
-    [ValidateRange(1, 300)][int]$TimeoutSeconds = 90,
+    [ValidateRange(1, 900)][int]$TimeoutSeconds = 90,
     [ValidateSet('Preview', 'VisualPreferencesStartup', 'SceneReview', 'ExplosivePreparation', 'Nature')][string]$Check = 'Preview'
 )
 $ErrorActionPreference = 'Stop'

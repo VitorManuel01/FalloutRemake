@@ -24,9 +24,16 @@ public sealed partial class WorldSession
     private readonly Dictionary<(int Map, string Key), DefeatedCritter> _defeated = new();
     private int _combatExperience;
     public int CombatExperience => _combatExperience;
-    /// <summary>Player HP after the last fight; null means unhurt (no world HP model exists outside combat yet).</summary>
-    public int? PlayerHitPoints { get; private set; }
-    public bool HasCombatOutcome => _defeated.Count != 0 || PlayerHitPoints != null;
+    // Damage is what persists between fights: a level-up raises max HP and, as CE critterAdjustHitPoints, current HP alike.
+    private int _playerDamage;
+    public int Level => CharacterProgression.Level(Experience);
+    public int MaxHitPoints => CharacterProgression.MaxHitPoints(Special.Neutral, Level);
+    public int HitPoints => MaxHitPoints - _playerDamage;
+    public int UnspentSkillPoints => CharacterProgression.UnspentSkillPoints(Special.Neutral, Level);
+    public int PerksAvailable => CharacterProgression.PerksAvailable(Level);
+    /// <summary>Player HP when hurt; null means unhurt. There is no healing outside the fights yet.</summary>
+    public int? PlayerHitPoints => _playerDamage == 0 ? null : HitPoints;
+    public bool HasCombatOutcome => _defeated.Count != 0 || _playerDamage != 0;
     public IReadOnlyList<DefeatedCritter> Defeated => _defeated.Values.OrderBy(d => d.Map).ThenBy(d => d.Key, StringComparer.Ordinal).ToArray();
     public bool IsDefeated(int map, string key) => _defeated.ContainsKey((map, key));
 
@@ -54,11 +61,11 @@ public sealed partial class WorldSession
         if (awarded != fight.Turn.ExperienceAwarded || awarded < 0) return CombatCommitStatus.InvalidFight;
         foreach (DefeatedCritter critter in dead) _defeated.Add((critter.Map, critter.Key), critter);
         _combatExperience += awarded;
-        PlayerHitPoints = players[0].HitPoints == players[0].Stats.MaxHitPoints ? null : players[0].HitPoints;
+        _playerDamage = players[0].Stats.MaxHitPoints - players[0].HitPoints;
         return CombatCommitStatus.Ready;
     }
 
-    private void ResetCombat() { _defeated.Clear(); _combatExperience = 0; PlayerHitPoints = null; }
+    private void ResetCombat() { _defeated.Clear(); _combatExperience = 0; _playerDamage = 0; }
 
     private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints);
 
@@ -68,9 +75,7 @@ public sealed partial class WorldSession
     {
         ResetCombat();
         if (saved == null) return;
-        int maxHitPoints = DerivedCombatStats.ForCharacter(Special.Neutral).MaxHitPoints;
-        if (saved.Defeated is not { Length: <= 64 } defeated || saved.Experience < 0
-            || saved.PlayerHitPoints is int hp && (hp < 1 || hp >= maxHitPoints))
+        if (saved.Defeated is not { Length: <= 64 } defeated || saved.Experience < 0 || saved.PlayerHitPoints is < 1)
             throw new InvalidDataException("Checkpoint combat outcome is malformed.");
         int experience = 0;
         foreach (DefeatedCritter dead in defeated)
@@ -89,7 +94,10 @@ public sealed partial class WorldSession
             _defeated.Add((dead.Map, dead.Key), dead);
         }
         if (experience != saved.Experience) throw new InvalidDataException("Checkpoint combat experience differs from its defeated critters.");
-        _combatExperience = experience; PlayerHitPoints = saved.PlayerHitPoints;
+        _combatExperience = experience;
+        // The level, and so the max HP, comes from the whole restored XP; full HP is stored as null.
+        if (saved.PlayerHitPoints is int hp && hp >= MaxHitPoints) throw new InvalidDataException("Checkpoint player HP is not below the level's maximum.");
+        _playerDamage = saved.PlayerHitPoints is int hurt ? MaxHitPoints - hurt : 0;
     }
 
     // Hostile temple creatures: Giant Ant (PID 382) and Radscorpion (PID 5). Dumar keeps his Speech role.
@@ -147,9 +155,9 @@ public sealed partial class WorldSession
         ArgumentNullException.ThrowIfNull(encounter); ArgumentNullException.ThrowIfNull(playerWeapon);
         if (encounter.Player != Location) throw new InvalidOperationException("The encounter belongs to another actor location.");
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
-        var stats = DerivedCombatStats.ForCharacter(Special.Neutral);
+        var stats = DerivedCombatStats.ForCharacter(Special.Neutral, level: Level);
         var combatants = new List<CombatantState> { new("player", "Escolhido", null, 0, true, Location.Hex, Location.Elevation, stats,
-            playerWeapon, PlayerHitPoints ?? stats.MaxHitPoints) };
+            playerWeapon, HitPoints) };
         foreach (string key in encounter.FoeKeys)
         {
             if (!roots.TryGetValue(key, out MapObject? source) || IsDefeated(CurrentMap, key)) throw new InvalidOperationException("Encounter critter is no longer available.");

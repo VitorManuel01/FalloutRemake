@@ -2,7 +2,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$GodotExe,
     [Parameter(Mandatory = $true)][string]$DataDirectory,
-    [ValidateRange(10, 300)][int]$TimeoutSeconds = 120
+    [ValidateRange(10, 900)][int]$TimeoutSeconds = 120
 )
 
 $ErrorActionPreference = 'Stop'

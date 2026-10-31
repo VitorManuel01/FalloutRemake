@@ -5,7 +5,7 @@ using FalloutRemake.Runtime;
 
 internal static class WorldEntryTests
 {
-    private static (WorldSession World,Func<int,MapDocument> Load,TempleNpcDepartureProfile Profile) Fixture(Func<MapDocument,ArroyoRewardProfile>? reward = null,bool ambiguousReturn = false)
+    private static (WorldSession World,Func<int,MapDocument> Load,TempleNpcDepartureProfile Profile) Fixture(Func<MapDocument,ArroyoRewardProfile>? reward = null,bool ambiguousReturn = false,Func<MapDocument,MapDocument>? adjustTemple = null)
     {
         var (temple,profile,original) = WorldTempleSpeechTests.Fixture();
         var exit = WorldTests.Map(3,4).ObjectLayers[0].Objects[0];
@@ -24,7 +24,7 @@ internal static class WorldEntryTests
             village = village with {ObjectLayers = village.ObjectLayers.Select(l => l with {Objects = l.Objects.Append(marker with {
                 Key = marker.Key + ":conflicting",State = new Dictionary<string,int>(marker.State) {["destinationMap"] = 126}}).ToArray()}).ToArray()};
         }
-        var source = temple; var destination = village;
+        var source = adjustTemple?.Invoke(temple) ?? temple; var destination = village;
         MapDocument Load(int id) => id == 3 ? source : id == 4 ? destination : WorldTests.Map(126,3);
         var world = new WorldSession(Load,new[] {3,4,126},templeProfile:_ => profile,arroyoProfile:reward ?? (_ => new ArroyoRewardProfile()));
         world.Current.Travel.Arrive(original.Location); world.CommitTempleSpeech(WorldTempleSpeechTests.Plan(world,profile),false);
@@ -48,6 +48,28 @@ internal static class WorldEntryTests
             Assert(world.UseExit(false).Status == ExitStatus.Ready && world.CurrentMap == 3);
             Assert(world.UseExit(false).Status == ExitStatus.Ready && world.CurrentMap == 4 && world.Experience == 600 && world.ArroyoGlobals == globals);
             int[] copy = world.EnteredMaps; copy[0] = -1; Assert(world.EnteredMaps[0] == 3);
+        });
+        check("the Arroyo first-entry reward is granted at any level now that level-ups are modeled",() =>
+        {
+            var probe = Fixture().World; int near = Enumerable.Range(0,6).Select(d => FalloutRemake.Geometry.FalloutGrid.Neighbor(13326,d)!.Value)
+                .First(t => probe.Current.Doors.Navigation(2).Walkable(t) && !probe.Current.Doors.Navigation(2).IsExit(t));
+            var (world,load,profile) = Fixture(adjustTemple: map => map with {
+                ObjectLayers = map.ObjectLayers.Select(l => l.Elevation != 2 ? l : l with { Objects = l.Objects.Append(CombatTests.Critter(near,0x0100017E,6,1,map.Source.Sha256 + ":veteran") with {
+                    ContainerElevation = 2,Header = CombatTests.Critter(near,0x0100017E,6,1,"x").Header with { Elevation = 2 } }).ToArray() }).ToArray(),
+                Prototypes = map.Prototypes.Append(CombatTests.AntPrototype(experience: 500)).ToArray() });
+            var fight = world.BeginCombat(world.FindEncounter(world.Location)!,FalloutRemake.Runtime.Combat.CombatWeapon.Unarmed(),new CombatTests.Scripted(99,1,3,1,3));
+            for (int guard = 0; guard < 10 && !fight.Turn.Over; guard++)
+            {
+                if (!fight.Active!.IsPlayer) { FalloutRemake.Runtime.Combat.ProvisionalMeleeBehavior.TakeTurn(fight); continue; }
+                var target = fight.Combatants.Single(c => !c.IsPlayer).Id;
+                if (fight.Execute(FalloutRemake.Runtime.Combat.CombatActionProposal.Attack("player",target)).Status != FalloutRemake.Runtime.Combat.CombatActionStatus.Ready)
+                    fight.Execute(FalloutRemake.Runtime.Combat.CombatActionProposal.EndTurn("player"));
+            }
+            Assert(world.CommitCombat(fight) == CombatCommitStatus.Ready && world.Experience == 500 && world.Level == 1);
+            Assert(world.UseExit(false).Status == ExitStatus.Ready && world.CurrentMap == 4 && world.Experience == 1100 && world.Level == 2
+                && world.MaxHitPoints == 34 && world.ArroyoReward?.Experience == 600);
+            var restored = Restore(world.Capture("catalog"),load,profile);
+            Assert(restored.Experience == 1100 && restored.Level == 2 && restored.ArroyoReward?.Experience == 600);
         });
         check("v9 checkpoints preserve unentered cached destinations then retain one reward and native globals through return and reload",() =>
         {

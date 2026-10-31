@@ -7,7 +7,7 @@ using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
-/// <summary>Audited first-entry Speech XP and karma/reputation subset, neutral character below the first level threshold.</summary>
+/// <summary>Audited first-entry Speech XP and karma/reputation subset for the neutral character, at any level (CharacterProgression).</summary>
 public sealed class ArroyoRewardProfile
 {
     public const int BaseExperience = 600;

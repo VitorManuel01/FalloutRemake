@@ -58,3 +58,5 @@ commitado). Enquanto ele não chega a este branch, siga também estes pontos:
 - Godot: `D:\Downloads\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe`.
 - Dados do Fallout 2: `D:\Games\fallout2\Fallout 2 English`.
 - Capturas: somente via `tools/Run-QuietGodot.ps1` (desktop isolado).
+- As baterias completas levam cerca de 4 a 5 min. Use `-TimeoutSeconds 600` em
+  `Validate-Temple.ps1` e `Run-QuietGodot.ps1` (o teto permitido é 900).

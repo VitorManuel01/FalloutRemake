@@ -272,6 +272,7 @@ public partial class TemplePreview
     private void FinishCombat()
     {
         CombatSession fight = _combat!;
+        int levelBefore = _campaign!.Level;
         _combat = null; _combatLabels.Clear(); _encounterCheckedHex = -1; _combatFinishPending = false; _combatTweens.Clear();
         CombatCommitStatus status = _campaign!.CommitCombat(fight);
         _hud.Combat(false, "", "", false);
@@ -286,8 +287,17 @@ public partial class TemplePreview
         // The corpse and the freed hex come from WorldSession projections; rebuilding keeps every other system unchanged.
         BuildWorld();
         CombatantState player = fight.Get("player");
-        NavigationStatus($"Vitória · +{fight.Turn.ExperienceAwarded} XP · {player.HitPoints}/{player.Stats.MaxHitPoints} HP · salve com K para guardar o resultado");
+        NavigationStatus($"Vitória · +{fight.Turn.ExperienceAwarded} XP · {_campaign.HitPoints}/{_campaign.MaxHitPoints} HP{LevelUpText(levelBefore)} · salve com K para guardar o resultado");
         GD.Print($"COMBAT_WON: {fight.Turn.ExperienceAwarded} XP, player {player.HitPoints} HP, round {fight.Turn.Round}");
+    }
+
+    // CE shows message 600 per level gained; unspent skill points and perks wait for a character screen.
+    private string LevelUpText(int levelBefore)
+    {
+        if (_campaign == null || _campaign.Level <= levelBefore) return "";
+        var gains = CharacterProgression.Gains(Special.Neutral, levelBefore, _campaign.Level);
+        return $" · subiu para o nível {_campaign.Level}: +{gains.Sum(g => g.HitPoints)} HP, +{gains.Sum(g => g.SkillPoints)} pontos de perícia"
+            + (gains.Any(g => g.PerkAvailable) ? ", perk disponível" : "");
     }
 
     private void DiscardCombat()

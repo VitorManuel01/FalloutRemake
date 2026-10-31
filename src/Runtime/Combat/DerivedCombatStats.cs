@@ -53,12 +53,13 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
             Skills(special, critter.Skill));
     }
 
-    /// <summary>Level 1 character without traits, perks or tags (CE critterUpdateDerivedStats + skillGetValue), with optional worn armor.</summary>
-    public static DerivedCombatStats ForCharacter(Special special, ArmorPrototypeData? armor = null)
+    /// <summary>Character without traits, perks or tags (CE critterUpdateDerivedStats + skillGetValue), with optional worn armor.
+    /// Each level above 1 adds EN/2+2 max HP (CharacterProgression); unspent skill points do not change skills.</summary>
+    public static DerivedCombatStats ForCharacter(Special special, ArmorPrototypeData? armor = null, int level = 1)
     {
         _ = Special.From(special.ToArray());
         int[] threshold = armor?.DamageThreshold ?? new int[7], resistance = armor?.DamageResistance ?? new int[7];
-        return new(special, 15 + special.Strength + 2 * special.Endurance, 5 + special.Agility / 2, special.Agility + (armor?.ArmorClass ?? 0),
+        return new(special, FalloutRemake.Runtime.CharacterProgression.MaxHitPoints(special, level), 5 + special.Agility / 2, special.Agility + (armor?.ArmorClass ?? 0),
             Math.Max(special.Strength - 5, 1), 2 * special.Perception, special.Luck,
             threshold.Select(v => Math.Clamp(v, 0, 999)).ToArray(), resistance.Select(v => Math.Clamp(v, 0, 100)).ToArray(),
             Skills(special, _ => 0));

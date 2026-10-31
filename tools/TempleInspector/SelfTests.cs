@@ -151,6 +151,7 @@ internal static class SelfTests
             TempleArchitectureTests.Run(Check);
             CombatTests.Run(Check);
             WorldCombatTests.Run(Check);
+            CharacterProgressionTests.Run(Check);
             MessageTextTests.Run(Check);
             InventoryViewTests.Run(Check);
             FloorArtTests.Run(Check);

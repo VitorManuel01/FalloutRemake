@@ -38,7 +38,7 @@ public partial class TemplePreview
         if (option.Status != ExitStatus.Ready) { NavigationStatus(ExitHint(option)); return; }
         bool walking = _walkMode;
         bool following = _followActor;
-        int xp = _campaign!.Experience;
+        int xp = _campaign!.Experience, level = _campaign.Level;
         option = _campaign!.UseExit(_walker!.Moving);
         if (option.Status != ExitStatus.Ready) { NavigationStatus(ExitHint(option)); return; }
         BindCurrentArea();
@@ -48,7 +48,7 @@ public partial class TemplePreview
         _focus = Point(FalloutGrid.HexCenter(destination.Hex) - _layout!.Origin, 0); _camera.Size = 32; UpdateCamera();
         SetCameraFollow(following);
         int award = _campaign.Experience - xp;
-        NavigationStatus(award > 0 ? $"Chegou a {DestinationName(destination)} · recompensa +{award} XP"
+        NavigationStatus(award > 0 ? $"Chegou a {DestinationName(destination)} · recompensa +{award} XP{LevelUpText(level)}"
             : $"Chegou a {DestinationName(destination)} · portas e XP preservados");
     }
 

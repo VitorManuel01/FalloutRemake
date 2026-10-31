@@ -28,8 +28,8 @@ public sealed partial class WorldSession
         if (_enteredMaps.Contains(destination.Map) || destination != new ActorLocation(4,0,20517,0) || CurrentMap != 3
             || InitialMap != 3 || _templeProgress == null || _arroyoProfile == null) return null;
         if (_templeProgress.Profile.Speech.MapKey != TempleBarrierEffectProposal.MapHash
-            || Current.Map.Source.Sha256 != TempleBarrierEffectProposal.MapHash || Experience is < 0 or >= 400)
-            throw new InvalidDataException("Arroyo reward requires verified Speech and a neutral character below level two.");
+            || Current.Map.Source.Sha256 != TempleBarrierEffectProposal.MapHash || Experience < 0)
+            throw new InvalidDataException("Arroyo reward requires verified Speech and a valid neutral character.");
         var profile = _arroyoProfile(target.Map);
         if (!profile.Matches(target.Map)) throw new InvalidDataException("Arroyo entry reward MAP mismatch.");
         return (new(profile.Fingerprint,ArroyoRewardProfile.BaseExperience),profile.EntryGlobals());
@@ -58,7 +58,8 @@ public sealed partial class WorldSession
             || reward.Experience != ArroyoRewardProfile.BaseExperience)
             throw new InvalidDataException("Checkpoint grants an unsupported Arroyo reward.");
         var profile = _arroyoProfile(village.Map);
-        if (!profile.Matches(village.Map) || reward.Profile != profile.Fingerprint || Experience is < 0 or >= 400)
+        // Any level: the 600 XP is fixed in arvillag.int and level-ups are modeled by CharacterProgression.
+        if (!profile.Matches(village.Map) || reward.Profile != profile.Fingerprint || Experience < 0)
             throw new InvalidDataException("Checkpoint Arroyo reward profile or character scope differs.");
         var expected = profile.EntryGlobals();
         if (saved.Version >= 9 && entries.ArroyoGlobals != expected || saved.Version < 9 && entries.ArroyoGlobals != null)

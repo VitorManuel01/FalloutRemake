@@ -34,14 +34,15 @@ viva.
 - **Cada cadáver:**
   - é único;
   - pertence a uma área restaurada;
-  - corresponde a uma criatura de encontro do MAP (hoje, a formiga gigante), com o
-    mesmo PID e a mesma elevação, sem `HIDDEN`;
+  - corresponde a uma criatura de encontro do MAP (formiga gigante ou radscorpion),
+    com o mesmo PID e a mesma elevação, sem `HIDDEN`;
   - está num hex válido que não é saída, sem bloqueadores além de criaturas e
     portas.
 - **XP:** precisa ser **exatamente** a soma do XP do PRO dessas criaturas (25 por
-  formiga). XP forjado é recusado.
-- **HP:** `PlayerHitPoints` é `null` ou fica em 1..29. O valor cheio é
-  representado por `null`.
+  formiga, 60 por radscorpion). XP forjado é recusado.
+- **HP:** `PlayerHitPoints` é `null` (cheio) ou fica entre 1 e o HP máximo do nível,
+  exclusive. O nível é derivado do XP total restaurado (29 no nível 1, 33 no nível 2,
+  ver [progressão](character-progression-2026-10-31.md)).
 - **Ordem:** o bloco é restaurado depois de áreas, portas, itens, cenário, Templo e
   entradas.
 
