@@ -41,6 +41,11 @@ try
         Console.WriteLine(JsonSerializer.Serialize(ArroyoElderAudit.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
+    if (args.Length == 3 && args[2] == "--arroyo-audit-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(FalloutRemake.TempleInspector.ArroyoAuditReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
     if (args.Length == 3 && args[2] == "--nature-source-report")
     {
         Console.WriteLine(JsonSerializer.Serialize(NatureSourceReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));

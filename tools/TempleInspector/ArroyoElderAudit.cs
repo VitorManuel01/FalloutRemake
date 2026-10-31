@@ -80,7 +80,7 @@ internal static class ArroyoElderAudit
             DetachedStates=new {stateProfile.Fingerprint,Opening=stateProfile.Project(Array.Empty<int>()),
                 Direct=stateProfile.Project(new[] {11868,16348}),Bridge=stateProfile.Project(new[] {11804,14664,16348}),
                 Alternative=stateProfile.Project(new[] {11804,14696,17510}),AppliedToWorld=false},
-            RepeatOpening=ArroyoElderRepeatAudit.Create(data,program),
+            RepeatOpening=ArroyoElderRepeatAudit.Create(data,program,stateProfile),
             SourceRefusals=ArroyoElderSourceChecks.Run(data,map),
             RuntimeDialogueEnabled=false,SourceTextExported=false,OriginalReconstruction="verified" };
     }

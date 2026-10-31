@@ -31,7 +31,7 @@ public partial class TemplePreview : Node3D
 	private float _yaw = Mathf.DegToRad(40);
 	private int _elevation;
 	private bool _test;
-    private bool _sceneReviewTest;
+	private bool _sceneReviewTest;
 	private string? _capture;
 	private string? _directory;
 	private bool _shuttingDown;
@@ -44,13 +44,13 @@ public partial class TemplePreview : Node3D
 		try
 		{
 			GetTree().AutoAcceptQuit = false;
-            // Graphical windows lay out in real pixels instead of shrinking a fixed 900px HUD.
-            // Headless retains the configured logical viewport (its native dummy window is 64px).
-            if (DisplayServer.GetName() != "headless")
-            {
-                GetWindow().ContentScaleSize = Vector2I.Zero;
-                GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.Disabled;
-            }
+			// Graphical windows lay out in real pixels instead of shrinking a fixed 900px HUD.
+			// Headless retains the configured logical viewport (its native dummy window is 64px).
+			if (DisplayServer.GetName() != "headless")
+			{
+				GetWindow().ContentScaleSize = Vector2I.Zero;
+				GetWindow().ContentScaleMode = Window.ContentScaleModeEnum.Disabled;
+			}
 			AddChild(_camera); _camera.Current = true;
 			AddChild(_hud); AddChild(_world);
 			AddChild(new WorldEnvironment { Environment = _resources.Own(new Godot.Environment
@@ -90,7 +90,7 @@ public partial class TemplePreview : Node3D
 				else if (args[i] == "--preview-test") _test = true;
 				else if (args[i] == "--nature-test") { _test = true; _natureTest = true; }
 				else if (args[i] == "--explosive-preparation-test") { _test = true; _explosivePreparationTest = true; }
-                else if (args[i] == "--scene-review-test") { _test = true; _sceneReviewTest = true; }
+				else if (args[i] == "--scene-review-test") { _test = true; _sceneReviewTest = true; }
 				else if (args[i] == "--visual-preferences-smoke") { _test = true; _preferencesStartupTest = true; }
 				else throw new ArgumentException($"Argumento desconhecido: {args[i]}");
 			}
@@ -110,7 +110,7 @@ public partial class TemplePreview : Node3D
 				if (_preferencesStartupTest) { await CheckVisualPreferencesStartup(); await Shutdown(0); return; }
 				if (_natureTest) { await CheckNatureModels(); await Shutdown(0); return; }
 				if (_explosivePreparationTest) { await CheckPlacedUsePreview(); await Shutdown(0); return; }
-                if (_sceneReviewTest) { await CheckEntityReadability(); await Shutdown(0); return; }
+				if (_sceneReviewTest) { await CheckEntityReadability(); await Shutdown(0); return; }
 				if (_test) await CheckPreview();
 				if (_test) await CheckNavigation();
 				if (_test) await CheckDoors();
@@ -159,7 +159,7 @@ public partial class TemplePreview : Node3D
 	{
 		var data = new GameData(directory);
 		var catalog = new MapCatalog(data.Read("data/maps.txt"));
-        var runtimePrototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
+		var runtimePrototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
 		var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 }, runtimePrototype: runtimePrototypes.Get,
 			templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read));
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
@@ -184,7 +184,7 @@ public partial class TemplePreview : Node3D
 		if (_map == null) return;
 		CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseLoot(); CloseBag(); CloseInventory();
 		_worldLabels.Clear();
-        ResetNpcRouteView();
+		ResetNpcRouteView();
 		using var resources = new ResourceScope();
 		_placedUseLayer = null; _placedUseNodes.Clear();
 		_replacementNodes.Clear();
@@ -192,7 +192,7 @@ public partial class TemplePreview : Node3D
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
 		_lookup.Clear(); _bodies.Clear(); _selected = null;
 		_layout = PreviewLayout.Create(_map, _elevation);
-        _layout = ProjectTempleLayout(_layout);
+		_layout = ProjectTempleLayout(_layout);
 		_walls = _layout.Objects.Where(o => o.Kind == PreviewKind.Wall).ToArray();
 		_cutWalls.Clear(); _occlusionDirty = true;
 		var mesh = resources.Own(new BoxMesh { Size = new Vector3((float)FalloutGrid.FloorWidth * .985f, .08f, 1.97f) });
@@ -219,7 +219,7 @@ public partial class TemplePreview : Node3D
 			if (!_shapes.TryGetValue(obj.Kind, out BoxShape3D? shape)) _shapes[obj.Kind] = shape = _resources.Own(new BoxShape3D { Size = size });
 			body.AddChild(new CollisionShape3D { Shape = shape });
 			ConfigureEntityVisual(obj, body);
-            ConfigureActiveTempleBody(obj,body);
+			ConfigureActiveTempleBody(obj,body);
 			_world.AddChild(body); _lookup.Add(body.GetInstanceId(), obj); _bodies.Add(obj.Source.Key, body);
 		}
 		_highlight = new MeshInstance3D { Name = "Selection", Mesh = resources.Own(new CylinderMesh { TopRadius = .72f, BottomRadius = .72f, Height = .025f, RadialSegments = 48 }),
@@ -277,7 +277,7 @@ public partial class TemplePreview : Node3D
 	}
 	private bool VisibleObject(PreviewObject obj)
 	{
-        if (_campaign?.TempleProgress is { Departure.Phase: NpcDeparturePhase.Hidden } progress && obj.Source.Key == progress.Scripts.Blocks[0].Key) return false;
+		if (_campaign?.TempleProgress is { Departure.Phase: NpcDeparturePhase.Hidden } progress && obj.Source.Key == progress.Scripts.Blocks[0].Key) return false;
 		if (_campaign?.Current.Scenery.Replaces(obj.Source.Key) == true) return false;
 		string filter = obj.Kind switch { PreviewKind.Wall => "wall", PreviewKind.Door or PreviewKind.Exit => "exit",
 			PreviewKind.Critter => "critter", PreviewKind.Marker => "marker", _ => "scenery" };
@@ -300,7 +300,7 @@ public partial class TemplePreview : Node3D
 		if (_selected != null && !VisibleObject(_selected)) ClearSelection();
 		_occlusionDirty = true; UpdateWallOcclusion();
 		RefreshContainerLocator();
-        RefreshNpcRouteView();
+		RefreshNpcRouteView();
 		ApplyNatureModels();
 	}
 
@@ -309,7 +309,7 @@ public partial class TemplePreview : Node3D
 		if (_map == null) return;
 		RefreshContainerVisuals();
 		if (InspectorOpen) return;
-        AdvanceTemplePlayback(delta);
+		AdvanceTemplePlayback(delta);
 		AdvanceWalker(delta);
 		float x = (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
 		float z = (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0);
@@ -376,7 +376,7 @@ public partial class TemplePreview : Node3D
 		Vector3 target = _focus + right * (_camera.Size * 145 / Math.Max(1, GetViewport().GetVisibleRect().Size.Y));
 		_camera.Position = target + new Vector3(Mathf.Sin(_yaw) * 90, 110, Mathf.Cos(_yaw) * 90);
 		_camera.LookAt(target, Vector3.Up);
-        RefreshWorldLabels();
+		RefreshWorldLabels();
 	}
 	private void FocusEntry()
 	{
@@ -419,8 +419,8 @@ public partial class TemplePreview : Node3D
 	private void Pick(Vector2 screen)
 	{
 		Vector3 origin = _camera.ProjectRayOrigin(screen), end = origin + _camera.ProjectRayNormal(screen) * 700;
-        PreviewObject? obj = InteractionObjectAtScreen(screen);
-        if (obj != null) SelectObject(obj);
+		PreviewObject? obj = InteractionObjectAtScreen(screen);
+		if (obj != null) SelectObject(obj);
 		else
 		{
 			Vector3 direction = end - origin;
@@ -460,18 +460,18 @@ public partial class TemplePreview : Node3D
 		string entityDescription = EntityDescription(obj);
 		if (entityDescription.Length != 0) text = entityDescription + "\n\n" + text;
 		_hud.Select(original?.Name is { } name ? $"{ShortName(name)} · {title} · objeto {h.Id}" : $"{title} · objeto {h.Id}", text);
-        PreviewObject[] colocated = _layout!.Objects.Where(o => o.Source.Header.Tile == h.Tile && VisibleObject(o)).ToArray();
-        int position = Array.FindIndex(colocated, o => o.Source.Key == obj.Source.Key) + 1;
-        _hud.CycleAction(colocated.Length > 1);
-        if (colocated.Length > 1) _hud.Select(_hud.SelectionHeading, $"{position}/{colocated.Length} no hex · Próximo alterna os objetos originais.\n\n" + _hud.SelectionDetails);
-        _hud.InventoryAction(CanInspectInventory(obj.Source));
+		PreviewObject[] colocated = _layout!.Objects.Where(o => o.Source.Header.Tile == h.Tile && VisibleObject(o)).ToArray();
+		int position = Array.FindIndex(colocated, o => o.Source.Key == obj.Source.Key) + 1;
+		_hud.CycleAction(colocated.Length > 1);
+		if (colocated.Length > 1) _hud.Select(_hud.SelectionHeading, $"{position}/{colocated.Length} no hex · Próximo alterna os objetos originais.\n\n" + _hud.SelectionDetails);
+		_hud.InventoryAction(CanInspectInventory(obj.Source));
 		RefreshLootAction();
 		RefreshDoorAction();
 	}
 	private void ClearSelection()
 	{
 		_selected = null;
-        _hud.CycleAction(false);
+		_hud.CycleAction(false);
 		_hud.InventoryAction(false);
 		RefreshLootAction();
 		if (_highlight != null) _highlight.Visible = false;
@@ -597,9 +597,9 @@ public partial class TemplePreview : Node3D
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		_resources.Dispose(); _materials.Clear(); _meshes.Clear(); _shapes.Clear(); _bodies.Clear(); _lookup.Clear();
 		_floorArtworkMaterials.Clear(); _floorArtworkMesh = null;
-        _entityMeshes.Clear(); _entityMaterials.Clear(); _entityShapes.Clear(); _containerVisuals.Clear(); _worldLabels.Clear();
-        _placedUseNodes.Clear(); _placedUseLayer = null; _placedUseMesh = null; _placedUseMaterial = null;
-        _replacementNodes.Clear(); _replacementMesh = null; _replacementMaterial = null;
+		_entityMeshes.Clear(); _entityMaterials.Clear(); _entityShapes.Clear(); _containerVisuals.Clear(); _worldLabels.Clear();
+		_placedUseNodes.Clear(); _placedUseLayer = null; _placedUseMesh = null; _placedUseMaterial = null;
+		_replacementNodes.Clear(); _replacementMesh = null; _replacementMaterial = null;
 		GC.Collect(); GC.WaitForPendingFinalizers();
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		GetTree().Quit(code);
