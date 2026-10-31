@@ -59,6 +59,7 @@ public partial class TemplePreview
     {
         if (_floor != null) _floor.Visible = _hud.Filters["floor"] && !_useOriginalFloor;
         if (_originalFloor != null) _originalFloor.Visible = _hud.Filters["floor"] && _useOriginalFloor;
+        foreach (MultiMeshInstance3D chunk in _architectureFloor) chunk.Visible = _hud.Filters["floor"] && !_useOriginalFloor;
     }
     private ArrayMesh FloorArtworkMesh()
     {

@@ -45,11 +45,13 @@ public partial class TemplePreview
     }
     private void UseSelectedDoor()
     {
+        if (CombatRefuses("usar portas")) return;
         if (_selected == null) { NavigationStatus(DoorHint(DoorUseStatus.NoDoor)); return; }
         UseDoor(_selected.Source.Key);
     }
     private DoorUseStatus UseDoor(string key)
     {
+        if (CombatRefuses("usar portas")) return DoorUseStatus.Busy;
         ClearRouteHover();
         DoorUseStatus status = DoorStatus(key);
         if (status != DoorUseStatus.Ready) { NavigationStatus(DoorHint(status)); RefreshDoorAction(); return status; }

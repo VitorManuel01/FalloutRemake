@@ -105,6 +105,7 @@ public partial class PreviewHud : CanvasLayer
         var side = new PanelContainer { AnchorLeft = 1, AnchorRight = 1, AnchorTop = 0, AnchorBottom = 1,
             OffsetLeft = -300, OffsetRight = -16, OffsetTop = 84, OffsetBottom = -64 };
         side.AddThemeStyleboxOverride("panel", Box("15211ff2", 10)); root.AddChild(side);
+        AddCombatBar(root);
         var sideSections = new VBoxContainer(); sideSections.AddThemeConstantOverride("separation", 8); side.AddChild(sideSections);
         var filtersScroll = new ScrollContainer { Name = "FiltersScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill, CustomMinimumSize = new(0, 140) }; sideSections.AddChild(filtersScroll);
@@ -118,6 +119,7 @@ public partial class PreviewHud : CanvasLayer
         column.AddChild(new HSeparator());
         _originalFloor.Toggled += enabled => OriginalFloorRequested?.Invoke(enabled); column.AddChild(_originalFloor);
         AddNatureControls(column);
+        AddArchitectureControls(column);
         AddFilter(column, "floor", "Piso", "68766d");
         _revealActor.Toggled += enabled => RevealActorRequested?.Invoke(enabled);
         AddFilter(column, "wall", "Paredes", "b6a17d").AddChild(_revealActor);

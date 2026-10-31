@@ -77,8 +77,8 @@ internal static class ItemUseTests
             var world = new WorldSession(_ => ExplosiveProposalTests.Fixture(), new[] { 3 }); world.Current.Items.Restore(new[] { new TakenItem("owner", "item", 1) });
             Assert(world.Current.Items.Place(Use()) == ItemUseStatus.Ready);
             var saved = world.Capture("catalog");
-            Reject(() => WorldSession.Restore(_ => ExplosiveProposalTests.Fixture(), new[] { 3 }, saved with { Entries = null, Version = 2, Profile = "neutral-v2" }, "catalog"));
-            Assert(world.CarriedCount == 0); world.Reset(); Assert(world.Capture("catalog").Version == 9);
+            Reject(() => WorldSession.Restore(_ => ExplosiveProposalTests.Fixture(), new[] { 3 }, saved with { Entries = null, Combat = null, Version = 2, Profile = "neutral-v2" }, "catalog"));
+            Assert(world.CarriedCount == 0); world.Reset(); Assert(world.Capture("catalog").Version == 10);
         });
     }
     private static void Assert(bool value) { if (!value) throw new Exception("Item-use ownership assertion failed."); }

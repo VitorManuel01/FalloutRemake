@@ -24,6 +24,7 @@ public partial class TemplePreview
             .OrderBy(t => reach.Distance(t!.Value)).ThenBy(t => t).FirstOrDefault();
     private void OpenLoot()
     {
+        if (_loot?.Visible != true && CombatRefuses("recolher itens")) return;
         if (_loot?.Visible == true) { CloseLoot(); return; }
         if (_selected?.Source is not { Subtype: 1 } owner || owner.Header.Pid >> 24 != 0 || _campaign == null) return;
         CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseInventory(); ClearRouteHover(); _lootOwner = owner.Key;

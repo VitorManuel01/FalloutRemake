@@ -94,6 +94,7 @@ public partial class TemplePreview
 
     private void ToggleWalkMode()
     {
+        if (CombatRefuses("trocar de modo")) return;
         if (_walker == null) return;
         ClearRouteHover();
         _walkMode = !_walkMode;
@@ -105,6 +106,7 @@ public partial class TemplePreview
     private void ResetWalker()
     {
         if (_campaign == null) return;
+        DiscardCombat();
         SetCameraFollow(false);
         _campaign.Reset(); _skills.Reset(); BindCurrentArea();
         ChangeElevation(_travel!.Location.Elevation); FocusEntry();
@@ -123,6 +125,7 @@ public partial class TemplePreview
     private HexRoute RequestWalk(int target)
     {
         if (_walker == null || _navigation == null) return new(RouteStatus.OutsideGrid, Array.Empty<int>());
+        if (CombatRefuses("caminhar livremente")) return new(RouteStatus.Busy, Array.Empty<int>());
         ClearRouteHover();
         HexRoute route = _walker.WalkTo(target);
         string message = route.Status switch

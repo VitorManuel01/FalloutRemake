@@ -16,7 +16,7 @@ public partial class TemplePreview
     private readonly HashSet<string> _cutWalls = new();
     private Vector3 _lastSightFrom, _lastSightTo;
     private static SightPoint Sight(Vector3 p) => new(p.X, p.Y, p.Z);
-    private static bool WallCovers(Vector3 from, Vector3 to, PreviewObject wall)
+    private bool WallCovers(Vector3 from, Vector3 to, PreviewObject wall)
     {
         Vector3 size = Dimensions(PreviewKind.Wall);
         return SightOcclusion.Intersects(Sight(from), Sight(to), Sight(Point(wall.Position, size.Y / 2)),
@@ -39,6 +39,7 @@ public partial class TemplePreview
             _bodies[wall.Source.Key].GetChild<MeshInstance3D>(0).Visible = !cut;
             if (cut) _cutWalls.Add(wall.Source.Key); else _cutWalls.Remove(wall.Source.Key);
         }
+        ApplyArchitectureVisibility();
     }
     private async Task CheckWallOcclusion()
     {

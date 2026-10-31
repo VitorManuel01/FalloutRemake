@@ -26,7 +26,7 @@ public sealed partial class WorldSession
     public int CurrentMap { get; private set; }
     public WorldArea Current => _areas[CurrentMap];
     public ActorLocation Location => Current.Travel.Location;
-    public int Experience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0) + (_arroyoReward?.Experience ?? 0);
+    public int Experience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0) + (_arroyoReward?.Experience ?? 0) + _combatExperience;
     public IReadOnlyList<WorldArea> Areas => _areas.OrderBy(p => p.Key).Select(p => p.Value).ToArray();
     public CarriedItem[] Carried => Areas.SelectMany(a => a.Items.Carried).ToArray();
     public WorldItemUse[] ItemUses => Areas.SelectMany(a => a.Items.CaptureUses().Select(u => new WorldItemUse(a.Map.Prefix.Header.MapIndex, u))).ToArray();
@@ -185,7 +185,7 @@ public sealed partial class WorldSession
     public void Reset()
     {
         _templeProgress = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
-        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null;
+        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat();
         foreach (WorldArea area in _areas.Values) { area.Scenery.Reset(); area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
     }
@@ -194,9 +194,10 @@ public sealed partial class WorldSession
     public WorldCheckpoint Capture(string catalogHash)
     {
         ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses(); ValidateTempleExit();
-        return new(9, "neutral-v9", catalogHash, InitialMap, CurrentMap,
+        return new(10, "neutral-v10", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
-                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray(), _templeProgress?.Capture(),CaptureEntries());
+                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray(), _templeProgress?.Capture(),CaptureEntries(),
+            CaptureCombat());
     }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
         Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null)
@@ -205,7 +206,9 @@ public sealed partial class WorldSession
             || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
             || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5" || checkpoint.Version == 6 && checkpoint.Profile == "neutral-v6"
             || checkpoint.Version == 7 && checkpoint.Profile == "neutral-v7" || checkpoint.Version == 8 && checkpoint.Profile == "neutral-v8"
-            || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9") || checkpoint.CatalogHash != catalogHash
+            || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9" || checkpoint.Version == 10 && checkpoint.Profile == "neutral-v10")
+            || checkpoint.CatalogHash != catalogHash
+            || checkpoint.Version < 10 && checkpoint.Combat != null || checkpoint.Version >= 10 && checkpoint.Combat == null
             || checkpoint.Version < 6 && checkpoint.Temple != null
             || checkpoint.Version < 8 && checkpoint.Entries != null
             || checkpoint.Version < 9 && checkpoint.Entries?.ArroyoGlobals != null
@@ -235,6 +238,7 @@ public sealed partial class WorldSession
         foreach (var scene in scenes) scene.Area.Scenery.ApplyPrepared(ScenerySession.Prepare(scene.Records));
         candidate.RestoreTempleProgress(checkpoint.Temple);
         candidate.RestoreEntries(checkpoint);
+        candidate.RestoreCombat(checkpoint.Combat);
         candidate.ValidateTempleExit();
         candidate.ValidateUses();
         foreach (SavedArea saved in checkpoint.Areas) candidate._areas[saved.Map].Travel.Arrive(saved.Location);
