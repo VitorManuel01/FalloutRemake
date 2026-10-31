@@ -9,5 +9,6 @@
     <Compile Include="../../src/Import/*.cs" Link="Import/%(Filename)%(Extension)" />
     <Compile Include="../../src/Geometry/*.cs" Link="Geometry/%(Filename)%(Extension)" />
     <Compile Include="../../src/Runtime/*.cs" Link="Runtime/%(Filename)%(Extension)" />
+    <Compile Include="../../src/Runtime/Combat/*.cs" Link="Runtime/Combat/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

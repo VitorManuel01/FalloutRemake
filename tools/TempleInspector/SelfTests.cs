@@ -149,6 +149,7 @@ internal static class SelfTests
             ReturnAllTests.Run(Check);
             OcclusionTests.Run(Check);
             TempleArchitectureTests.Run(Check);
+            CombatTests.Run(Check);
             MessageTextTests.Run(Check);
             InventoryViewTests.Run(Check);
             FloorArtTests.Run(Check);
