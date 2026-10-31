@@ -113,7 +113,7 @@ public partial class TemplePreview
             ? "Bloqueador técnico original · contorno vermelho no chão. Mantém o bloqueio do hex compartilhado; use Próximo para voltar ao recipiente ou à luz."
             : _bodies[obj.Source.Key].HasMeta("shared_light_obstacle") ? "Obstáculo original · base vermelha sob a luz. Mantém o bloqueio; use Próximo para consultar o emissor separado."
             : "Obstáculo · placa vermelha com X. Bloqueia a passagem; a cor não indica que possa ser destruído.",
-        EntityVisualRole.LightSource => $"Fonte de luz · luminária dourada. Raio original: {obj.Source.Header.LightDistance} hexes. "
+        EntityVisualRole.LightSource => $"Fonte de luz · {(ArchitectureActive ? "luz quente da tocha" : "luminária dourada")}. Raio original: {obj.Source.Header.LightDistance} hexes. "
             + (EntityPresentation.Blocks(obj.Source) ? "Base vermelha: também bloqueia a passagem." : ""),
         EntityVisualRole.Container => $"Recipiente · {_campaign!.Current.Items.Contents(obj.Source.Key).Sum(i => (long)i.Quantity)} unidade(s) restante(s). "
             + (_campaign.Current.Items.ContainerStatus(obj.Source.Key) == ItemTakeStatus.Ready ? "Verde: com itens; cinza: vazio. Use Recolher [J] para consultar." : "Roxo: interação especial ou acesso restrito; consulte Recolher [J]."),

@@ -28,6 +28,10 @@ window/stretch/aspect="expand"
 
 project/assembly_name="Fallout Remake"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/temple_kit_import/plugin.cfg")
+
 [physics]
 
 3d/physics_engine="Jolt Physics"

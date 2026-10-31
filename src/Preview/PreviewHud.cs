@@ -118,6 +118,7 @@ public partial class PreviewHud : CanvasLayer
         column.AddChild(new HSeparator());
         _originalFloor.Toggled += enabled => OriginalFloorRequested?.Invoke(enabled); column.AddChild(_originalFloor);
         AddNatureControls(column);
+        AddArchitectureControls(column);
         AddFilter(column, "floor", "Piso", "68766d");
         _revealActor.Toggled += enabled => RevealActorRequested?.Invoke(enabled);
         AddFilter(column, "wall", "Paredes", "b6a17d").AddChild(_revealActor);

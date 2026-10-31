@@ -53,15 +53,18 @@ public partial class TemplePreview : Node3D
             }
 			AddChild(_camera); _camera.Current = true;
 			AddChild(_hud); AddChild(_world);
-			AddChild(new WorldEnvironment { Environment = _resources.Own(new Godot.Environment
+			_environment = _resources.Own(new Godot.Environment
 			{
 				BackgroundMode = Godot.Environment.BGMode.Color, BackgroundColor = new Color("101918"),
 				AmbientLightSource = Godot.Environment.AmbientSource.Color, AmbientLightColor = new Color("b2c4b7"), AmbientLightEnergy = 0.65f,
 				ReflectedLightSource = Godot.Environment.ReflectionSource.Disabled, TonemapMode = Godot.Environment.ToneMapper.Filmic
-			}) });
-			var sun = new DirectionalLight3D { LightColor = new Color("f0d8ac"), LightEnergy = 1.3f,
+			});
+			AddChild(new WorldEnvironment { Environment = _environment });
+			_sun = new DirectionalLight3D { LightColor = new Color("f0d8ac"), LightEnergy = 1.3f,
 				RotationDegrees = new Vector3(-55, -25, 0), ShadowEnabled = true, DirectionalShadowMaxDistance = 180 };
-			AddChild(sun);
+			AddChild(_sun);
+			LoadKit(); ApplyLightingMode();
+			_hud.ArchitectureRequested = SetArchitecture; _hud.Architecture(ArchitectureActive, _kit != null, _kitStatus);
 			_hud.EntryRequested = GoToEntry; _hud.FrameRequested = FrameAll; _hud.OpenRequested = ChooseFolder;
 			_hud.ElevationRequested = elevation => TryInspectionElevation(elevation);
 			_hud.FilterChanged = (_, _) => ApplyFilters(); _hud.CycleRequested = CycleSelection;
@@ -112,6 +115,7 @@ public partial class TemplePreview : Node3D
 				if (_explosivePreparationTest) { await CheckPlacedUsePreview(); await Shutdown(0); return; }
                 if (_sceneReviewTest) { await CheckEntityReadability(); await Shutdown(0); return; }
 				if (_test) await CheckPreview();
+				if (_test) await CheckTempleArchitecture();
 				if (_test) await CheckNavigation();
 				if (_test) await CheckDoors();
 				if (_test) await CheckLockpick();
@@ -163,7 +167,7 @@ public partial class TemplePreview : Node3D
 		var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 }, runtimePrototype: runtimePrototypes.Get,
 			templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read));
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
-		_floorArt = new FloorArtCatalog(data.Read);
+		_floorArt = new FloorArtCatalog(data.Read); _artLists = new ResourceCatalog(data.Read);
 		_inventoryArt = new InventoryArtCatalog(data.Read); _unavailableItemArt.Clear();
 		LoadObjectText(data);
 		BindCurrentArea();
@@ -176,7 +180,12 @@ public partial class TemplePreview : Node3D
 		WorldArea area = _campaign!.Current;
 		_map = area.Map; _doors = area.Doors; _travel = area.Travel;
 		_hud.Area(_mapCatalog!.Get(_campaign.CurrentMap).Name.ToUpperInvariant());
-		_hud.Status($"{_map.Prefix.Header.Name} · mapa {_campaign.CurrentMap} · formas provisórias");
+		BindStatus();
+	}
+	private void BindStatus()
+	{
+		if (_map == null || _campaign == null) return;
+		_hud.Status($"{_map.Prefix.Header.Name} · mapa {_campaign.CurrentMap} · {(ArchitectureActive ? "arquitetura do kit 3D" : "formas provisórias")}");
 	}
 
 	private void BuildWorld()
@@ -222,6 +231,7 @@ public partial class TemplePreview : Node3D
             ConfigureActiveTempleBody(obj,body);
 			_world.AddChild(body); _lookup.Add(body.GetInstanceId(), obj); _bodies.Add(obj.Source.Key, body);
 		}
+		BuildArchitecture();
 		_highlight = new MeshInstance3D { Name = "Selection", Mesh = resources.Own(new CylinderMesh { TopRadius = .72f, BottomRadius = .72f, Height = .025f, RadialSegments = 48 }),
 			MaterialOverride = resources.Own(new StandardMaterial3D { AlbedoColor = new Color(.9f, .75f, .36f, .4f), Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
 				ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, NoDepthTest = false }), Visible = false };
@@ -246,9 +256,11 @@ public partial class TemplePreview : Node3D
 		BuildAppliedSceneryVisuals();
 	}
 
-	private static Vector3 Dimensions(PreviewKind kind) => kind switch
+	// Kit walls stand TempleArchitecture.WallHeight; picking boxes and the cutaway test follow the drawn height.
+	private Vector3 Dimensions(PreviewKind kind) => kind switch
 	{
-		PreviewKind.Wall => new Vector3(.88f, .9f, .88f), PreviewKind.Door => new Vector3(.85f, 1.3f, .30f),
+		PreviewKind.Wall => ArchitectureActive ? new Vector3(.86f, (float)TempleArchitecture.WallHeight, .86f) : new Vector3(.88f, .9f, .88f),
+		PreviewKind.Door => new Vector3(.85f, ArchitectureActive ? 1.95f : 1.3f, .30f),
 		PreviewKind.Critter => new Vector3(.5f, .9f, .5f), PreviewKind.Item => new Vector3(.35f, .25f, .35f),
 		PreviewKind.Exit => new Vector3(1.05f, .09f, 1.05f), PreviewKind.Marker => new Vector3(.28f, .12f, .28f),
 		_ => new Vector3(.6f, .5f, .6f)
@@ -256,7 +268,7 @@ public partial class TemplePreview : Node3D
 	private StandardMaterial3D Material(PreviewKind kind)
 	{
 		if (_materials.TryGetValue(kind, out StandardMaterial3D? material)) return material;
-		string color = kind switch { PreviewKind.Wall => "ae9c80", PreviewKind.Door => "cfad62", PreviewKind.Critter => "c87761",
+		string color = kind switch { PreviewKind.Wall => "ae9c80", PreviewKind.Door => ArchitectureActive ? "8a6438" : "cfad62", PreviewKind.Critter => "c87761",
 			PreviewKind.Exit => "59b49e", PreviewKind.Item => "c9c18d", PreviewKind.Marker => "7b87a0", _ => "8d795b" };
 		material = _resources.Own(new StandardMaterial3D { AlbedoColor = new Color(color), Roughness = .88f });
 		if (kind == PreviewKind.Exit) { material.EmissionEnabled = true; material.Emission = new Color(color); material.EmissionEnergyMultiplier = .35f; }
@@ -357,6 +369,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.T) FrameRoute();
 			if (key.PhysicalKeycode == Key.J) OpenLoot();
 			if (key.PhysicalKeycode == Key.B) OpenBag();
+			if (key.PhysicalKeycode == Key.P) SetArchitecture(!_architectureEnabled);
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;
@@ -595,6 +608,7 @@ public partial class TemplePreview : Node3D
 		for (int i = GetChildCount() - 1; i >= 0; i--) GetChild(i).QueueFree();
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		_architectureParts.Clear(); _architectureFloor = Array.Empty<MultiMeshInstance3D>(); _architecture = null; _kit = null; _environment = null; _sun = null;
 		_resources.Dispose(); _materials.Clear(); _meshes.Clear(); _shapes.Clear(); _bodies.Clear(); _lookup.Clear();
 		_floorArtworkMaterials.Clear(); _floorArtworkMesh = null;
         _entityMeshes.Clear(); _entityMaterials.Clear(); _entityShapes.Clear(); _containerVisuals.Clear(); _worldLabels.Clear();

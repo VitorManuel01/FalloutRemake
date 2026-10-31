@@ -51,6 +51,10 @@ Orientação e extensão de malhas de paredes/portas ainda não são inferidas d
 
 ## Limites e próximo passo
 
+Desde 31/10/2026, paredes, colunas, piso do templo e tochas usam o
+[kit modular 3D](temple-architecture-2026-10-31.md) sobre essas mesmas coordenadas.
+As caixas abaixo continuam disponíveis para comparação (P).
+
 Alturas, larguras, materiais e iluminação são escolhas provisórias. Esta cena não
 recupera modelos 3D dos sprites. A reconstrução espacial usa os índices fonte, mas
 a aparência ainda não foi comparada lado a lado com o jogo original. Não há tetos,
