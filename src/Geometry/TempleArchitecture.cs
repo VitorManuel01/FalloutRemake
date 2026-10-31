@@ -62,12 +62,14 @@ public static class TempleArchitecture
     /// <summary>
     /// Original wall sprites are wider than their hex, so the map leaves single hexes between wall objects and
     /// fills them with invisible blockers (block.frm). Those fillers are drawn as stone when they sit between two
-    /// walls; walkable hexes are never fillers, so doorways stay open.
+    /// walls; walkable hexes are never fillers, so doorways stay open. A blocker under a visible object (a pot in a
+    /// wall niche stands on one) is never drawn: <paramref name="keepClear"/> lists those hexes.
     /// </summary>
-    public static WallPlan PlanWalls(IEnumerable<int> wallTiles, GroundPoint origin, IEnumerable<int>? fillers = null)
+    public static WallPlan PlanWalls(IEnumerable<int> wallTiles, GroundPoint origin, IEnumerable<int>? fillers = null, IEnumerable<int>? keepClear = null)
     {
         var tiles = wallTiles.Where(HexNavigation.Valid).ToHashSet();
         var candidates = (fillers ?? Array.Empty<int>()).Where(t => HexNavigation.Valid(t) && !tiles.Contains(t)).ToHashSet();
+        candidates.ExceptWith(keepClear ?? Array.Empty<int>());
         var filled = new List<int>();
         // Two passes close gaps two blockers wide; a blocker beside a wall but not between two stays empty.
         for (int pass = 0; pass < 2; pass++)

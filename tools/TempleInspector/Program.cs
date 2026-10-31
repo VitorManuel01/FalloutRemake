@@ -96,6 +96,11 @@ try
         Console.WriteLine(JsonSerializer.Serialize(TempleRunAudit.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
+    if (args.Length == 3 && args[2] == "--architecture-clearance-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(ArchitectureClearanceReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
     if (args.Length == 3 && args[2] == "--drug-report")
     {
         var drugs = new PrototypeCatalog(new ResourceCatalog(new GameData(args[1]).Read));

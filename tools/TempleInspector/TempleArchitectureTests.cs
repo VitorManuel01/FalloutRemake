@@ -69,6 +69,9 @@ internal static class TempleArchitectureTests
             if (links.Length != 0) throw new Exception($"Open link {links[0].A}-{links[0].B}.");
             WallPlan passage = TempleArchitecture.PlanWalls(wall, Origin);
             if (passage.Filled.Length != 0 || Drawn(passage, At(filler), .2)) throw new Exception("Walkable gap without a blocker was closed.");
+            // A pot in a wall niche stands on a blocker between two walls: its hex stays clear of stone.
+            WallPlan niche = TempleArchitecture.PlanWalls(wall.Concat(branch), Origin, new[] { filler, beside }, new[] { filler });
+            if (niche.Filled.Length != 0 || Drawn(niche, At(filler), .25)) throw new Exception("Stone drawn over a blocker that holds a visible object.");
         });
         check("temple kit plan is deterministic, ignores invalid hexes and closes the slit between parallel walls", () =>
         {
