@@ -163,8 +163,8 @@ flowchart TD
   - `src/Runtime/Combat/DerivedCombatStats.cs`
   - `tools/TempleInspector/CombatantStatsTests.cs`
 - **Critérios de Aceitação:**
-  1. Formiga Gigante (PID 382) deriva 18 HP, 7 AP, AC 4, Sequence 50.
-  2. Escorpião (PID 5) deriva 32 HP, 6 AP, AC 3, Sequence 150.
+  1. Formiga Gigante (PID 382) deriva 6 HP, 5 AP, AC 4, Sequence 9. *(corrigido em 31/10/2026 contra o PRO original e o CE; ver `docs/combat-core-2026-10-31.md`)*
+  2. Radscorpion (PID 5) deriva 10 HP, 5 AP, AC 3, Sequence 4.
   3. Jogador neutro (SPECIAL 5 em tudo) deriva 30 HP, 7 AP, AC 5, Sequence 10.
 - **Testes:** 15 novos testes unitários em `TempleInspector`.
 - **Complexidade:** Média (2 dias).
@@ -184,7 +184,7 @@ flowchart TD
 - **Arquivos Candidatos a Alteração:** `src/Import/PrototypeCatalog.cs`
 - **Critérios de Aceitação:**
   1. Lança (PID 7) decodifica dano 3–10, alcance 2, custo 4 AP.
-  2. Pistola 10mm (PID 4) decodifica dano 5–12, alcance 25, custo 5 AP, capacidade 12.
+  2. Pistola 10mm (PID 8; o PID 4 é a faca) decodifica dano 5–12, alcance 25, custo 5 AP, capacidade 12.
 - **Testes:** 20 testes em `ItemCombatPrototypeTests.cs`.
 - **Complexidade:** Média (2–3 dias).
 

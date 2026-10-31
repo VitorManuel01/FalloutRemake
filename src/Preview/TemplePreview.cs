@@ -172,7 +172,6 @@ public partial class TemplePreview : Node3D
 			templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read));
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
 		_floorArt = new FloorArtCatalog(data.Read); _artLists = new ResourceCatalog(data.Read);
-		LoadCombatWeapon(runtimePrototypes);
 		_inventoryArt = new InventoryArtCatalog(data.Read); _unavailableItemArt.Clear();
 		LoadObjectText(data);
 		BindCurrentArea();

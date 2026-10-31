@@ -47,39 +47,50 @@ internal static class CombatReport
         var armorProto = prototypes.Get(1); var armor = ArmorPrototypeData.Read(armorProto);
         var ammoProto = prototypes.Get(29); var ammo = AmmoPrototypeData.Read(ammoProto);
 
-        // Seeded read-only duel: the first elevation-0 ant, the neutral character with the spear five hexes away.
-        MapObject antSource = map.ObjectLayers.Single(l => l.Elevation == 0).Objects.Where(o => o.Header.Pid == 0x0100017E).OrderBy(o => o.Offset).First();
+        // Seeded read-only duels: the first elevation-0 critter of each encounter PID, the neutral character with the spear five hexes away.
         var navigation = HexNavigation.FromMap(map, 0);
-        string before = string.Join(",", antSource.State.Select(kv => $"{kv.Key}={kv.Value}"));
         var spear = CombatWeapon.Primary(Name("pro_item.msg", prototypes.Get(7).MessageId), spearData);
-        CombatSession? session = null; CombatantState? hero = null, foe = null; int start = -1;
-        foreach (int tile in Enumerable.Range(0, 40000).Where(t => FalloutGrid.Distance(t, antSource.Header.Tile) == 5 && navigation.Walkable(t)))
+        object Duel(int pid, ulong seed)
         {
-            foe = CombatantState.FromMapCritter(antSource, CritterPrototypeData.Read(prototypes.Get(0x0100017E)), ant.Name);
-            hero = new CombatantState("player", "Escolhido", null, 0, true, tile, 0, player, spear, player.MaxHitPoints);
-            var candidate = new CombatSession(new[] { hero, foe }, navigation, new SeededCombatRandom(2026));
-            if (candidate.Movement.Path(hero, h => FalloutGrid.Distance(h, foe.Hex) <= spear.Range) is { Length: > 0 }) { session = candidate; start = tile; break; }
+            MapObject source = map.ObjectLayers.Single(l => l.Elevation == 0).Objects.Where(o => o.Header.Pid == pid).OrderBy(o => o.Offset).First();
+            string before = string.Join(",", source.State.Select(kv => $"{kv.Key}={kv.Value}"));
+            string name = Name("pro_crit.msg", prototypes.Get(pid).MessageId);
+            CombatSession? session = null; CombatantState? hero = null, foe = null; int start = -1;
+            foreach (int tile in Enumerable.Range(0, 40000).Where(t => FalloutGrid.Distance(t, source.Header.Tile) == 5 && navigation.Walkable(t)))
+            {
+                foe = CombatantState.FromMapCritter(source, CritterPrototypeData.Read(prototypes.Get(pid)), name);
+                hero = new CombatantState("player", "Escolhido", null, 0, true, tile, 0, player, spear, player.MaxHitPoints);
+                var candidate = new CombatSession(new[] { hero, foe }, navigation, new SeededCombatRandom(seed));
+                if (candidate.Movement.Path(hero, h => FalloutGrid.Distance(h, foe.Hex) <= spear.Range) is { Length: > 0 }) { session = candidate; start = tile; break; }
+            }
+            if (session == null || hero == null || foe == null) throw new InvalidDataException($"No reachable duel position near PID {pid:X8}.");
+            for (int guard = 0; guard < 400 && !session.Turn.Over; guard++)
+            {
+                if (!session.Active!.IsPlayer) { ProvisionalMeleeBehavior.TakeTurn(session); continue; }
+                var attack = session.Preview(CombatActionProposal.Attack("player", foe.Id));
+                if (attack.Status == CombatActionStatus.Ready) session.Execute(CombatActionProposal.Attack("player", foe.Id));
+                else if (attack.Status == CombatActionStatus.OutOfRange && hero.ActionPoints > 0
+                    && session.Movement.Path(hero, h => FalloutGrid.Distance(h, foe.Hex) <= spear.Range) is { Length: > 0 } path)
+                    session.Execute(CombatActionProposal.Move("player", path[Math.Min(path.Length, hero.ActionPoints) - 1]));
+                else session.Execute(CombatActionProposal.EndTurn("player"));
+            }
+            if (!session.Turn.Over) throw new InvalidDataException("Seeded duel did not finish.");
+            MapLayoutWriter.Verify(map);
+            if (before != string.Join(",", source.State.Select(kv => $"{kv.Key}={kv.Value}"))) throw new InvalidDataException("Duel mutated the source critter.");
+            return new
+            {
+                Seed = seed, Critter = name, Key = source.Key, Hex = source.Header.Tile, PlayerHex = start, Order = session.Log.OfType<CombatStarted>().Single().Order,
+                Rounds = session.Turn.Round, Winner = session.Turn.WinningTeam, session.Turn.ExperienceAwarded, PlayerHitPoints = hero.HitPoints, CritterHitPoints = foe.HitPoints,
+                FirstPlayerAttack = session.Log.OfType<AttackResolved>().FirstOrDefault(a => a.AttackerId == "player"),
+                FirstCritterAttack = session.Log.OfType<AttackResolved>().FirstOrDefault(a => a.AttackerId == foe.Id),
+                Attacks = session.Log.OfType<AttackResolved>().Count(), Moves = session.Log.OfType<CombatantMoved>().Count(), SourceUnchanged = true
+            };
         }
-        if (session == null || hero == null || foe == null) throw new InvalidDataException("No reachable duel position near the first ant.");
-        for (int guard = 0; guard < 400 && !session.Turn.Over; guard++)
-        {
-            if (!session.Active!.IsPlayer) { ProvisionalMeleeBehavior.TakeTurn(session); continue; }
-            var attack = session.Preview(CombatActionProposal.Attack("player", foe.Id));
-            if (attack.Status == CombatActionStatus.Ready) session.Execute(CombatActionProposal.Attack("player", foe.Id));
-            else if (attack.Status == CombatActionStatus.OutOfRange && hero.ActionPoints > 0
-                && session.Movement.Path(hero, h => FalloutGrid.Distance(h, foe.Hex) <= spear.Range) is { Length: > 0 } path)
-                session.Execute(CombatActionProposal.Move("player", path[Math.Min(path.Length, hero.ActionPoints) - 1]));
-            else session.Execute(CombatActionProposal.EndTurn("player"));
-        }
-        if (!session.Turn.Over) throw new InvalidDataException("Seeded duel did not finish.");
-        MapLayoutWriter.Verify(map);
-        if (before != string.Join(",", antSource.State.Select(kv => $"{kv.Key}={kv.Value}"))) throw new InvalidDataException("Duel mutated the source ant.");
-        var firstAttack = session.Log.OfType<AttackResolved>().FirstOrDefault(a => a.AttackerId == "player");
 
         return new
         {
             Status = "COMBAT_CORE_OK",
-            Scope = "Front B phase 2 (ARCH-001, COM-001, ARM-001, COM-002, COM-003): pure C# domain; not connected to TemplePreview or WorldSession",
+            Scope = "Front B combat domain on original data; the playable slice (COM-004) is validated in-engine by --preview-test",
             Player = new { Special = player.Special.ToArray(), player.MaxHitPoints, player.MaxActionPoints, player.ArmorClass, player.Sequence, player.MeleeDamage,
                 player.CriticalChance, Skills = player.CombatSkills },
             Critters = critters,
@@ -101,13 +112,8 @@ internal static class CombatReport
                 "Turns end explicitly; running out of AP does not end them.", "Non-player turns use ProvisionalMeleeBehavior until AI-001." },
             NotModeled = new[] { "Critical hits and failures", "Aimed shots", "Burst fire", "Line of fire and cover", "Lighting penalty", "Perks, traits, tags",
                 "Difficulty other than normal", "Knockback, knockdown, crippling", "Reload and ammo consumption", "Persistence in checkpoints" },
-            Duel = new
-            {
-                Seed = 2026, AntKey = antSource.Key, AntHex = antSource.Header.Tile, PlayerHex = start, Order = session.Log.OfType<CombatStarted>().Single().Order,
-                Rounds = session.Turn.Round, Winner = session.Turn.WinningTeam, session.Turn.ExperienceAwarded, PlayerHitPoints = hero.HitPoints, AntHitPoints = foe.HitPoints,
-                FirstPlayerAttack = firstAttack, Attacks = session.Log.OfType<AttackResolved>().Count(), Moves = session.Log.OfType<CombatantMoved>().Count(),
-                SourceAntUnchanged = true
-            },
+            Duels = new[] { Duel(0x0100017E, 2026), Duel(0x01000005, 2026) },
+
             AdditionalDependencies = resources.Identities,
             OriginalReconstruction = "verified"
         };

@@ -120,11 +120,11 @@ A **Frente B** introduz o combate por turnos no grid hexagonal com identidade au
 Para validar o ciclo de combate sem depender de toda a complexidade de companions, armas automáticas ou utility AI, define-se a menor fatia executável:
 - **Cenário:** Templo das Provações — Sala 1 da Elevação 0 (`maps/arcaves.map`).
 - **Encontro:** **Duelo 1v1 contra Formiga Gigante** (Giant Ant, PID 382 / `0x0100017E`).
-  - *Dados reais da Formiga Gigante:* 18 HP, 7 AP, AC 4, Sequence 50, Unarmed 25%, DT 0, DR 0%, Recompensa de 25 XP.
-  - *Dados do Jogador:* Perfil neutro com Força 5, Percepção 5, Resistência 5, Carisma 5, Inteligência 5, Agilidade 5, Sorte 5 $\to$ 30 HP, 7 AP, AC 5, Sequence 10, Unarmed / Lança.
+  - *Dados reais da Formiga Gigante:* 6 HP, 5 AP, AC 4, Sequence 9, Unarmed 65%, DT 0, DR 0%, Recompensa de 25 XP (base + bônus do PRO). *(corrigido em 31/10/2026 contra o PRO original e o CE; ver `docs/combat-core-2026-10-31.md`)*
+  - *Dados do Jogador:* Perfil neutro com Força 5, Percepção 5, Resistência 5, Carisma 5, Inteligência 5, Agilidade 5, Sorte 5 $\to$ 30 HP, 7 AP, AC 5, Sequence 10, Unarmed 50% / Melee 40% (lança).
 - **Escopo do Ciclo:**
   1. Detecção mútua e transição de exploração para modo de combate.
-  2. Rolagem de iniciativa por Sequence (Formiga com 50 vs Jogador com 10 $\to$ Formiga inicia).
+  2. Quem percebe primeiro inicia (CE); depois, ordem por Sequence e Sorte (Jogador 10 vs Formiga 9).
   3. Consumo de 1 AP por hexágono percorrido.
   4. Ataque simples (mordida da formiga / soco ou estocada do jogador).
   5. Cálculo de acerto percentual, dedução de DT/DR e redução de HP.

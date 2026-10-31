@@ -68,14 +68,13 @@ classDiagram
 
 ## 3. Gestão de Turnos, Rodadas e Iniciativa
 
-### 3.1. Rolagem de Iniciativa
-Ao iniciar o combate, todos os participantes na zona de engajamento são ordenados por iniciativa:
-$$\text{Score de Iniciativa} = \text{Sequence} + \text{Desempate D6}$$
-- **Desempates:**
-  1. Maior valor de Agilidade ($\text{AG}$).
-  2. Maior valor de Percepção ($\text{PE}$).
-  3. Maior valor de Sorte ($\text{LK}$).
-  4. Semente pseudo-aleatória determinística da sessão de combate.
+### 3.1. Ordem de Iniciativa
+Ao iniciar o combate, quem percebeu o adversário age primeiro (CE `_combat_sequence_init`). A cada rodada os combatentes vivos são reordenados como no CE `_compare_faster`:
+1. Maior Sequence.
+2. Maior Sorte ($\text{LK}$).
+3. Empates restantes (o CE os deixa ao `qsort`): maior Agilidade, maior Percepção e, por fim, o id de origem, para que uma luta com a mesma semente se repita exatamente.
+
+Não há dado de iniciativa (D6) no CE. *(corrigido em 31/10/2026; ver `docs/combat-core-2026-10-31.md`)*
 
 ### 3.2. Estrutura da Rodada
 - Uma **Rodada** completa-se quando todos os combatentes ativos tiveram seu turno.
@@ -209,7 +208,8 @@ Para cada impacto:
 2. **Subtração de Limiar de Dano (Damage Threshold - DT):**
    $$\text{Dano Pós-DT} = \max(0, \text{Dano Bruto} - \text{DT})$$
 3. **Aplicação de Resistência a Dano (Damage Resistance - DR %):**
-   $$\text{Dano Efetivo} = \lfloor \text{Dano Pós-DT} \times (1 - \frac{\text{DR}}{100}) \rfloor$$
+   $$\text{Dano Efetivo} = \text{Dano Pós-DT} - \lfloor \text{Dano Pós-DT} \times \frac{\text{DR}}{100} \rfloor$$
+   (CE `attackComputeDamage`: trunca a parcela absorvida; 7 de dano com DR 30% resulta em 5) *(corrigido em 31/10/2026 contra o PRO original e o CE; ver `docs/combat-core-2026-10-31.md`)*
 4. **Subtração de HP:**
    $$\text{HP Final} = \text{CurrentHP} - \text{Dano Efetivo}$$
 
@@ -259,18 +259,18 @@ Para comprovar a integração de ponta a ponta sem riscos de sobrecarga de escop
 ### Especificação do Encontro
 - **Localização:** `maps/arcaves.map` (Templo das Provações), Elevação 0, Primeira Câmara.
 - **Inimigo:** **Formiga Gigante** (`0x0100017E` / PID 382, PRO `00000382.pro`).
-  - HP: 18 | AP: 7 | AC: 4 | Sequence: 50 | Unarmed: 25%.
+  - HP: 6 | AP: 5 | AC: 4 | Sequence: 9 | Unarmed: 65% | Melee Damage 2 (mordida 1–4). Valores efetivos = base + bônus do PRO; todas as instâncias do mapa gravam `hp=6`. *(corrigido em 31/10/2026 contra o PRO original e o CE; ver `docs/combat-core-2026-10-31.md`)*
   - DT: 0 | DR: 0% para todos os tipos.
   - Recompensa ao morrer: **25 XP**.
 - **Jogador:** The Chosen One (Perfil Neutro).
-  - HP: 30 | AP: 7 | AC: 5 | Sequence: 10 | Unarmed: 35% / Lança (PID 7, dano 3–10, 4 AP).
+  - HP: 30 | AP: 7 | AC: 5 | Sequence: 10 | Unarmed: 50% / Melee: 40% / Lança (PID 7, dano 3–10 + Melee Damage no máximo, 4 AP). *(corrigido em 31/10/2026 contra o PRO original e o CE; ver `docs/combat-core-2026-10-31.md`)*
 - **Objetivos de Homologação:**
   1. O jogador aproxima-se a 5 hexes da formiga $\to$ Modo de combate inicia.
-  2. Iniciativa rola (Formiga com 50 Sequence age primeiro).
+  2. A formiga que percebe o jogador age primeiro (CE `_combat_sequence_init`); nas rodadas seguintes o jogador (Sequence 10) precede a formiga (Sequence 9).
   3. Formiga gasta 3 APs para andar 3 hexes e 3 APs para tentar uma mordida.
   4. Turno passa ao jogador com 7 APs cheios.
-  5. Jogador passa o mouse na formiga: HUD exibe a pré-visualização (chance ~65%, dano esperado ~6 HP, custo 4 AP).
-  6. Jogador clica e ataca com lança $\to$ Acerto sorteado $\to$ Formiga perde 7 HP (fica com 11 HP).
+  5. Jogador passa o mouse na formiga: HUD exibe a pré-visualização (com lança: chance 36% = Melee 40 − AC 4, dano 3–11, custo 4 AP).
+  6. Jogador clica e ataca com lança $\to$ Acerto sorteado $\to$ um acerto de 6+ mata a formiga (6 HP).
   7. Jogador encerra o turno.
   8. No turno seguinte, jogador finaliza a formiga.
   9. Formiga toca animação de morte, colisor torna-se passável (cadáver), jogador recebe 25 XP no HUD e a sessão de combate encerra retornando à exploração normal.

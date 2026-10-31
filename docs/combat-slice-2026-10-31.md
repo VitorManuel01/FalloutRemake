@@ -1,35 +1,46 @@
-# Frente B · COM-004 — primeiro combate jogável (formiga gigante)
+# Frente B · COM-004 — combate jogável no Templo (formigas e radscorpions)
 
 31/10/2026 · worktree `C:\Dev\FalloutRemakeClaude`, branch `agent/claude-work`.
 
 O núcleo da Fase 2 ([combat-core](combat-core-2026-10-31.md)) agora está ligado ao
 `TemplePreview`. Quem anda pelo Templo e chega a até 5 hexes de uma formiga
-gigante é percebido por ela, e a luta acontece por turnos sobre a grade hexagonal.
-Este é o primeiro **gameplay de combate integrado**, ainda restrito às formigas
-gigantes (PID `0x0100017E`), sem IA tática e sem persistência no checkpoint.
+gigante (PID `0x0100017E`) ou de um radscorpion (PID `0x01000005`) é percebido
+pela criatura, e a luta acontece por turnos sobre a grade hexagonal. É o primeiro
+**gameplay de combate integrado**, ainda sem IA tática. O Dumar mantém o papel do
+Speech e não entra em combate.
 
 ## Fluxo
 
-1. **Encontro** (`WorldSession.FindEncounter`): uma formiga viva, sem `HIDDEN`, de
-   time diferente de 0, na mesma elevação, a no máximo 5 hexes e com caminho de
-   até 10 passos até o jogador. Uma formiga atrás de parede, em outra sala, não
-   inicia luta. Se o personagem estiver andando, a luta começa no próximo hex
+1. **Encontro** (`WorldSession.FindEncounter`): uma criatura de encontro viva,
+   sem `HIDDEN`, de time diferente de 0, na mesma elevação, a no máximo 5 hexes e
+   com caminho de até 10 passos até o jogador. Uma criatura atrás de parede, em
+   outra sala, não inicia luta. Se o personagem estiver andando, a luta começa no próximo hex
    inteiro.
-2. **Início** (`WorldSession.BeginCombat`): a formiga que percebeu o jogador age
+2. **Início** (`WorldSession.BeginCombat`): a criatura que percebeu o jogador age
    primeiro (`_combat_sequence_init` do CE). As rodadas seguintes seguem a ordem de
    Sequence e Sorte. O jogador entra com o HP que restou da luta anterior.
 3. **Turno do jogador:**
    - Clique no chão para mover (1 AP por hex).
-   - Clique na criatura para atacar com a lança (PID 7, 4 AP).
+   - Clique na criatura para atacar com a arma carregada (`WorldSession.PlayerWeapon`).
+     Vale a arma corpo a corpo de maior dano médio que está na bolsa; sem nenhuma,
+     o ataque é um soco (1–2, 3 AP). Armas de fogo ficam de fora até existir
+     controle de munição. Não há slot de equipar: carregar a arma é empunhá-la. A
+     única arma do Templo é a lança (PID 7), num recipiente atrás da porta trancada
+     (hex 16262). O inventário inicial do personagem original não está modelado.
    - **Espaço** ou o botão encerra o turno.
    - Ao passar o mouse, aparece a prévia do mesmo `Preview` que resolve a ação:
      chance, dano depois de DT/DR, custo e motivo de recusa. O teste in-engine
      compara a chance mostrada com a usada no ataque.
-4. **Turno da criatura:** `ProvisionalMeleeBehavior` (aproximar e morder), com
+4. **Turno da criatura:** `ProvisionalMeleeBehavior` (aproximar e atacar), com
    0,45 s de pausa para leitura.
-5. **Fim:**
+5. **Animação mínima:** os combatentes andam hex a hex (0,12 s por hex) e dão um
+   avanço curto no golpe. A ação seguinte da criatura e o fim da luta esperam a
+   animação. Nas verificações automáticas tudo é instantâneo, exceto um turno
+   animado de propósito para testar a espera.
+6. **Fim:**
    - **Vitória:** `WorldSession.CommitCombat` registra o cadáver no hex em que a
-     formiga caiu, sem bloquear, mais o XP do PRO (25) e o HP restante. O mundo é
+     criatura caiu, sem bloquear, mais o XP do PRO (formiga 25, radscorpion 60) e
+     o HP restante. O mundo é
      reconstruído pela projeção (`EffectiveObject`). O registro original do MAP não
      muda.
    - **Derrota:** a prévia reinicia.
@@ -52,33 +63,53 @@ apenas enquanto uma luta está aberta.
 | --- | --- |
 | Domínio | `src/Runtime/WorldCombat.cs` (encontro, início, commit, cadáver, XP, HP); `WorldSession.Experience` e `Reset`; `EffectiveObject` projeta cadáveres. |
 | Godot | `src/Preview/CombatViewAdapter.cs` (gatilho, turnos, cliques, prévia, eventos, cadáver, teste in-engine); `src/Preview/CombatHudBar.cs` (barra de combate). `ProjectTempleLayout` também projeta cadáveres. Bloqueios em portas, saída, recolher, salvar, elevação, modo e arquitetura. |
-| Testes | `tools/TempleInspector/WorldCombatTests.cs` (3 grupos); `CheckCombat` em `--preview-test` (`COMBAT_SLICE_OK`, exigido pelos dois runners). |
+| Testes | `tools/TempleInspector/WorldCombatTests.cs`; `--combat-report` (duelos com semente contra uma formiga e um radscorpion reais); `CheckCombat` em `--preview-test` (`COMBAT_SLICE_OK`, exigido pelos dois runners). |
 
 ## Validação
 
-- **Testes sintéticos:** 353 grupos. Os 3 novos cobrem o encontro (alcance,
-  formiga murada, outro mapa ou elevação), o commit único com cadáver projetado,
-  hex liberado e 25 XP, o reset, o HP ferido mantido, e as lutas perdidas,
-  estrangeiras ou incompletas recusadas sem efeito.
+- **Testes sintéticos:** 357 grupos. Os de `WorldCombat` cobrem:
+  - o encontro (alcance, formiga murada, outro mapa ou elevação, radscorpion);
+  - o commit único com cadáver projetado, hex liberado e XP;
+  - o reset;
+  - o HP ferido mantido;
+  - as lutas perdidas, estrangeiras ou incompletas recusadas sem efeito;
+  - a arma carregada: lança empunhada, pistola sem munição ignorada, mãos vazias;
+  - o checkpoint v10.
+- **`--combat-report`:** formiga (hex 20066), vitória na rodada 5 com 19 HP e
+  25 XP; radscorpion (hex 13071), vitória na rodada 5 com 17 HP e 60 XP. A
+  ferroada tem 70% (Unarmed 75 − AC 5).
 - **`--preview-test` headless e gráfico isolado:**
   - Depois de abrir a primeira porta, o personagem caminha até uma formiga e é
     percebido no vão da porta (hex 24308).
+  - A lança carregada é a arma usada.
+  - O primeiro turno da criatura é animado e a ação seguinte espera a animação, que termina no hex lógico.
   - A luta, com semente 2026, termina na rodada 2.
   - A prévia ao passar o mouse coincide com a resolução.
   - O marcador acompanha cada movimento.
-  - As ações de mundo e o salvamento são recusados, e o arquivo de checkpoint fica
-    intacto.
+  - As ações de mundo e o salvamento no meio da luta são recusados, e o arquivo de
+    checkpoint fica intacto.
+  - Salvar depois da vitória, reiniciar e carregar mantém o cadáver, o XP e o HP.
   - O cadáver fica onde a formiga caiu e não bloqueia.
   - Reiniciar devolve a formiga.
   - Os bytes do MAP são preservados.
 - **Capturas:** `.local/kit/temple.combat-start.png` e `temple.combat-victory.png`.
 - **`tools/Validate-Temple.ps1`:** 21 passos aprovados.
+- **`tools/Run-QuietGodot.ps1`:** aprovado em cerca de 245 s, perto do limite de
+  300 s do runner. A bateria gráfica completa está crescendo.
 
 ## Limites
 
-- Só formigas gigantes. Radscorpions e outros ficam para depois.
-- Sem animação de ataque ou morte: a criatura muda de hex e o cadáver é a cápsula deitada.
+- **XP × limite de Arroyo:** a recompensa de entrada em Arroyo (Frente A) só
+  vale para o personagem abaixo do nível 2 (`PrepareEntryReward` exige
+  `Experience < 400`, para que 400 + 600 fique abaixo dos 1000 XP do nível 2). Matar
+  as criaturas da elevação 0 dá até 425 XP (5 formigas e 5 radscorpions). Somado
+  ao arrombamento (25), passa do limite, e a saída para a vila fica indisponível.
+  Resolver isso exige modelar a subida de nível ou rever a regra homologada de
+  Arroyo, e é uma decisão em aberto.
+- O radscorpion não envenena: veneno, críticos e efeitos de dano não estão modelados.
+- A animação é mínima (deslizar e avançar). Não há animação de morte; o cadáver é
+  a cápsula deitada.
 - Sem IA tática (AI-001), sem críticos, mira, cobertura ou luz.
-- Arma fixa (lança), porque o equipamento do inventário ainda não alimenta o combate.
+- Sem slot de equipar e sem armas de fogo em combate (falta controle de munição).
 - HP do jogador só existe em combate. Não há cura nem HP no HUD de exploração.
 - Uma luta aberta não pode ser salva. Só o resultado de lutas terminadas entra no checkpoint v10 (o roadmap prevê salvar no meio do turno no SAV-001).

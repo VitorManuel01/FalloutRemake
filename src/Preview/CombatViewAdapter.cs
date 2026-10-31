@@ -26,14 +26,21 @@ public partial class TemplePreview
     private int _encounterCheckedHex = -1;
     private string _combatHoverKey = "";
     private readonly Dictionary<string, Label3D> _combatLabels = new();
-    private const double EnemyTurnDelay = .45;
+    private const double EnemyTurnDelay = .45, StepSeconds = .12, LungeSeconds = .11;
+    private ulong _combatBusyUntil;
+    private bool _combatFinishPending;
+    private readonly Dictionary<Node3D, Tween> _combatTweens = new();
+    // Automated checks resolve visuals instantly so positions are exact on the same frame.
+    private bool _forceCombatAnimation;
+    private bool AnimateCombat => _forceCombatAnimation || !_checkingNavigation && !_test;
     private bool InCombat => _combat != null;
 
-    private void LoadCombatWeapon(PrototypeCatalog prototypes)
+    // The carried weapon keeps its original prototype name; bare hands otherwise (WorldSession.PlayerWeapon).
+    private CombatWeapon NamedWeapon(CombatWeapon weapon)
     {
-        // The Chosen One starts with the spear (PID 7); the original inventory/equipment model is not wired yet.
-        try { _combatWeapon = CombatWeapon.Primary("Lança", WeaponPrototypeData.Read(prototypes.Get(7))); }
-        catch (Exception error) when (error is IOException or InvalidDataException) { _combatWeapon = CombatWeapon.Unarmed(); GD.Print("COMBAT_WEAPON_UNAVAILABLE: " + error.Message); }
+        if (weapon.Pid is not int pid) return weapon;
+        CarriedItem? item = _campaign?.Carried.FirstOrDefault(i => i.Source.Header.Pid == pid);
+        return item != null && OriginalText(item.Source)?.Name is { } name ? weapon with { Name = ShortName(name) } : weapon;
     }
 
     private bool CombatRefuses(string action)
@@ -46,6 +53,8 @@ public partial class TemplePreview
     private void UpdateCombat(double delta)
     {
         if (_combat == null) { CheckEncounter(); return; }
+        if (Time.GetTicksMsec() < _combatBusyUntil) return;
+        if (_combatFinishPending) { FinishCombat(); return; }
         if (_combat.Active is { IsPlayer: false })
         {
             _combatAiTimer += delta;
@@ -72,8 +81,9 @@ public partial class TemplePreview
     private void StartCombat(CombatEncounter encounter)
     {
         ClearRouteHover(); ClearRouteVisual(); ClearSelection();
-        _combat = _campaign!.BeginCombat(encounter, _combatWeapon, new SeededCombatRandom(_combatSeed ?? (ulong)DateTime.UtcNow.Ticks));
-        _combatAiTimer = 0; _combatHoverKey = "";
+        _combatWeapon = NamedWeapon(_campaign!.PlayerWeapon());
+        _combat = _campaign.BeginCombat(encounter, _combatWeapon, new SeededCombatRandom(_combatSeed ?? (ulong)DateTime.UtcNow.Ticks));
+        _combatAiTimer = 0; _combatHoverKey = ""; _combatBusyUntil = 0; _combatFinishPending = false; _combatTweens.Clear();
         foreach (CombatantState combatant in _combat.Combatants)
         {
             Node3D? host = combatant.IsPlayer ? _walkerNode : _bodies.GetValueOrDefault(combatant.Id);
@@ -188,13 +198,15 @@ public partial class TemplePreview
         if (_combat == null || _layout == null) return;
         var lines = new List<string>();
         bool ended = false;
+        _combatTweens.Clear();
         foreach (CombatEvent e in events)
             switch (e)
             {
                 case CombatantMoved moved:
-                    PlaceCombatant(_combat.Get(moved.CombatantId));
+                    PlaceCombatant(_combat.Get(moved.CombatantId), moved.Path);
                     lines.Add($"{CombatName(moved.CombatantId)} andou {moved.Path.Length} hex(es) · {moved.ActionPointsSpent} AP"); break;
                 case AttackResolved attack:
+                    Lunge(_combat.Get(attack.AttackerId), _combat.Get(attack.TargetId));
                     lines.Add($"{CombatName(attack.AttackerId)} ataca {CombatName(attack.TargetId)}: {attack.Roll} em {attack.Chance}% · "
                         + (attack.Hit ? $"acerto, {attack.Damage} de dano ({attack.TargetHitPoints} HP)" : "erro")); break;
                 case CombatantDied died:
@@ -206,19 +218,41 @@ public partial class TemplePreview
             }
         _combatHoverKey = "";
         if (lines.Count > 0) _hud.CombatLog(string.Join("\n", lines));
-        if (ended) FinishCombat(); else RefreshCombatView();
+        if (ended && AnimateCombat && Time.GetTicksMsec() < _combatBusyUntil) { _combatFinishPending = true; RefreshCombatView(); }
+        else if (ended) FinishCombat(); else RefreshCombatView();
     }
 
-    private void PlaceCombatant(CombatantState combatant)
+    private Node3D? CombatNode(CombatantState combatant) => combatant.IsPlayer ? _walkerNode : _bodies.GetValueOrDefault(combatant.Id);
+    private Vector3 CombatPoint(CombatantState combatant, int hex) =>
+        Point(FalloutGrid.HexCenter(hex) - _layout!.Origin, combatant.IsPlayer ? 0 : Dimensions(PreviewKind.Critter).Y / 2);
+
+    // One tween per node and event batch, so a creature walks its path and then strikes, in order.
+    private Tween CombatTween(Node3D node)
     {
-        Vector3 position = Point(FalloutGrid.HexCenter(combatant.Hex) - _layout!.Origin, 0);
-        if (combatant.IsPlayer)
-        {
-            _travel?.MoveTo(combatant.Hex);
-            if (_walkerNode != null) _walkerNode.Position = position;
-            RefreshNpcRouteView();
-        }
-        else if (_bodies.TryGetValue(combatant.Id, out StaticBody3D? body)) body.Position = position + Vector3.Up * Dimensions(PreviewKind.Critter).Y / 2;
+        if (!_combatTweens.TryGetValue(node, out Tween? tween)) _combatTweens[node] = tween = node.CreateTween();
+        return tween;
+    }
+    private void Busy(double seconds) => _combatBusyUntil = Math.Max(_combatBusyUntil, Time.GetTicksMsec()) + (ulong)(seconds * 1000);
+
+    private void PlaceCombatant(CombatantState combatant, int[] path)
+    {
+        if (combatant.IsPlayer) { _travel?.MoveTo(combatant.Hex); RefreshNpcRouteView(); }
+        if (CombatNode(combatant) is not { } node) return;
+        if (!AnimateCombat) { node.Position = CombatPoint(combatant, combatant.Hex); return; }
+        Tween tween = CombatTween(node);
+        foreach (int hex in path) tween.TweenProperty(node, "position", CombatPoint(combatant, hex), StepSeconds);
+        Busy(path.Length * StepSeconds);
+    }
+
+    private void Lunge(CombatantState attacker, CombatantState target)
+    {
+        if (!AnimateCombat || CombatNode(attacker) is not { } node) return;
+        Vector3 home = CombatPoint(attacker, attacker.Hex), toward = CombatPoint(attacker, target.Hex) - home;
+        if (toward.LengthSquared() < 1e-6f) return;
+        Tween tween = CombatTween(node);
+        tween.TweenProperty(node, "position", home + toward.Normalized() * .35f, LungeSeconds);
+        tween.TweenProperty(node, "position", home, LungeSeconds * 1.4);
+        Busy(LungeSeconds * 2.4 + .15);
     }
 
     private void RefreshCombatView()
@@ -238,7 +272,7 @@ public partial class TemplePreview
     private void FinishCombat()
     {
         CombatSession fight = _combat!;
-        _combat = null; _combatLabels.Clear(); _encounterCheckedHex = -1;
+        _combat = null; _combatLabels.Clear(); _encounterCheckedHex = -1; _combatFinishPending = false; _combatTweens.Clear();
         CombatCommitStatus status = _campaign!.CommitCombat(fight);
         _hud.Combat(false, "", "", false);
         if (status == CombatCommitStatus.PlayerDefeated)
@@ -259,7 +293,7 @@ public partial class TemplePreview
     private void DiscardCombat()
     {
         if (_combat == null) return;
-        _combat = null; _combatLabels.Clear(); _encounterCheckedHex = -1; _hud.Combat(false, "", "", false);
+        _combat = null; _combatLabels.Clear(); _encounterCheckedHex = -1; _combatFinishPending = false; _combatTweens.Clear(); _hud.Combat(false, "", "", false);
     }
 
     // Presentation of fallen source critters: lying down, darker, still selectable; WorldSession frees their hex.
@@ -287,6 +321,11 @@ public partial class TemplePreview
             // The first door opens the way to the ants of the first chambers.
             RequestWalk(24508); CompleteReadabilityWalk(); UseDoor(_layout!.Objects.Single(o => o.Source.Offset == 244040).Source.Key);
             int xpBefore = _campaign!.Experience;
+            if (_campaign.PlayerWeapon().Pid != null) throw new InvalidDataException("An empty bag must fight bare-handed.");
+            // The only weapon of the temple is the spear in a container behind the locked door; carry it as if collected.
+            var spear = _campaign.Current.Map.ObjectLayers.SelectMany(l => l.Objects)
+                .SelectMany(o => o.Inventory.Select(e => (Owner: o, Item: e.Object))).Single(p => p.Item.Header.Pid == 7);
+            _campaign.Current.Items.Restore(new[] { new TakenItem(spear.Owner.Key, spear.Item.Key, 1) });
             var ants = _layout.Objects.Where(o => o.Source.Header.Pid == 0x0100017E && o.Source.Header.Elevation == 0).ToArray();
             // Walk toward the first reachable ant with encounters on: the actor stops on a whole hex once noticed.
             int target = -1;
@@ -307,7 +346,7 @@ public partial class TemplePreview
             }
             if (_combat == null) throw new InvalidDataException("Approaching the ant did not start combat.");
             PreviewObject ant = _layout!.Objects.Single(o => o.Source.Key == _combat.Turn.Order[0]);
-            if (_walker!.Moving || ant.Source.Header.Pid != 0x0100017E || FalloutGrid.Distance(_campaign.Location.Hex, ant.Source.Header.Tile) > WorldSession.EncounterDistance
+            if (_walker!.Moving || !WorldSession.EncounterPids.Contains(ant.Source.Header.Pid) || FalloutGrid.Distance(_campaign.Location.Hex, ant.Source.Header.Tile) > WorldSession.EncounterDistance
                 || _combat.Get("player").Hex != _campaign.Location.Hex) throw new InvalidDataException("Combat started mid-step, out of range or with the wrong initiator.");
             var hud = (Control)_hud.FindChild("CombatBar", true, false);
             if (!hud.Visible || _combatLabels.Count != _combat.Combatants.Count) throw new InvalidDataException("Combat HUD or HP labels missing.");
@@ -322,6 +361,22 @@ public partial class TemplePreview
             if (RequestWalk(28906).Status != RouteStatus.Busy || TryInspectionElevation(1) || _campaign.Location.Hex != hexBefore || !InCombat
                 || checkpointBefore != (File.Exists(CheckpointPath) ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(CheckpointPath))) : ""))
                 throw new InvalidDataException("World actions or a mid-fight save leaked into combat.");
+            // One animated creature turn: the next action waits for the tweens, which end on the logical hex.
+            if (_combat.Active is { IsPlayer: false } mover)
+            {
+                _forceCombatAnimation = true;
+                Node3D node = _bodies[mover.Id];
+                UpdateCombat(EnemyTurnDelay);
+                bool waited = Time.GetTicksMsec() < _combatBusyUntil;
+                CombatantState? nextActor = _combat?.Active;
+                UpdateCombat(EnemyTurnDelay);
+                if (!waited || _combat != null && _combat.Active != nextActor) throw new InvalidDataException("Creature turn did not wait for its animation.");
+                for (int frame = 0; frame < 240 && Time.GetTicksMsec() < _combatBusyUntil; frame++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                for (int frame = 0; frame < 3; frame++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                if (node.Position.DistanceTo(CombatPoint(mover, mover.Hex)) > .01f) throw new InvalidDataException("Animated creature did not end on its logical hex.");
+                _forceCombatAnimation = false;
+                if (_combatFinishPending) UpdateCombat(0);
+            }
             int rounds = 0;
             for (int guard = 0; guard < 300 && InCombat; guard++)
             {
@@ -345,7 +400,10 @@ public partial class TemplePreview
             }
             if (InCombat) throw new InvalidDataException("Seeded fight did not end.");
             if (!_campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key)) throw new InvalidDataException("Seeded fight was lost; expected the documented victory.");
-            if (_campaign.Experience != xpBefore + 25 || _campaign.CombatExperience != 25) throw new InvalidDataException("Ant XP was not awarded once.");
+            if (_combatWeapon.Pid != 7 || !_combatWeapon.Name.Contains("Spear", StringComparison.OrdinalIgnoreCase) || _combatWeapon.Range != 2)
+                throw new InvalidDataException($"The carried spear was not used ({_combatWeapon.Name}).");
+            int reward = CritterPrototypeData.Read(_campaign.Current.Map.Prototypes.Single(p => p.Pid == ant.Source.Header.Pid)).Experience;
+            if (_campaign.Experience != xpBefore + reward || _campaign.CombatExperience != reward) throw new InvalidDataException("Creature XP was not awarded once.");
             MapObject corpse = _campaign.EffectiveObject(_campaign.CurrentMap, _campaign.Current.Map.ObjectLayers.SelectMany(l => l.Objects).Single(o => o.Key == ant.Source.Key));
             if (!_navigation!.Walkable(corpse.Header.Tile) || !_bodies[ant.Source.Key].HasMeta("defeated")
                 || _bodies[ant.Source.Key].Position.DistanceTo(Point(FalloutGrid.HexCenter(corpse.Header.Tile) - _layout!.Origin, Dimensions(PreviewKind.Critter).Y / 2)) > .001f)
@@ -356,19 +414,19 @@ public partial class TemplePreview
             int corpseHex = corpse.Header.Tile; int? hitPoints = _campaign.PlayerHitPoints;
             SaveCheckpoint();
             WorldCheckpoint saved = CheckpointFile.Read(CheckpointPath);
-            if (saved.Version != 10 || saved.Combat is not { } combat || combat.Experience != 25 || combat.PlayerHitPoints != hitPoints
+            if (saved.Version != 10 || saved.Combat is not { } combat || combat.Experience != reward || combat.PlayerHitPoints != hitPoints
                 || combat.Defeated.Single() is not { } dead || dead.Key != ant.Source.Key || dead.Hex != corpseHex)
                 throw new InvalidDataException("Checkpoint v10 did not record the won fight.");
             ResetWalker();
             if (_campaign.HasCombatOutcome || _campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key) || InCombat) throw new InvalidDataException("Reset kept the combat outcome.");
             LoadCheckpoint();
-            if (!_campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key) || _campaign.Experience != xpBefore + 25 || _campaign.PlayerHitPoints != hitPoints
+            if (!_campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key) || _campaign.Experience != xpBefore + reward || _campaign.PlayerHitPoints != hitPoints
                 || !_bodies[ant.Source.Key].HasMeta("defeated") || !_navigation!.Walkable(corpseHex) || InCombat)
                 throw new InvalidDataException("Loading checkpoint v10 lost the corpse, XP or HP.");
             ResetWalker();
             MapLayoutWriter.Verify(_map!);
-            GD.Print($"COMBAT_SLICE_OK: Giant Ant {ant.Source.Key} noticed the actor, seeded fight won in {rounds + 1}+ player turns, 25 XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v10 save/reset/load round trip; source bytes verified.");
+            GD.Print($"COMBAT_SLICE_OK: PID 0x{ant.Source.Header.Pid:X8} {ant.Source.Key} noticed the actor, carried spear wielded, animated creature turn awaited, seeded fight won in {rounds + 1}+ player turns, {reward} XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v10 save/reset/load round trip; source bytes verified.");
         }
-        finally { _combatEncounters = encounters; _combatSeed = null; DiscardCombat(); SetNavigationGrid(grid); _checkingNavigation = false; }
+        finally { _forceCombatAnimation = false; _combatEncounters = encounters; _combatSeed = null; DiscardCombat(); SetNavigationGrid(grid); _checkingNavigation = false; }
     }
 }

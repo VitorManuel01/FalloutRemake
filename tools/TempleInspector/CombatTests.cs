@@ -20,7 +20,7 @@ internal static class CombatTests
     static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }
     static int Tile(int column, int row) => row * 200 + 199 - column;
 
-    static Prototype Item(int pid, int subtype, int length, int extendedFlags, Action<Func<int, int, int>> fill)
+    internal static Prototype Item(int pid, int subtype, int length, int extendedFlags, Action<Func<int, int, int>> fill)
     {
         var bytes = new byte[length];
         int Put(int offset, int value) { BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(offset, 4), value); return value; }
@@ -30,7 +30,7 @@ internal static class CombatTests
     }
     internal static Prototype Spear() => Item(7, 3, 122, 0xA054, put =>
     { put(57, 4); put(61, 3); put(65, 10); put(69, 0); put(73, 2); put(77, 8); put(81, 0x5000007); put(85, 4); put(89, 4); put(93, 6); put(101, -1); put(113, -1); });
-    static Prototype Pistol() => Item(8, 3, 122, 0x6, put =>
+    internal static Prototype Pistol() => Item(8, 3, 122, 0x6, put =>
     { put(61, 5); put(65, 12); put(73, 25); put(85, 3); put(89, 5); put(105, 1); put(109, 8); put(113, 29); put(117, 12); });
     static Prototype Jhp() => Item(29, 4, 81, 0, put => { put(57, 8); put(61, 24); put(65, -5); put(69, 25); put(73, 2); put(77, 1); });
 

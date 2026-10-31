@@ -106,7 +106,27 @@ internal static class WorldCombatTests
             try { CheckpointFile.Decode(System.Text.Encoding.UTF8.GetBytes(json[..start].TrimEnd().TrimEnd(',') + "\n}")); throw new Exception("v10 without Combat decoded."); }
             catch (InvalidDataException) { }
         });
-        check("world combat keeps the wounded player's HP for the next fight and refuses lost, foreign or forged fights atomically", () =>
+        check("world combat wields the best carried hand weapon, ignores ranged weapons without ammunition and treats radscorpions as encounters", () =>
+        {
+            MapObject Item(string key, int pid) => CombatTests.Blocker(-1, 0, pid, key) with { Subtype = 3, Header = CombatTests.Blocker(-1, 0, pid, key).Header with { Tile = -1 } };
+            var spear = Item("map3:spear", 7); var pistol = Item("map3:pistol", 8);
+            var pot = CombatTests.Blocker(Tile(97, 100), 0, 0x000000FA, "map3:pot") with { Subtype = 1, InventoryCount = 2, State = new Dictionary<string, int> { ["flags"] = 0 },
+                Inventory = new[] { new InventoryEntry(0, 1, spear), new InventoryEntry(0, 1, pistol) } };
+            var scorpion = CombatTests.Critter(Tile(100, 102), 0x01000005, 10, 1, "map3:scorpion");
+            var baseMap = Map();
+            var map = baseMap with { ObjectLayers = new[] { baseMap.ObjectLayers[0] with { Objects = baseMap.ObjectLayers[0].Objects.Append(pot).Append(scorpion).ToArray(),
+                    DeclaredCount = baseMap.ObjectLayers[0].Objects.Length + 2 } },
+                Prototypes = baseMap.Prototypes.Append(CombatTests.Spear()).Append(CombatTests.Pistol()).Append(CombatTests.Item(0xFA, 1, 65, 0, _ => { })).ToArray() };
+            var world = new WorldSession(_ => map, new[] { 3, 126 });
+            Assert(world.PlayerWeapon() is { Pid: null, AttackType: FalloutRemake.Import.WeaponAttackType.Unarmed, ActionPoints: 3 }, "Empty bag fights bare-handed.");
+            world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:pistol", 1) });
+            Assert(world.PlayerWeapon().Pid == null, "A pistol without ammunition tracking is not wielded.");
+            world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:pistol", 1), new TakenItem("map3:pot", "map3:spear", 1) });
+            Assert(world.PlayerWeapon() is { Pid: 7, Range: 2, ActionPoints: 4, MinDamage: 3, MaxDamage: 10 }, "Carried spear is wielded.");
+            var encounter = world.FindEncounter(world.Location);
+            Assert(encounter != null && encounter.FoeKeys.Contains("map3:scorpion") && encounter.FoeKeys.Contains("map3:near-ant")
+                && encounter.InitiatorKey == "map3:scorpion", "Radscorpion (2 hexes) notices before the ant (3 hexes).");
+        });        check("world combat keeps the wounded player's HP for the next fight and refuses lost, foreign or forged fights atomically", () =>
         {
             var world = new WorldSession(_ => Map(), new[] { 3, 126 });
             var fight = world.BeginCombat(world.FindEncounter(world.Location)!, Spear(), new CombatTests.Scripted(1, 4, 1, 11));

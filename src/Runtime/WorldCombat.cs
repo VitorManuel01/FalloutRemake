@@ -92,8 +92,26 @@ public sealed partial class WorldSession
         _combatExperience = experience; PlayerHitPoints = saved.PlayerHitPoints;
     }
 
-    // First vertical slice: Giant Ants only (PID 382). Other temple critters (radscorpions, Dumar) keep their roles.
-    public static readonly IReadOnlySet<int> EncounterPids = new HashSet<int> { 0x0100017E };
+    // Hostile temple creatures: Giant Ant (PID 382) and Radscorpion (PID 5). Dumar keeps his Speech role.
+    public static readonly IReadOnlySet<int> EncounterPids = new HashSet<int> { 0x0100017E, 0x01000005 };
+
+    /// <summary>
+    /// Weapon the player fights with: the carried hand weapon (melee or unarmed primary attack) with the highest average
+    /// damage, ties by PID then source key; bare hands when none is carried. Ranged weapons wait for ammunition tracking.
+    /// There is no equip slot yet, so carrying is wielding.
+    /// </summary>
+    public CombatWeapon PlayerWeapon()
+    {
+        CombatWeapon best = CombatWeapon.Unarmed();
+        foreach (CarriedItem item in Carried.OrderBy(i => i.Source.Header.Pid).ThenBy(i => i.Source.Key, StringComparer.Ordinal))
+        {
+            if (!_areas.TryGetValue(item.Map, out WorldArea? area)
+                || area.Map.Prototypes.FirstOrDefault(p => p.Pid == item.Source.Header.Pid) is not { Type: 0, Subtype: WeaponPrototypeData.Subtype } prototype) continue;
+            CombatWeapon weapon = CombatWeapon.Primary($"PID {prototype.Pid}", WeaponPrototypeData.Read(prototype));
+            if (!weapon.IsRanged && weapon.MinDamage + weapon.MaxDamage > best.MinDamage + best.MaxDamage) best = weapon;
+        }
+        return best;
+    }
     public const int EncounterDistance = 5, EncounterApproach = 10;
 
     /// <summary>
