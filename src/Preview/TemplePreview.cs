@@ -85,6 +85,7 @@ public partial class TemplePreview : Node3D
 			_hud.BagRequested = OpenBag;
 			_hud.UseClockRequested = OpenUseClock;
 			_hud.ContainerLocateRequested = LocateContainer;
+			_hud.CombatEndTurnRequested = EndCombatTurn;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -97,6 +98,8 @@ public partial class TemplePreview : Node3D
 				else if (args[i] == "--visual-preferences-smoke") { _test = true; _preferencesStartupTest = true; }
 				else throw new ArgumentException($"Argumento desconhecido: {args[i]}");
 			}
+			// Scripted checks predate combat and walk past ants; CheckCombat turns encounters on for itself.
+			_combatEncounters = !_test;
 			string? preferencesNotice = RestoreVisualPreferences();
 			if (_directory == null && File.Exists(SettingsPath))
 				_directory = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(SettingsPath))?.GetValueOrDefault("GameDataDirectory");
@@ -118,6 +121,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckTempleArchitecture();
 				if (_test) await CheckNavigation();
 				if (_test) await CheckDoors();
+				if (_test) await CheckCombat();
 				if (_test) await CheckLockpick();
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();
@@ -168,6 +172,7 @@ public partial class TemplePreview : Node3D
 			templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read));
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
 		_floorArt = new FloorArtCatalog(data.Read); _artLists = new ResourceCatalog(data.Read);
+		LoadCombatWeapon(runtimePrototypes);
 		_inventoryArt = new InventoryArtCatalog(data.Read); _unavailableItemArt.Clear();
 		LoadObjectText(data);
 		BindCurrentArea();
@@ -232,6 +237,7 @@ public partial class TemplePreview : Node3D
 			_world.AddChild(body); _lookup.Add(body.GetInstanceId(), obj); _bodies.Add(obj.Source.Key, body);
 		}
 		BuildArchitecture();
+		ApplyCombatCorpses();
 		_highlight = new MeshInstance3D { Name = "Selection", Mesh = resources.Own(new CylinderMesh { TopRadius = .72f, BottomRadius = .72f, Height = .025f, RadialSegments = 48 }),
 			MaterialOverride = resources.Own(new StandardMaterial3D { AlbedoColor = new Color(.9f, .75f, .36f, .4f), Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
 				ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, NoDepthTest = false }), Visible = false };
@@ -323,6 +329,7 @@ public partial class TemplePreview : Node3D
 		if (InspectorOpen) return;
         AdvanceTemplePlayback(delta);
 		AdvanceWalker(delta);
+		UpdateCombat(delta);
 		float x = (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
 		float z = (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0);
 		Vector3 right = new(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));
@@ -332,7 +339,7 @@ public partial class TemplePreview : Node3D
 		_focus += (right * x + down * z) * (float)delta * _camera.Size * .55f;
 		UpdateCamera();
 		UpdateWallOcclusion();
-		if (!_checkingNavigation)
+		if (!_checkingNavigation && !InCombat)
 		{
 			if (Input.IsMouseButtonPressed(MouseButton.Right)) ClearRouteHover();
 			else RouteHoverAtScreen(GetViewport().GetMousePosition());
@@ -348,6 +355,7 @@ public partial class TemplePreview : Node3D
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.B }) CloseBag();
 			return;
 		}
+		if (HandleCombatInput(input)) return;
 		if (input is InputEventKey { Pressed: true, Echo: false } key)
 		{
 			if (key.PhysicalKeycode == Key.F) GoToEntry();
@@ -406,6 +414,7 @@ public partial class TemplePreview : Node3D
 	private bool TryInspectionElevation(int elevation)
 	{
 		if (elevation == _elevation) return true;
+		if (CombatRefuses("trocar de elevação")) { _hud.Elevation(_elevation); return false; }
 		if (_walker?.Moving == true)
 		{
 			_hud.Elevation(_elevation);
@@ -609,6 +618,7 @@ public partial class TemplePreview : Node3D
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		_architectureParts.Clear(); _architectureFloor = Array.Empty<MultiMeshInstance3D>(); _architecture = null; _kit = null; _environment = null; _sun = null;
+		_combat = null; _combatLabels.Clear();
 		_resources.Dispose(); _materials.Clear(); _meshes.Clear(); _shapes.Clear(); _bodies.Clear(); _lookup.Clear();
 		_floorArtworkMaterials.Clear(); _floorArtworkMesh = null;
         _entityMeshes.Clear(); _entityMaterials.Clear(); _entityShapes.Clear(); _containerVisuals.Clear(); _worldLabels.Clear();

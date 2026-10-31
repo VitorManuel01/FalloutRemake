@@ -26,7 +26,7 @@ public sealed partial class WorldSession
     public int CurrentMap { get; private set; }
     public WorldArea Current => _areas[CurrentMap];
     public ActorLocation Location => Current.Travel.Location;
-    public int Experience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0) + (_arroyoReward?.Experience ?? 0);
+    public int Experience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0) + (_arroyoReward?.Experience ?? 0) + _combatExperience;
     public IReadOnlyList<WorldArea> Areas => _areas.OrderBy(p => p.Key).Select(p => p.Value).ToArray();
     public CarriedItem[] Carried => Areas.SelectMany(a => a.Items.Carried).ToArray();
     public WorldItemUse[] ItemUses => Areas.SelectMany(a => a.Items.CaptureUses().Select(u => new WorldItemUse(a.Map.Prefix.Header.MapIndex, u))).ToArray();
@@ -185,7 +185,7 @@ public sealed partial class WorldSession
     public void Reset()
     {
         _templeProgress = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
-        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null;
+        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat();
         foreach (WorldArea area in _areas.Values) { area.Scenery.Reset(); area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
     }

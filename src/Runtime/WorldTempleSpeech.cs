@@ -75,7 +75,7 @@ public sealed partial class WorldSession
         return new(TempleWorldStatus.Ready,tiles,TargetKey: target);
     }
     public MapObject EffectiveObject(int map, MapObject source) => map == 3 && _templeProgress?.Profile.ActorKey == source.Key
-        ? _templeProgress.Profile.Actor(_templeProgress.Departure) : source;
+        ? _templeProgress.Profile.Actor(_templeProgress.Departure) : DefeatedObject(map, source);
     private DoorState? TempleGate(int map, string key) => map == 3 && _templeProgress?.Profile.GateKey == key ? _templeProgress.Gate() : null;
     private string TempleWorldStamp() => Convert.ToHexString(SHA256.HashData(CheckpointFile.Encode(Capture("temple-transaction"))));
     private TempleWorldStatus TempleSpeechPreflight(TempleNpcDepartureProfile? profile, ScriptStateSnapshot? accepted, bool moving, int intelligence, bool tagged)

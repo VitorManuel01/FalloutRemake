@@ -260,6 +260,7 @@ public partial class TemplePreview
     private void SetArchitecture(bool enabled)
     {
         if (enabled == _architectureEnabled) { _hud.Architecture(ArchitectureActive, _kit != null, _kitStatus); return; }
+        if (CombatRefuses("trocar a arquitetura")) { _hud.Architecture(ArchitectureActive, _kit != null, _kitStatus); return; }
         if (_walker?.Moving == true) { _hud.Architecture(ArchitectureActive, _kit != null, _kitStatus); NavigationStatus("Termine ou pare a caminhada [Esc] antes de trocar a arquitetura."); return; }
         _architectureEnabled = enabled;
         // Sizes of walls/doors differ between modes: rebuild shared shapes and meshes.

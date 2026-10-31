@@ -16,6 +16,7 @@ public partial class TemplePreview
 
     private void UseSelectedLockpick()
     {
+        if (CombatRefuses("arrombar")) return;
         if (_selected == null) { NavigationStatus(DoorHint(DoorUseStatus.NoDoor)); return; }
         UseLockpick(_selected.Source.Key);
     }

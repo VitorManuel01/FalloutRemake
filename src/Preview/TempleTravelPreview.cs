@@ -33,6 +33,7 @@ public partial class TemplePreview
     }
     private void UseExit()
     {
+        if (CombatRefuses("sair da área")) return;
         ExitOption option = CurrentExit();
         if (option.Status != ExitStatus.Ready) { NavigationStatus(ExitHint(option)); return; }
         bool walking = _walkMode;

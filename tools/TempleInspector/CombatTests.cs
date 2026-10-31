@@ -5,7 +5,7 @@ using FalloutRemake.Runtime.Combat;
 
 internal static class CombatTests
 {
-    sealed class Scripted : ICombatRandom
+    internal sealed class Scripted : ICombatRandom
     {
         private readonly Queue<int> _values;
         public Scripted(params int[] values) => _values = new Queue<int>(values);
@@ -28,14 +28,15 @@ internal static class CombatTests
         fill(Put);
         return PrototypeCatalog.Read(new GameResource($"proto/items/{pid}.pro", "synthetic", bytes), pid);
     }
-    static Prototype Spear() => Item(7, 3, 122, 0xA054, put =>
+    internal static Prototype Spear() => Item(7, 3, 122, 0xA054, put =>
     { put(57, 4); put(61, 3); put(65, 10); put(69, 0); put(73, 2); put(77, 8); put(81, 0x5000007); put(85, 4); put(89, 4); put(93, 6); put(101, -1); put(113, -1); });
     static Prototype Pistol() => Item(8, 3, 122, 0x6, put =>
     { put(61, 5); put(65, 12); put(73, 25); put(85, 3); put(89, 5); put(105, 1); put(109, 8); put(113, 29); put(117, 12); });
     static Prototype Jhp() => Item(29, 4, 81, 0, put => { put(57, 8); put(61, 24); put(65, -5); put(69, 25); put(73, 2); put(77, 1); });
 
     // Giant Ant layout from the shipped PRO: base stats derived from SPECIAL plus the creature's bonus block.
-    static CritterPrototypeData Ant(int unarmedPoints = 25)
+    static CritterPrototypeData Ant(int unarmedPoints = 25) => CritterPrototypeData.Read(AntPrototype(unarmedPoints));
+    internal static Prototype AntPrototype(int unarmedPoints = 25)
     {
         var bytes = new byte[416];
         void Put(int offset, int value) => BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(offset, 4), value);
@@ -45,13 +46,13 @@ internal static class CombatTests
         Put(48 + 4 * 7, 18); Put(48 + 4 * 8, 7); Put(48 + 4 * 9, 4); Put(48 + 4 * 11, 1); Put(48 + 4 * 13, 4); Put(48 + 4 * 15, 1);
         Put(188 + 4 * 7, -12); Put(188 + 4 * 8, -2); Put(188 + 4 * 11, 1); Put(188 + 4 * 13, 5); Put(188 + 4 * 29, 500);
         Put(328 + 4 * 3, unarmedPoints); Put(404, 25); Put(412, 0);
-        return CritterPrototypeData.Read(PrototypeCatalog.Read(new GameResource("proto/critters/00000382.pro", "synthetic", bytes), 0x0100017E));
+        return PrototypeCatalog.Read(new GameResource("proto/critters/00000382.pro", "synthetic", bytes), 0x0100017E);
     }
 
-    static MapObject Critter(int tile, int pid, int hp, int team, string key) => new(key, tile, 0, 0, 0,
+    internal static MapObject Critter(int tile, int pid, int hp, int team, string key) => new(key, tile, 0, 0, 0,
         new ObjectHeader(42, tile, 0, 0, 0, 0, 0, 0, 0x01000000, 0, 0, pid, -1, 0, 0, 0, -1, -1),
         0, 0, 0, null, new Dictionary<string, int> { ["hp"] = hp, ["team"] = team }, Array.Empty<InventoryEntry>());
-    static MapObject Blocker(int tile, int type, int pid, string key) => new(key, tile, 0, 0, 0,
+    internal static MapObject Blocker(int tile, int type, int pid, string key) => new(key, tile, 0, 0, 0,
         new ObjectHeader(43, tile, 0, 0, 0, 0, 0, 0, type << 24, 0, 0, pid, -1, 0, 0, 0, -1, -1),
         0, 0, 0, null, new Dictionary<string, int>(), Array.Empty<InventoryEntry>());
 

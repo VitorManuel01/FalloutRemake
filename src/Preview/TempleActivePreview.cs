@@ -10,7 +10,9 @@ public partial class TemplePreview
 {
     private PreviewLayout ProjectTempleLayout(PreviewLayout layout)
     {
-        if (_campaign?.TempleProgress == null || _campaign.CurrentMap != 3) return layout;
+        bool temple = _campaign?.TempleProgress != null && _campaign.CurrentMap == 3;
+        // Corpses of won fights are WorldSession projections too: they lie where they fell.
+        if (_campaign == null || !temple && !_campaign.Defeated.Any(d => d.Map == _campaign.CurrentMap)) return layout;
         var roots = _campaign.Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key);
         return layout with { Objects = layout.Objects.Select(obj =>
         {
