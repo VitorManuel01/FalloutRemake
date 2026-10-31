@@ -329,7 +329,7 @@ public partial class TemplePreview : Node3D
 		if (InspectorOpen) return;
         AdvanceTemplePlayback(delta);
 		AdvanceWalker(delta);
-		UpdateCombat(delta);
+		if (!_checkingNavigation) UpdateCombat(delta);
 		float x = (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
 		float z = (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0);
 		Vector3 right = new(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));

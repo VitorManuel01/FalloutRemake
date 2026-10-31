@@ -8,7 +8,10 @@ using System.Text.Json.Serialization;
 namespace FalloutRemake.Runtime;
 
 public sealed record SavedArea(int Map, string SourceHash, string DependenciesHash, ActorLocation Location, SavedDoorSession Session, TakenItem[]? Taken = null, ItemUseAllocation[]? Uses = null, SceneryReplacement[]? Replacements = null);
-public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null, SavedWorldEntries? Entries = null);
+public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null, SavedWorldEntries? Entries = null,
+    SavedCombat? Combat = null);
+/// <summary>v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>
+public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defeated, [property: JsonRequired] int Experience, int? PlayerHitPoints);
 
 /// <summary>Small project-local checkpoint, not an original Fallout SAV and never an asset archive.</summary>
 public static class CheckpointFile
@@ -37,6 +40,8 @@ public static class CheckpointFile
             if (checkpoint.Version >= 9 && (!document.RootElement.TryGetProperty("Entries",out var entries)
                 || entries.ValueKind != JsonValueKind.Object || !entries.TryGetProperty("ArroyoGlobals",out _)))
                 throw new InvalidDataException("Checkpoint v9 requires explicit ArroyoGlobals entry state.");
+            if (checkpoint.Version >= 10 && (!document.RootElement.TryGetProperty("Combat", out var combat) || combat.ValueKind != JsonValueKind.Object))
+                throw new InvalidDataException("Checkpoint v10 requires an explicit Combat object.");
             return checkpoint;
         }
         catch (JsonException error) { throw new InvalidDataException("Malformed checkpoint JSON.", error); }

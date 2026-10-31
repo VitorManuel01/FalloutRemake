@@ -194,9 +194,10 @@ public sealed partial class WorldSession
     public WorldCheckpoint Capture(string catalogHash)
     {
         ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses(); ValidateTempleExit();
-        return new(9, "neutral-v9", catalogHash, InitialMap, CurrentMap,
+        return new(10, "neutral-v10", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
-                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray(), _templeProgress?.Capture(),CaptureEntries());
+                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray(), _templeProgress?.Capture(),CaptureEntries(),
+            CaptureCombat());
     }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
         Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null)
@@ -205,7 +206,9 @@ public sealed partial class WorldSession
             || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
             || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5" || checkpoint.Version == 6 && checkpoint.Profile == "neutral-v6"
             || checkpoint.Version == 7 && checkpoint.Profile == "neutral-v7" || checkpoint.Version == 8 && checkpoint.Profile == "neutral-v8"
-            || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9") || checkpoint.CatalogHash != catalogHash
+            || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9" || checkpoint.Version == 10 && checkpoint.Profile == "neutral-v10")
+            || checkpoint.CatalogHash != catalogHash
+            || checkpoint.Version < 10 && checkpoint.Combat != null || checkpoint.Version >= 10 && checkpoint.Combat == null
             || checkpoint.Version < 6 && checkpoint.Temple != null
             || checkpoint.Version < 8 && checkpoint.Entries != null
             || checkpoint.Version < 9 && checkpoint.Entries?.ArroyoGlobals != null
@@ -235,6 +238,7 @@ public sealed partial class WorldSession
         foreach (var scene in scenes) scene.Area.Scenery.ApplyPrepared(ScenerySession.Prepare(scene.Records));
         candidate.RestoreTempleProgress(checkpoint.Temple);
         candidate.RestoreEntries(checkpoint);
+        candidate.RestoreCombat(checkpoint.Combat);
         candidate.ValidateTempleExit();
         candidate.ValidateUses();
         foreach (SavedArea saved in checkpoint.Areas) candidate._areas[saved.Map].Travel.Arrive(saved.Location);

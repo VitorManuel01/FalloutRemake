@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.Json.Serialization;
 using FalloutRemake.Geometry;
 using FalloutRemake.Import;
 using FalloutRemake.Runtime.Combat;
@@ -11,11 +13,11 @@ public enum CombatCommitStatus { Ready, NotOver, PlayerDefeated, InvalidFight, S
 /// <summary>Source critters that notice the player at its current location; the nearest one starts the fight.</summary>
 public sealed record CombatEncounter(ActorLocation Player, string[] FoeKeys, string InitiatorKey);
 /// <summary>A source critter killed in a won fight: its record stays intact; the world projects the corpse.</summary>
-public sealed record DefeatedCritter(int Map, string Key, int Pid, int Elevation, int Hex);
+public sealed record DefeatedCritter([property: JsonRequired] int Map, [property: JsonRequired] string Key, [property: JsonRequired] int Pid,
+    [property: JsonRequired] int Elevation, [property: JsonRequired] int Hex);
 
 /// <summary>
-/// Outcome of won fights in the live world (roadmap COM-004). Kept in memory only: the checkpoint schema that will
-/// persist it is v10 (roadmap CONT-003), so callers must refuse to save while <see cref="CombatOutcomeUnsaved"/> is true.
+/// Outcome of won fights in the live world (roadmap COM-004), saved in checkpoint v10 (<see cref="SavedCombat"/>).
 /// </summary>
 public sealed partial class WorldSession
 {
@@ -24,7 +26,7 @@ public sealed partial class WorldSession
     public int CombatExperience => _combatExperience;
     /// <summary>Player HP after the last fight; null means unhurt (no world HP model exists outside combat yet).</summary>
     public int? PlayerHitPoints { get; private set; }
-    public bool CombatOutcomeUnsaved => _defeated.Count != 0 || PlayerHitPoints != null;
+    public bool HasCombatOutcome => _defeated.Count != 0 || PlayerHitPoints != null;
     public IReadOnlyList<DefeatedCritter> Defeated => _defeated.Values.OrderBy(d => d.Map).ThenBy(d => d.Key, StringComparer.Ordinal).ToArray();
     public bool IsDefeated(int map, string key) => _defeated.ContainsKey((map, key));
 
@@ -57,6 +59,38 @@ public sealed partial class WorldSession
     }
 
     private void ResetCombat() { _defeated.Clear(); _combatExperience = 0; PlayerHitPoints = null; }
+
+    private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints);
+
+    // Atomic with the rest of Restore (runs on the candidate session). Every corpse must be an encounter critter of a
+    // restored area lying on geometry it could reach, and the XP must be exactly what those kills award.
+    private void RestoreCombat(SavedCombat? saved)
+    {
+        ResetCombat();
+        if (saved == null) return;
+        int maxHitPoints = DerivedCombatStats.ForCharacter(Special.Neutral).MaxHitPoints;
+        if (saved.Defeated is not { Length: <= 64 } defeated || saved.Experience < 0
+            || saved.PlayerHitPoints is int hp && (hp < 1 || hp >= maxHitPoints))
+            throw new InvalidDataException("Checkpoint combat outcome is malformed.");
+        int experience = 0;
+        foreach (DefeatedCritter dead in defeated)
+        {
+            if (dead?.Key == null || _defeated.ContainsKey((dead.Map, dead.Key)) || !_areas.TryGetValue(dead.Map, out WorldArea? area))
+                throw new InvalidDataException("Checkpoint corpse is duplicated or outside the restored areas.");
+            MapObject? source = area.Map.ObjectLayers.SelectMany(l => l.Objects).FirstOrDefault(o => o.Key == dead.Key);
+            Prototype? prototype = area.Map.Prototypes.FirstOrDefault(p => p.Pid == dead.Pid);
+            if (source == null || prototype == null || source.Header.Pid != dead.Pid || !EncounterPids.Contains(dead.Pid)
+                || source.Header.Elevation != dead.Elevation || !HexNavigation.Valid(dead.Hex) || (source.Header.Flags & HexNavigation.Hidden) != 0)
+                throw new InvalidDataException("Checkpoint corpse does not match an encounter critter of its MAP.");
+            HexNavigation navigation = area.Doors.Navigation(dead.Elevation);
+            if (navigation.IsExit(dead.Hex) || navigation.BlockersAt(dead.Hex).Any(b => b.FidType != 1 && !b.IsDoor))
+                throw new InvalidDataException("Checkpoint corpse lies on geometry no critter can stand on.");
+            experience += CritterPrototypeData.Read(prototype).Experience;
+            _defeated.Add((dead.Map, dead.Key), dead);
+        }
+        if (experience != saved.Experience) throw new InvalidDataException("Checkpoint combat experience differs from its defeated critters.");
+        _combatExperience = experience; PlayerHitPoints = saved.PlayerHitPoints;
+    }
 
     // First vertical slice: Giant Ants only (PID 382). Other temple critters (radscorpions, Dumar) keep their roles.
     public static readonly IReadOnlySet<int> EncounterPids = new HashSet<int> { 0x0100017E };

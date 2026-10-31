@@ -19,8 +19,6 @@ public partial class TemplePreview
         if (_campaign == null || _mapCatalog == null) return;
         if (_walker?.Moving == true) { NavigationStatus("Aguarde terminar o percurso para salvar."); return; }
         if (CombatRefuses("salvar")) return;
-        // Won fights are not part of checkpoint v9; saving now would silently drop them (v10, roadmap CONT-003).
-        if (_campaign.CombatOutcomeUnsaved) { NavigationStatus("Salvar indisponível: o resultado do combate ainda não cabe no checkpoint v9. Reinicie ou carregue para voltar a salvar."); return; }
         SetTemplePlayback(false);
         try
         {

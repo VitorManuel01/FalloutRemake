@@ -14,7 +14,7 @@ namespace FalloutRemake.Preview;
 /// <summary>
 /// First playable fight (roadmap COM-004): exploration hands over to a CombatSession when a Giant Ant notices the
 /// actor. Rules stay in Runtime.Combat; this layer only feeds clicks, shows the preview and mirrors the events.
-/// The outcome lives in WorldSession memory: saving is refused until the checkpoint schema can hold it (CONT-003).
+/// The outcome lives in WorldSession and is saved by checkpoint v10; saving waits only while a fight is open.
 /// </summary>
 public partial class TemplePreview
 {
@@ -252,7 +252,7 @@ public partial class TemplePreview
         // The corpse and the freed hex come from WorldSession projections; rebuilding keeps every other system unchanged.
         BuildWorld();
         CombatantState player = fight.Get("player");
-        NavigationStatus($"Vitória · +{fight.Turn.ExperienceAwarded} XP · {player.HitPoints}/{player.Stats.MaxHitPoints} HP · este resultado ainda não pode ser salvo (checkpoint v10 pendente)");
+        NavigationStatus($"Vitória · +{fight.Turn.ExperienceAwarded} XP · {player.HitPoints}/{player.Stats.MaxHitPoints} HP · salve com K para guardar o resultado");
         GD.Print($"COMBAT_WON: {fight.Turn.ExperienceAwarded} XP, player {player.HitPoints} HP, round {fight.Turn.Round}");
     }
 
@@ -319,8 +319,9 @@ public partial class TemplePreview
             // World actions wait for the fight; refused actions leave the session unchanged.
             int hexBefore = _campaign.Location.Hex;
             SaveCheckpoint(); UseExit(); ToggleWalkMode(); SetArchitecture(!_architectureEnabled);
-            if (RequestWalk(28906).Status != RouteStatus.Busy || TryInspectionElevation(1) || _campaign.Location.Hex != hexBefore || !InCombat)
-                throw new InvalidDataException("World actions leaked into combat.");
+            if (RequestWalk(28906).Status != RouteStatus.Busy || TryInspectionElevation(1) || _campaign.Location.Hex != hexBefore || !InCombat
+                || checkpointBefore != (File.Exists(CheckpointPath) ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(CheckpointPath))) : ""))
+                throw new InvalidDataException("World actions or a mid-fight save leaked into combat.");
             int rounds = 0;
             for (int guard = 0; guard < 300 && InCombat; guard++)
             {
@@ -351,13 +352,22 @@ public partial class TemplePreview
                 throw new InvalidDataException("Corpse is not shown where it fell or still blocks.");
             if (_hud.FindChild("CombatBar", true, false) is Control { Visible: true }) throw new InvalidDataException("Combat HUD stayed open.");
             if (_capture != null) { _focus = _walkerNode!.Position; _camera.Size = 18; UpdateCamera(); await Capture(Path.ChangeExtension(_capture, "combat-victory.png")); }
+            // Checkpoint v10 keeps the outcome: save, reset (the ant returns), load (the corpse and XP return).
+            int corpseHex = corpse.Header.Tile; int? hitPoints = _campaign.PlayerHitPoints;
             SaveCheckpoint();
-            string checkpointAfter = File.Exists(CheckpointPath) ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(CheckpointPath))) : "";
-            if (checkpointBefore != checkpointAfter || !_campaign.CombatOutcomeUnsaved) throw new InvalidDataException("An unsavable combat outcome was written to the checkpoint.");
+            WorldCheckpoint saved = CheckpointFile.Read(CheckpointPath);
+            if (saved.Version != 10 || saved.Combat is not { } combat || combat.Experience != 25 || combat.PlayerHitPoints != hitPoints
+                || combat.Defeated.Single() is not { } dead || dead.Key != ant.Source.Key || dead.Hex != corpseHex)
+                throw new InvalidDataException("Checkpoint v10 did not record the won fight.");
             ResetWalker();
-            if (_campaign.CombatOutcomeUnsaved || _campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key) || InCombat) throw new InvalidDataException("Reset kept the combat outcome.");
+            if (_campaign.HasCombatOutcome || _campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key) || InCombat) throw new InvalidDataException("Reset kept the combat outcome.");
+            LoadCheckpoint();
+            if (!_campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key) || _campaign.Experience != xpBefore + 25 || _campaign.PlayerHitPoints != hitPoints
+                || !_bodies[ant.Source.Key].HasMeta("defeated") || !_navigation!.Walkable(corpseHex) || InCombat)
+                throw new InvalidDataException("Loading checkpoint v10 lost the corpse, XP or HP.");
+            ResetWalker();
             MapLayoutWriter.Verify(_map!);
-            GD.Print($"COMBAT_SLICE_OK: Giant Ant {ant.Source.Key} noticed the actor, seeded fight won in {rounds + 1}+ player turns, 25 XP once, corpse freed its hex, world actions and save refused, reset restored the ant; source bytes verified.");
+            GD.Print($"COMBAT_SLICE_OK: Giant Ant {ant.Source.Key} noticed the actor, seeded fight won in {rounds + 1}+ player turns, 25 XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v10 save/reset/load round trip; source bytes verified.");
         }
         finally { _combatEncounters = encounters; _combatSeed = null; DiscardCombat(); SetNavigationGrid(grid); _checkingNavigation = false; }
     }

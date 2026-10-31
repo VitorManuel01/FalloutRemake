@@ -39,15 +39,12 @@ arrombar, recolher itens, trocar de elevação, trocar o modo e a arquitetura, e
 caminhar livremente. A câmera, as visualizações, **R** (carregar) e **Reiniciar**
 continuam disponíveis; carregar ou reiniciar descarta a luta.
 
-## Persistência: decisão provisória
+## Persistência
 
-O roadmap põe o checkpoint v10 (CONT-003, Frente A) antes do COM-004, e ele ainda
-não existe. Para não criar um v10 paralelo, que entraria em conflito com a Frente
-A, o resultado das lutas fica **só em memória** no `WorldSession` (`WorldCombat.cs`).
-Depois de uma vitória, **salvar fica recusado com aviso** até reiniciar ou
-carregar (`CombatOutcomeUnsaved`). Assim nada é perdido em silêncio. Quando o v10
-chegar, `Defeated`, `CombatExperience` e `PlayerHitPoints` são os campos a
-persistir.
+Desde o [checkpoint v10](checkpoint-v10-combat-2026-10-31.md), o resultado das
+lutas é salvo e carregado. A primeira versão deste marco mantinha o resultado só
+em memória e recusava salvar depois de uma vitória. Hoje salvar fica recusado
+apenas enquanto uma luta está aberta.
 
 ## Arquivos
 
@@ -84,4 +81,4 @@ persistir.
 - Sem IA tática (AI-001), sem críticos, mira, cobertura ou luz.
 - Arma fixa (lança), porque o equipamento do inventário ainda não alimenta o combate.
 - HP do jogador só existe em combate. Não há cura nem HP no HUD de exploração.
-- Resultado não persistível até o checkpoint v10.
+- Uma luta aberta não pode ser salva. Só o resultado de lutas terminadas entra no checkpoint v10 (o roadmap prevê salvar no meio do turno no SAV-001).

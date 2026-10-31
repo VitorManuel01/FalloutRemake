@@ -18,7 +18,7 @@ internal static class ItemCheckpointTests
         {
             var w = World(); Take(w); WorldCheckpoint saved = CheckpointFile.Decode(CheckpointFile.Encode(w.Capture("catalog")));
             var fresh = Restore(saved);
-            Assert(saved.Version == 9 && saved.Profile == "neutral-v9" && fresh.CarriedCount == 2 && fresh.Carried.Single().Source.Key == "item");
+            Assert(saved.Version == 10 && saved.Profile == "neutral-v10" && fresh.CarriedCount == 2 && fresh.Carried.Single().Source.Key == "item");
             Assert(fresh.Current.Items.Contents("owner").Single().Quantity == 3 && fresh.Location == w.Location);
             saved.Areas[0].Taken![0] = new("owner", "item", 5); Assert(w.CarriedCount == 2 && fresh.CarriedCount == 2);
         });
@@ -37,7 +37,7 @@ internal static class ItemCheckpointTests
         check("v1 checkpoints remain loadable as an empty carried inventory without accepting injected item data", () =>
         {
             var w = World(); WorldCheckpoint saved = w.Capture("catalog");
-            var legacy = saved with { Entries = null, Version = 1, Profile = "neutral-v1", Areas = saved.Areas.Select(a => a with { Taken = null, Uses = null, Replacements = null }).ToArray() };
+            var legacy = saved with { Entries = null, Combat = null, Version = 1, Profile = "neutral-v1", Areas = saved.Areas.Select(a => a with { Taken = null, Uses = null, Replacements = null }).ToArray() };
             Assert(Restore(CheckpointFile.Decode(CheckpointFile.Encode(legacy))).CarriedCount == 0);
             Reject(() => Restore(legacy with { Areas = new[] { legacy.Areas[0] with { Taken = new[] { new TakenItem("owner", "item", 1) } } } }));
             Reject(() => Restore(saved with { Areas = new[] { saved.Areas[0] with { Taken = null } } }));
