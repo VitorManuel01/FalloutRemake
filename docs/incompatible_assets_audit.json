@@ -1,0 +1,1482 @@
+[
+  {
+    "source_name": "bs101policestationtower",
+    "output_path": "Assets/Architecture/bs101policestationtower.glb",
+    "category": "Architecture",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dlc04_subsignsubstation01",
+    "output_path": "Assets/Architecture/dlc04_subsignsubstation01.glb",
+    "category": "Architecture",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalk01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalk01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalk2way01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalk2way01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalk3way01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalk3way01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalk3wayent01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalk3wayent01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalk3wayent02",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalk3wayent02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalk3wayent03",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalk3wayent03.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalk4way01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalk4way01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkcable01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkcable01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkcable02",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkcable02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkcable03",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkcable03.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkcablepipe01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkcablepipe01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkcablepipe02",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkcablepipe02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkcablepipe03",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkcablepipe03.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkcablepipe04",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkcablepipe04.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkcap01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkcap01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkhalf01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkhalf01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalklowerdeck01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalklowerdeck01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalklowerdeck02",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalklowerdeck02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkstairs01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkstairs01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkstairsent01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkstairsent01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalkstairsent02",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalkstairsent02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalksupport01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalksupport01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalksupport02",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalksupport02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalksupport03",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalksupport03.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalksupport04",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalksupport04.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalksupport05",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalksupport05.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalksupport06",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalksupport06.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prycatwalksupportcap01",
+    "output_path": "Assets/Architecture/AirshipRigging/prycatwalksupportcap01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydockingcable01",
+    "output_path": "Assets/Architecture/AirshipRigging/prydockingcable01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenarm01",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenarm01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenbridge01",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenbridge01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenbridge02",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenbridge02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenbridge03",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenbridge03.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwencontrols01",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwencontrols01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwencontrols02",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwencontrols02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwendestruction",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwendestruction.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext01",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext01d",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext01d.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext02",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext03",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext03.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext03d",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext03d.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext04",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext04.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext04d",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext04d.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext05",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext05.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext05d",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext05d.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext06",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext06.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext07",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext07.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext08",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext08.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext08d",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext08d.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext09",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext09.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenext09d",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenext09d.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenextladder01",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenextladder01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenextramp01",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenextramp01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenextscrap01",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenextscrap01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prydwenshipswheel01",
+    "output_path": "Assets/Architecture/AirshipRigging/prydwenshipswheel01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "pryhull01",
+    "output_path": "Assets/Architecture/AirshipRigging/pryhull01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "pryhull02",
+    "output_path": "Assets/Architecture/AirshipRigging/pryhull02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "pryhull03",
+    "output_path": "Assets/Architecture/AirshipRigging/pryhull03.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "pryhull04",
+    "output_path": "Assets/Architecture/AirshipRigging/pryhull04.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "pryhull05",
+    "output_path": "Assets/Architecture/AirshipRigging/pryhull05.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prypipe01",
+    "output_path": "Assets/Architecture/AirshipRigging/prypipe01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prypowercable01",
+    "output_path": "Assets/Architecture/AirshipRigging/prypowercable01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prypowercable02",
+    "output_path": "Assets/Architecture/AirshipRigging/prypowercable02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prypowercable03",
+    "output_path": "Assets/Architecture/AirshipRigging/prypowercable03.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prypowercablebend01",
+    "output_path": "Assets/Architecture/AirshipRigging/prypowercablebend01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prypowercablebend02",
+    "output_path": "Assets/Architecture/AirshipRigging/prypowercablebend02.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prysmroomladder01",
+    "output_path": "Assets/Architecture/AirshipRigging/prysmroomladder01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "prytank01",
+    "output_path": "Assets/Architecture/AirshipRigging/prytank01.glb",
+    "category": "Architecture/AirshipRigging",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Dirig\u00edvel Prydwen (Exclusivo BoS Costa Leste 2287)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dext02midhalfbrick01ramp01lcap",
+    "output_path": "Assets/Architecture/DiamondCity/dext02midhalfbrick01ramp01lcap.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dext02midquarterbrick01",
+    "output_path": "Assets/Architecture/DiamondCity/dext02midquarterbrick01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextaddonpipe01",
+    "output_path": "Assets/Architecture/DiamondCity/dextaddonpipe01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextaddonpipe02",
+    "output_path": "Assets/Architecture/DiamondCity/dextaddonpipe02.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextcustom01",
+    "output_path": "Assets/Architecture/DiamondCity/dextcustom01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextcustomcor01",
+    "output_path": "Assets/Architecture/DiamondCity/dextcustomcor01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextcustompressbox01",
+    "output_path": "Assets/Architecture/DiamondCity/dextcustompressbox01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextpressboxwall01",
+    "output_path": "Assets/Architecture/DiamondCity/dextpressboxwall01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextpressboxwall02",
+    "output_path": "Assets/Architecture/DiamondCity/dextpressboxwall02.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextpressboxwall03",
+    "output_path": "Assets/Architecture/DiamondCity/dextpressboxwall03.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextrooftrima1x1endl01dam01",
+    "output_path": "Assets/Architecture/DiamondCity/dextrooftrima1x1endl01dam01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextrooftrima1x1endr01dam01",
+    "output_path": "Assets/Architecture/DiamondCity/dextrooftrima1x1endr01dam01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstairs1x1capl01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstairs1x1capl01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstairs1x1rampl03",
+    "output_path": "Assets/Architecture/DiamondCity/dextstairs1x1rampl03.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstairs1x1rampr03",
+    "output_path": "Assets/Architecture/DiamondCity/dextstairs1x1rampr03.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstairs1x1ramprcap01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstairs1x1ramprcap01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstands1x1angle01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstands1x1angle01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstands1x1angle02",
+    "output_path": "Assets/Architecture/DiamondCity/dextstands1x1angle02.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstands1x1anglebot01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstands1x1anglebot01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstands1x1angletop01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstands1x1angletop01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstands1x1angletop02",
+    "output_path": "Assets/Architecture/DiamondCity/dextstands1x1angletop02.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstands1x1bot01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstands1x1bot01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstands1x1top01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstands1x1top01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstands1x2bot01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstands1x2bot01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstands1x2top01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstands1x2top01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstandsaddonpanels02",
+    "output_path": "Assets/Architecture/DiamondCity/dextstandsaddonpanels02.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstandsground1x1endl01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstandsground1x1endl01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstandsground1x1endr01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstandsground1x1endr01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dextstandsground1x1str01",
+    "output_path": "Assets/Architecture/DiamondCity/dextstandsground1x1str01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dexttop1x1wall01",
+    "output_path": "Assets/Architecture/DiamondCity/dexttop1x1wall01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dexttop1x1win01",
+    "output_path": "Assets/Architecture/DiamondCity/dexttop1x1win01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dexttop1x1win02",
+    "output_path": "Assets/Architecture/DiamondCity/dexttop1x1win02.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dexttop1x2shortbal01full01",
+    "output_path": "Assets/Architecture/DiamondCity/dexttop1x2shortbal01full01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dexttop1x2shortbalcor01",
+    "output_path": "Assets/Architecture/DiamondCity/dexttop1x2shortbalcor01.glb",
+    "category": "Architecture/DiamondCity",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Est\u00e1dio Fenway Park / Diamond City (Boston)",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subctunnel01",
+    "output_path": "Assets/Architecture/Subway/subctunnel01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subctunnel02",
+    "output_path": "Assets/Architecture/Subway/subctunnel02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subctunnel03",
+    "output_path": "Assets/Architecture/Subway/subctunnel03.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subdoor01",
+    "output_path": "Assets/Architecture/Subway/subdoor01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subdoor01left",
+    "output_path": "Assets/Architecture/Subway/subdoor01left.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subdoor01right",
+    "output_path": "Assets/Architecture/Subway/subdoor01right.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subdoor02",
+    "output_path": "Assets/Architecture/Subway/subdoor02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subdoor02left",
+    "output_path": "Assets/Architecture/Subway/subdoor02left.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subdoor02right",
+    "output_path": "Assets/Architecture/Subway/subdoor02right.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subfence01",
+    "output_path": "Assets/Architecture/Subway/subfence01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subfence02",
+    "output_path": "Assets/Architecture/Subway/subfence02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subgate01",
+    "output_path": "Assets/Architecture/Subway/subgate01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subhanginglight01",
+    "output_path": "Assets/Architecture/Subway/subhanginglight01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subhanginglight02",
+    "output_path": "Assets/Architecture/Subway/subhanginglight02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "sublaccesstunnel01",
+    "output_path": "Assets/Architecture/Subway/sublaccesstunnel01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "sublaccesstunnel02",
+    "output_path": "Assets/Architecture/Subway/sublaccesstunnel02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "sublaccesstunnelend01",
+    "output_path": "Assets/Architecture/Subway/sublaccesstunnelend01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "sublaccesstunnelend02",
+    "output_path": "Assets/Architecture/Subway/sublaccesstunnelend02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subltunnel01",
+    "output_path": "Assets/Architecture/Subway/subltunnel01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subltunnel02",
+    "output_path": "Assets/Architecture/Subway/subltunnel02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subltunnel03",
+    "output_path": "Assets/Architecture/Subway/subltunnel03.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subltunnel04",
+    "output_path": "Assets/Architecture/Subway/subltunnel04.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subltunnelbend01",
+    "output_path": "Assets/Architecture/Subway/subltunnelbend01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subltunnelbend02",
+    "output_path": "Assets/Architecture/Subway/subltunnelbend02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subltunnelend01",
+    "output_path": "Assets/Architecture/Subway/subltunnelend01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subltunnelend02",
+    "output_path": "Assets/Architecture/Subway/subltunnelend02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subltunnelopen01",
+    "output_path": "Assets/Architecture/Subway/subltunnelopen01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatform3way01",
+    "output_path": "Assets/Architecture/Subway/subplatform3way01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatform3way02",
+    "output_path": "Assets/Architecture/Subway/subplatform3way02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatform3wayent01",
+    "output_path": "Assets/Architecture/Subway/subplatform3wayent01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatform3wayent02",
+    "output_path": "Assets/Architecture/Subway/subplatform3wayent02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatform3waytrans01",
+    "output_path": "Assets/Architecture/Subway/subplatform3waytrans01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatform3waytrans02",
+    "output_path": "Assets/Architecture/Subway/subplatform3waytrans02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcol01",
+    "output_path": "Assets/Architecture/Subway/subplatformcol01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcol01desta",
+    "output_path": "Assets/Architecture/Subway/subplatformcol01desta.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcol01destb",
+    "output_path": "Assets/Architecture/Subway/subplatformcol01destb.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcol02",
+    "output_path": "Assets/Architecture/Subway/subplatformcol02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcolbbottom01",
+    "output_path": "Assets/Architecture/Subway/subplatformcolbbottom01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcolbbottom02",
+    "output_path": "Assets/Architecture/Subway/subplatformcolbbottom02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcolbmid01",
+    "output_path": "Assets/Architecture/Subway/subplatformcolbmid01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcolbmid02",
+    "output_path": "Assets/Architecture/Subway/subplatformcolbmid02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcolbmid03",
+    "output_path": "Assets/Architecture/Subway/subplatformcolbmid03.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcolbtop01",
+    "output_path": "Assets/Architecture/Subway/subplatformcolbtop01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcolbtop02",
+    "output_path": "Assets/Architecture/Subway/subplatformcolbtop02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcorner01",
+    "output_path": "Assets/Architecture/Subway/subplatformcorner01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcorner02",
+    "output_path": "Assets/Architecture/Subway/subplatformcorner02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcorner03",
+    "output_path": "Assets/Architecture/Subway/subplatformcorner03.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcorner04",
+    "output_path": "Assets/Architecture/Subway/subplatformcorner04.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcornerarch01",
+    "output_path": "Assets/Architecture/Subway/subplatformcornerarch01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcornerarch02",
+    "output_path": "Assets/Architecture/Subway/subplatformcornerarch02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcornerarch03",
+    "output_path": "Assets/Architecture/Subway/subplatformcornerarch03.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformcornerarch04",
+    "output_path": "Assets/Architecture/Subway/subplatformcornerarch04.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformhall01",
+    "output_path": "Assets/Architecture/Subway/subplatformhall01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformhall02",
+    "output_path": "Assets/Architecture/Subway/subplatformhall02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformhallend01",
+    "output_path": "Assets/Architecture/Subway/subplatformhallend01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformhallend02",
+    "output_path": "Assets/Architecture/Subway/subplatformhallend02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformhallend03",
+    "output_path": "Assets/Architecture/Subway/subplatformhallend03.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subplatformhallend04",
+    "output_path": "Assets/Architecture/Subway/subplatformhallend04.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subsignairport01",
+    "output_path": "Assets/Architecture/Subway/subsignairport01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subsignandrew01",
+    "output_path": "Assets/Architecture/Subway/subsignandrew01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subsignbaggageclaim01",
+    "output_path": "Assets/Architecture/Subway/subsignbaggageclaim01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subsignblueline01",
+    "output_path": "Assets/Architecture/Subway/subsignblueline01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subsignbroadway01",
+    "output_path": "Assets/Architecture/Subway/subsignbroadway01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subsigncollegesquare01",
+    "output_path": "Assets/Architecture/Subway/subsigncollegesquare01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subsigncopley01",
+    "output_path": "Assets/Architecture/Subway/subsigncopley01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subtracksend01",
+    "output_path": "Assets/Architecture/Subway/subtracksend01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subwalllight01",
+    "output_path": "Assets/Architecture/Subway/subwalllight01.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "subwalllight02",
+    "output_path": "Assets/Architecture/Subway/subwalllight02.glb",
+    "category": "Architecture/Subway",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "workshopscavengingstation01",
+    "output_path": "Assets/Furniture/workshopscavengingstation01.glb",
+    "category": "Furniture",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "workstationarmorb01",
+    "output_path": "Assets/Furniture/workstationarmorb01.glb",
+    "category": "Furniture",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "workstationchemistrya01",
+    "output_path": "Assets/Furniture/workstationchemistrya01.glb",
+    "category": "Furniture",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "workstationchemistryb01",
+    "output_path": "Assets/Furniture/workstationchemistryb01.glb",
+    "category": "Furniture",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dlc01_robcowallsign_powersubstationa",
+    "output_path": "Assets/Props/dlc01_robcowallsign_powersubstationa.glb",
+    "category": "Props",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "dlc01_robcowallsign_powersubstationb",
+    "output_path": "Assets/Props/dlc01_robcowallsign_powersubstationb.glb",
+    "category": "Props",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "redrocketfillstation01",
+    "output_path": "Assets/Props/redrocketfillstation01.glb",
+    "category": "Props",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "workstationchemistry01",
+    "output_path": "Assets/Props/workstationchemistry01.glb",
+    "category": "Props",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "workstationchemistry02",
+    "output_path": "Assets/Props/workstationchemistry02.glb",
+    "category": "Props",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "stationwagon01_postwar",
+    "output_path": "Assets/Vehicles/stationwagon01_postwar.glb",
+    "category": "Vehicles",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "stationwagon01_postwarhulk",
+    "output_path": "Assets/Vehicles/stationwagon01_postwarhulk.glb",
+    "category": "Vehicles",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "stationwagon02_postwar",
+    "output_path": "Assets/Vehicles/stationwagon02_postwar.glb",
+    "category": "Vehicles",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  },
+  {
+    "source_name": "stationwagontrunkopen01",
+    "output_path": "Assets/Vehicles/stationwagontrunkopen01.glb",
+    "category": "Vehicles",
+    "lore_classification": "F (Incompat\u00edvel / Fora de Escopo FO2)",
+    "reason": "Rede de metr\u00f4 metropolitano de Boston",
+    "status": "Preservado no acervo f\u00edsico, exclu\u00eddo do mapeamento FO2"
+  }
+]

@@ -1,0 +1,216 @@
+{
+  "archives": {
+    "master.dat": {
+      "file_size": 333177805,
+      "entries_count": 23140
+    },
+    "critter.dat": {
+      "file_size": 166951131,
+      "entries_count": 7120
+    },
+    "patch000.dat": {
+      "file_size": 2355526,
+      "entries_count": 489
+    },
+    "f2_res.dat": {
+      "file_size": 651823,
+      "entries_count": 177
+    }
+  },
+  "total_unique_entries": 30438,
+  "loose_music_count": 21,
+  "loose_music_tracks": [
+    {
+      "name": "01hub.acm",
+      "size": 5271351,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\01hub.acm"
+    },
+    {
+      "name": "03wrldmp.acm",
+      "size": 3939405,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\03wrldmp.acm"
+    },
+    {
+      "name": "05raider.acm",
+      "size": 4340887,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\05raider.acm"
+    },
+    {
+      "name": "07desert.acm",
+      "size": 4273282,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\07desert.acm"
+    },
+    {
+      "name": "08vats.acm",
+      "size": 4205084,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\08vats.acm"
+    },
+    {
+      "name": "10labone.acm",
+      "size": 4682336,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\10labone.acm"
+    },
+    {
+      "name": "12junktn.acm",
+      "size": 4422501,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\12junktn.acm"
+    },
+    {
+      "name": "13carvrn.acm",
+      "size": 5045692,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\13carvrn.acm"
+    },
+    {
+      "name": "14necro.acm",
+      "size": 4464634,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\14necro.acm"
+    },
+    {
+      "name": "16follow.acm",
+      "size": 3820901,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\16follow.acm"
+    },
+    {
+      "name": "17arroyo.acm",
+      "size": 4112911,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\17arroyo.acm"
+    },
+    {
+      "name": "18modoc.acm",
+      "size": 4166911,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\18modoc.acm"
+    },
+    {
+      "name": "19reno.acm",
+      "size": 4140849,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\19reno.acm"
+    },
+    {
+      "name": "20car.acm",
+      "size": 1478843,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\20car.acm"
+    },
+    {
+      "name": "21sf.acm",
+      "size": 5099957,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\21sf.acm"
+    },
+    {
+      "name": "22vcity.acm",
+      "size": 4349590,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\22vcity.acm"
+    },
+    {
+      "name": "23world.acm",
+      "size": 1948171,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\23world.acm"
+    },
+    {
+      "name": "24redd.acm",
+      "size": 4408303,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\24redd.acm"
+    },
+    {
+      "name": "akiss.acm",
+      "size": 3956001,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\akiss.acm"
+    },
+    {
+      "name": "wind1.acm",
+      "size": 136918,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\wind1.acm"
+    },
+    {
+      "name": "wind2.acm",
+      "size": 120544,
+      "path": "D:\\Games\\fallout2\\Fallout 2 English\\sound\\music\\wind2.acm"
+    }
+  ],
+  "loose_data_count": 33,
+  "by_extension": {
+    ".frm": 12235,
+    ".lst": 24,
+    ".cfg": 30,
+    ".mve": 13,
+    ".pal": 48,
+    ".txt": 1207,
+    ".ref": 1,
+    "": 27,
+    ".rix": 7,
+    ".acm": 2473,
+    ".lbm": 1,
+    ".gam": 88,
+    ".msk": 7,
+    ".aaf": 5,
+    ".fon": 5,
+    ".map": 155,
+    ".gcd": 6,
+    ".bio": 3,
+    ".pro": 7650,
+    ".int": 1443,
+    ".com": 1,
+    ".lnk": 2,
+    ".bak": 3,
+    ".lip": 1029,
+    ".sve": 11,
+    ".msg": 839,
+    ".fr0": 495,
+    ".fr1": 495,
+    ".fr2": 495,
+    ".fr3": 495,
+    ".fr4": 495,
+    ".fr5": 495,
+    ".edg": 155
+  },
+  "by_root_folder": {
+    "art": 15302,
+    "color.pal": 1,
+    "data": 25,
+    "font0.aaf": 1,
+    "font0.fon": 1,
+    "font1.aaf": 1,
+    "font1.fon": 1,
+    "font2.aaf": 1,
+    "font2.fon": 1,
+    "font3.aaf": 1,
+    "font3.fon": 1,
+    "font4.aaf": 1,
+    "font5.fon": 1,
+    "maps": 415,
+    "premade": 9,
+    "proto": 7683,
+    "scripts": 1448,
+    "sound": 4562,
+    "text": 981,
+    "patch.txt": 1,
+    "readme.txt": 1
+  },
+  "maps_count": 151,
+  "areas_count": 49,
+  "scripts_lst_count": 1303,
+  "compiled_scripts_count": 1443,
+  "dialog_msg_count": 802,
+  "audio_counts": {
+    "sfx": 1362,
+    "speech": 3200,
+    "music_in_dats": 0,
+    "loose_music": 21,
+    "total_audio": 4583
+  },
+  "prototype_msg_counts": {
+    "items": 1023,
+    "critters": 502,
+    "scenery": 2765,
+    "walls": 1647,
+    "misc": 54,
+    "tiles": 813
+  },
+  "prototype_lst_counts": {
+    "items": 531,
+    "critters": 483,
+    "scenery": 1851,
+    "walls": 1633,
+    "tiles": 3102,
+    "misc": 50
+  }
+}

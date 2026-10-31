@@ -1,0 +1,855 @@
+[
+  {
+    "requirement": "Critter: Radscorpion (PID 0x01000005)",
+    "type": "Critter",
+    "instances_in_arroyo": 9,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "barkscorpiontaxidermy",
+        "path": "Assets/ProjectMojave/Props/Decor/barkscorpiontaxidermy.glb",
+        "category": "ProjectMojave/Decor",
+        "origin": "Project Mojave (FNV -> FO4 -> Remake)"
+      },
+      {
+        "name": "radscorpionls",
+        "path": "Assets/ProjectMojave/Props/Decor/radscorpionls.glb",
+        "category": "ProjectMojave/Decor",
+        "origin": "Project Mojave (FNV -> FO4 -> Remake)"
+      },
+      {
+        "name": "radscorpiontaxidermy",
+        "path": "Assets/ProjectMojave/Props/Decor/radscorpiontaxidermy.glb",
+        "category": "ProjectMojave/Decor",
+        "origin": "Project Mojave (FNV -> FO4 -> Remake)"
+      }
+    ],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "Radscorpion cl\u00e1ssico de FO2 requer rig completo de pin\u00e7as, cauda e ferr\u00e3o."
+  },
+  {
+    "requirement": "Critter: Giant Ant (PID 0x0100017E)",
+    "type": "Critter",
+    "instances_in_arroyo": 12,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "hitplanterfree01a",
+        "path": "Assets/Architecture/HighTech/hitplanterfree01a.glb",
+        "category": "Architecture/HighTech",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "powerliftminigantryplatform01",
+        "path": "Assets/Architecture/HighTech/powerliftminigantryplatform01.glb",
+        "category": "Architecture/HighTech",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "powerliftminigantrystairs01",
+        "path": "Assets/Architecture/HighTech/powerliftminigantrystairs01.glb",
+        "category": "Architecture/HighTech",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "Formiga Gigante cl\u00e1ssica requer rig com mand\u00edbulas m\u00f3veis e patas articuladas."
+  },
+  {
+    "requirement": "Critter: Dumar (PID 0x01000112)",
+    "type": "Critter",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "NPC humanoide (Dumar) requer modelo de personagem tribal com vestes de couro/penas e rig compat\u00edvel."
+  },
+  {
+    "requirement": "Critter: Villager (PID 0x01000003)",
+    "type": "Critter",
+    "instances_in_arroyo": 8,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "NPC humanoide (Villager) requer modelo de personagem tribal com vestes de couro/penas e rig compat\u00edvel."
+  },
+  {
+    "requirement": "Critter: Spore Plant (PID 0x01000010)",
+    "type": "Critter",
+    "instances_in_arroyo": 2,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "hitplanterfree01a",
+        "path": "Assets/Architecture/HighTech/hitplanterfree01a.glb",
+        "category": "Architecture/HighTech",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "beachgrassblufflarge",
+        "path": "Assets/Nature/Plants/beachgrassblufflarge.glb",
+        "category": "Nature/Plants",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "beachgrassbluffmed",
+        "path": "Assets/Nature/Plants/beachgrassbluffmed.glb",
+        "category": "Nature/Plants",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "Spore Plant requer rig de boca tentacular e esporos proj\u00e9teis."
+  },
+  {
+    "requirement": "Critter: Brahmin (PID 0x0100000A)",
+    "type": "Critter",
+    "instances_in_arroyo": 4,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 1,
+    "candidates": [
+      {
+        "name": "BrahminSkull",
+        "path": "Assets/Props/BrahminSkull.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2 (Homologated)"
+      }
+    ],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "Brahmin de duas cabe\u00e7as exige malha org\u00e2nica rigged e anima\u00e7\u00f5es de repouso/caminhada."
+  },
+  {
+    "requirement": "Critter: Hakunin (PID 0x0100000E)",
+    "type": "Critter",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "NPC humanoide (Hakunin) requer modelo de personagem tribal com vestes de couro/penas e rig compat\u00edvel."
+  },
+  {
+    "requirement": "Critter: Villager (PID 0x01000004)",
+    "type": "Critter",
+    "instances_in_arroyo": 5,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "NPC humanoide (Villager) requer modelo de personagem tribal com vestes de couro/penas e rig compat\u00edvel."
+  },
+  {
+    "requirement": "Critter: Elder (PID 0x0100000D)",
+    "type": "Critter",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "NPC humanoide (Elder) requer modelo de personagem tribal com vestes de couro/penas e rig compat\u00edvel."
+  },
+  {
+    "requirement": "Critter: Mynoc (PID 0x0100000F)",
+    "type": "Critter",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "NPC humanoide (Mynoc) requer modelo de personagem tribal com vestes de couro/penas e rig compat\u00edvel."
+  },
+  {
+    "requirement": "Critter: Dog (PID 0x01000009)",
+    "type": "Critter",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Requer nova modelagem / rigging 3D",
+    "technical_notes": "NPC humanoide (Dog) requer modelo de personagem tribal com vestes de couro/penas e rig compat\u00edvel."
+  },
+  {
+    "requirement": "Item: Bones (PID 0x000000FA)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "EXCELENTE",
+    "candidates_count": 1,
+    "candidates": [
+      {
+        "name": "crossskeleton",
+        "path": "Assets/ProjectMojave/Props/Decor/crossskeleton.glb",
+        "category": "ProjectMojave/Decor",
+        "origin": "Project Mojave (FNV -> FO4 -> Remake)"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Esqueletos e restos mortais no ch\u00e3o do templo. Ampla cobertura em Props/Rubble e Encampment."
+  },
+  {
+    "requirement": "Item: Spear (PID 0x00000007)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "bosbarricadepoles01",
+        "path": "Assets/Architecture/bosbarricadepoles01.glb",
+        "category": "Architecture",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "diamondfoulpole01",
+        "path": "Assets/Architecture/diamondfoulpole01.glb",
+        "category": "Architecture",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "gstelephonepole01",
+        "path": "Assets/Architecture/gstelephonepole01.glb",
+        "category": "Architecture",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Lan\u00e7a tribal de ponta de pedra/osso. Modelos de hastes/postes existem, mas requer modelo de arma dedicado."
+  },
+  {
+    "requirement": "Item: Pot (PID 0x000000F3)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "MS09AncientPot",
+        "path": "Assets/Containers/MS09AncientPot.glb",
+        "category": "Containers",
+        "origin": "Fallout4 - Meshes.ba2 (Homologated)"
+      },
+      {
+        "name": "coffeepot01",
+        "path": "Assets/Props/coffeepot01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "coffeepotrare",
+        "path": "Assets/Props/coffeepotrare.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Vasos cerimoniais de barro cozido. Dezenas de modelos de cer\u00e2mica r\u00fastica no acervo."
+  },
+  {
+    "requirement": "Item: Healing Powder (PID 0x00000111)",
+    "type": "Item",
+    "instances_in_arroyo": 3,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA COM ADAPTA\u00c7\u00c3O",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "beerbottle01",
+        "path": "Assets/Props/beerbottle01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "beerbottlefull01",
+        "path": "Assets/Props/beerbottlefull01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "beerbottlegwinbunker01",
+        "path": "Assets/Props/beerbottlegwinbunker01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Bolsa de ervas medicinais / p\u00f3 de cura. Pode ser representado por bolsas r\u00fasticas ou jarros."
+  },
+  {
+    "requirement": "Item: Chest (PID 0x000000F5)",
+    "type": "Item",
+    "instances_in_arroyo": 4,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA",
+    "candidates_count": 1,
+    "candidates": [
+      {
+        "name": "toolchest",
+        "path": "Assets/Containers/toolchest.glb",
+        "category": "Containers",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Ba\u00fa de oferendas tribal de madeira envelhecida ou pedra. Diversos ba\u00fas de madeira em Furniture/Containers."
+  },
+  {
+    "requirement": "Item: Antidote (PID 0x00000031)",
+    "type": "Item",
+    "instances_in_arroyo": 2,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA COM ADAPTA\u00c7\u00c3O",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "beerbottle01",
+        "path": "Assets/Props/beerbottle01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "beerbottlefull01",
+        "path": "Assets/Props/beerbottlefull01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "beerbottlegwinbunker01",
+        "path": "Assets/Props/beerbottlegwinbunker01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Bolsa de ervas medicinais / p\u00f3 de cura. Pode ser representado por bolsas r\u00fasticas ou jarros."
+  },
+  {
+    "requirement": "Item: Pot (PID 0x000000F4)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "MS09AncientPot",
+        "path": "Assets/Containers/MS09AncientPot.glb",
+        "category": "Containers",
+        "origin": "Fallout4 - Meshes.ba2 (Homologated)"
+      },
+      {
+        "name": "coffeepot01",
+        "path": "Assets/Props/coffeepot01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "coffeepotrare",
+        "path": "Assets/Props/coffeepotrare.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Vasos cerimoniais de barro cozido. Dezenas de modelos de cer\u00e2mica r\u00fastica no acervo."
+  },
+  {
+    "requirement": "Item: Plastic Explosives (PID 0x00000055)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Dinamite / Explosivo pl\u00e1stico. Existem bananas de dinamite e blocos C4 no acervo de props."
+  },
+  {
+    "requirement": "Item: Temple Key (PID 0x000001B6)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "bottlewhiskey01",
+        "path": "Assets/Props/bottlewhiskey01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "whiskeycw",
+        "path": "Assets/ProjectMojave/Props/Decor/whiskeycw.glb",
+        "category": "ProjectMojave/Decor",
+        "origin": "Project Mojave (FNV -> FO4 -> Remake)"
+      },
+      {
+        "name": "whiskeyemptycw",
+        "path": "Assets/ProjectMojave/Props/Decor/whiskeyemptycw.glb",
+        "category": "ProjectMojave/Decor",
+        "origin": "Project Mojave (FNV -> FO4 -> Remake)"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Chave r\u00fastica de pedra ou metal forjado. Modelos de chaves existem em Props."
+  },
+  {
+    "requirement": "Item: Plant Spike (PID 0x0000016D)",
+    "type": "Item",
+    "instances_in_arroyo": 2,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "hitplanterfree01a",
+        "path": "Assets/Architecture/HighTech/hitplanterfree01a.glb",
+        "category": "Architecture/HighTech",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "beachgrassblufflarge",
+        "path": "Assets/Nature/Plants/beachgrassblufflarge.glb",
+        "category": "Nature/Plants",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "beachgrassbluffmed",
+        "path": "Assets/Nature/Plants/beachgrassbluffmed.glb",
+        "category": "Nature/Plants",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Item gen\u00e9rico: Plant Spike."
+  },
+  {
+    "requirement": "Item: Shelf (PID 0x000000F6)",
+    "type": "Item",
+    "instances_in_arroyo": 4,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "barn_shelf01",
+        "path": "Assets/Furniture/barn_shelf01.glb",
+        "category": "Furniture",
+        "origin": "DLCCoast - Main.ba2"
+      },
+      {
+        "name": "barn_shelf02",
+        "path": "Assets/Furniture/barn_shelf02.glb",
+        "category": "Furniture",
+        "origin": "DLCCoast - Main.ba2"
+      },
+      {
+        "name": "barn_shelf03",
+        "path": "Assets/Furniture/barn_shelf03.glb",
+        "category": "Furniture",
+        "origin": "DLCCoast - Main.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Item gen\u00e9rico: Shelf."
+  },
+  {
+    "requirement": "Item: Knife (PID 0x00000004)",
+    "type": "Item",
+    "instances_in_arroyo": 4,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "knife",
+        "path": "Assets/Props/knife.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "knife_prewar",
+        "path": "Assets/Props/knife_prewar.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "kitchenknife",
+        "path": "Assets/ProjectMojave/Props/Decor/kitchenknife.glb",
+        "category": "ProjectMojave/Decor",
+        "origin": "Project Mojave (FNV -> FO4 -> Remake)"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Item gen\u00e9rico: Knife."
+  },
+  {
+    "requirement": "Item: Shelf (PID 0x000000F7)",
+    "type": "Item",
+    "instances_in_arroyo": 2,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "barn_shelf01",
+        "path": "Assets/Furniture/barn_shelf01.glb",
+        "category": "Furniture",
+        "origin": "DLCCoast - Main.ba2"
+      },
+      {
+        "name": "barn_shelf02",
+        "path": "Assets/Furniture/barn_shelf02.glb",
+        "category": "Furniture",
+        "origin": "DLCCoast - Main.ba2"
+      },
+      {
+        "name": "barn_shelf03",
+        "path": "Assets/Furniture/barn_shelf03.glb",
+        "category": "Furniture",
+        "origin": "DLCCoast - Main.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Item gen\u00e9rico: Shelf."
+  },
+  {
+    "requirement": "Item: Fruit (PID 0x00000047)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 1,
+    "candidates": [
+      {
+        "name": "floramutfruit01",
+        "path": "Assets/Nature/Plants/floramutfruit01.glb",
+        "category": "Nature/Plants",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Item gen\u00e9rico: Fruit."
+  },
+  {
+    "requirement": "Item: Money (PID 0x00000029)",
+    "type": "Item",
+    "instances_in_arroyo": 2,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 1,
+    "candidates": [
+      {
+        "name": "arcademoneyslot01",
+        "path": "Assets/Props/arcademoneyslot01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Item gen\u00e9rico: Money."
+  },
+  {
+    "requirement": "Item: Pot (PID 0x000000F9)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "MS09AncientPot",
+        "path": "Assets/Containers/MS09AncientPot.glb",
+        "category": "Containers",
+        "origin": "Fallout4 - Meshes.ba2 (Homologated)"
+      },
+      {
+        "name": "coffeepot01",
+        "path": "Assets/Props/coffeepot01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "coffeepotrare",
+        "path": "Assets/Props/coffeepotrare.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Vasos cerimoniais de barro cozido. Dezenas de modelos de cer\u00e2mica r\u00fastica no acervo."
+  },
+  {
+    "requirement": "Item: Pot (PID 0x000000F8)",
+    "type": "Item",
+    "instances_in_arroyo": 2,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA",
+    "candidates_count": 3,
+    "candidates": [
+      {
+        "name": "MS09AncientPot",
+        "path": "Assets/Containers/MS09AncientPot.glb",
+        "category": "Containers",
+        "origin": "Fallout4 - Meshes.ba2 (Homologated)"
+      },
+      {
+        "name": "coffeepot01",
+        "path": "Assets/Props/coffeepot01.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "coffeepotrare",
+        "path": "Assets/Props/coffeepotrare.glb",
+        "category": "Props",
+        "origin": "Fallout4 - Meshes.ba2"
+      }
+    ],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Vasos cerimoniais de barro cozido. Dezenas de modelos de cer\u00e2mica r\u00fastica no acervo."
+  },
+  {
+    "requirement": "Item: Xander Root (PID 0x00000110)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Item gen\u00e9rico: Xander Root."
+  },
+  {
+    "requirement": "Item: Shovel (PID 0x00000121)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Item gen\u00e9rico: Shovel."
+  },
+  {
+    "requirement": "Item: Flint (PID 0x00000116)",
+    "type": "Item",
+    "instances_in_arroyo": 1,
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Reaproveit\u00e1vel com correspond\u00eancia funcional",
+    "technical_notes": "Item gen\u00e9rico: Flint."
+  },
+  {
+    "requirement": "Torch (Tocha de parede)",
+    "type": "Scenery",
+    "instances_in_arroyo": "54 tochas no Templo",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Modelos de arandelas e tochas r\u00fasticas existem em Props/Lighting e Mojave."
+  },
+  {
+    "requirement": "Stone Bench (Banco de pedra cerimonial)",
+    "type": "Scenery",
+    "instances_in_arroyo": "26 bancos no Templo",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA",
+    "candidates_count": 1,
+    "candidates": [
+      {
+        "name": "StoneBench01",
+        "path": "Assets/Furniture/StoneBench01.glb",
+        "category": "Furniture",
+        "origin": "Fallout4 - Meshes.ba2 (Homologated)"
+      }
+    ],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Modelos de bancos de pedra/granito dispon\u00edveis em Architecture/RetainingWall e Props."
+  },
+  {
+    "requirement": "Incense Burner (Queimador de incenso ritual)",
+    "type": "Scenery",
+    "instances_in_arroyo": "7 queimadores",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Modelos de braseiros e recipientes rituais em Props/Encampment."
+  },
+  {
+    "requirement": "Floor Depression (Placa de press\u00e3o de armadilha)",
+    "type": "Scenery",
+    "instances_in_arroyo": "2 placas no Templo",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Placa de pedra rebaixada no piso. Requer montagem com piso do templo."
+  },
+  {
+    "requirement": "Hole (Orif\u00edcio de dardos nas paredes)",
+    "type": "Scenery",
+    "instances_in_arroyo": "4 furos de dardo",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Abertura na parede de pedra."
+  },
+  {
+    "requirement": "Door / Door Track (Porta pesada de pedra)",
+    "type": "Scenery",
+    "instances_in_arroyo": "4 portas de pedra",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Portas de correr pesadas de pedra. Malhas de lajes existem; requer montagem deslizante."
+  },
+  {
+    "requirement": "Stone Head (Cabe\u00e7a colossal do Vault Dweller)",
+    "type": "Scenery",
+    "instances_in_arroyo": "Fachada do Templo (Map 126)",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "SEM COBERTURA (GAP CR\u00cdTICO)",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Monumento monol\u00edtico asteca com o rosto do Vault Dweller. Requer escultura 3D dedicada."
+  },
+  {
+    "requirement": "Skull Pole (Totem tribal com cr\u00e2nios)",
+    "type": "Scenery",
+    "instances_in_arroyo": "Entrada do Templo",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "EXCELENTE",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Totens com cr\u00e2nios e estacas existem em Props/Encampment e Raider."
+  },
+  {
+    "requirement": "Firepit (Fogueira cerimonial)",
+    "type": "Scenery",
+    "instances_in_arroyo": "3 fogueiras no Templo e Vila",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "EXCELENTE",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Campfires com pedras e cinzas amplamente cobertos em Props/Encampment e Mojave."
+  },
+  {
+    "requirement": "Chasm / Canyon (Abismo interior)",
+    "type": "Scenery",
+    "instances_in_arroyo": "Fosso do Templo",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "EXCELENTE",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Paredes de penhasco e desfiladeiro em Environment/Cliffs do Project Mojave."
+  },
+  {
+    "requirement": "Great Arroyo Bridge (Grande Ponte Suspensa)",
+    "type": "Scenery",
+    "instances_in_arroyo": "Ponte de Arroyo (Map 5)",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Ponte suspensa colossal de t\u00e1buas e cordas sobre o desfiladeiro. Requer montagem modular."
+  },
+  {
+    "requirement": "Tribal Tents (Tendas da Aldeia de Arroyo)",
+    "type": "Scenery",
+    "instances_in_arroyo": "Aldeia de Arroyo (Map 4)",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Tendas de couro animal esticado sobre estacas. Shacks/Shantytown possuem estruturas de lona/tarp."
+  },
+  {
+    "requirement": "Arroyo Well (Po\u00e7o comunit\u00e1rio da Aldeia)",
+    "type": "Scenery",
+    "instances_in_arroyo": "Centro da Aldeia (Map 4)",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "ADEQUADA",
+    "candidates_count": 0,
+    "candidates": [],
+    "fidelity_assessment": "Avaliado contra 5.788 modelos f\u00edsicos",
+    "technical_notes": "Po\u00e7o de pedra circular. Modelos de an\u00e9is de pedra e manivelas dispon\u00edveis em Props/Architecture."
+  },
+  {
+    "requirement": "Temple Stone Walls & Portals (Paredes de Pedra Asteca / Maia)",
+    "type": "Wall",
+    "instances_in_arroyo": "2.622 paredes no Mapa 3",
+    "relevance_category": "A (Essencial Fatia 1)",
+    "coverage_status": "PARCIAL COM TEXTURIZA\u00c7\u00c3O PBR",
+    "candidates_count": 5,
+    "candidates": [
+      {
+        "name": "rwpiecebottomcapcor01",
+        "path": "Assets/Architecture/RetainingWall/rwpiecebottomcapcor01.glb",
+        "category": "Architecture/RetainingWall",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "rwpiecebottomcapcor02",
+        "path": "Assets/Architecture/RetainingWall/rwpiecebottomcapcor02.glb",
+        "category": "Architecture/RetainingWall",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "rwpiecebottomcapcurve01",
+        "path": "Assets/Architecture/RetainingWall/rwpiecebottomcapcurve01.glb",
+        "category": "Architecture/RetainingWall",
+        "origin": "Fallout4 - Meshes.ba2"
+      },
+      {
+        "name": "StoneWallOld01",
+        "path": "Assets/Architecture/StoneWallOld01.glb",
+        "category": "Architecture",
+        "origin": "Fallout4 - Meshes.ba2 (Homologated)"
+      },
+      {
+        "name": "StoneWallOldRubble",
+        "path": "Assets/Architecture/StoneWallOldRubble.glb",
+        "category": "Architecture",
+        "origin": "Fallout4 - Meshes.ba2 (Homologated)"
+      }
+    ],
+    "fidelity_assessment": "A volumetria e blocagem geom\u00e9trica s\u00e3o cobertas por muros de cantaria; entalhes pr\u00e9-colombianos exigem materiais PBR/Decals.",
+    "technical_notes": "106 varia\u00e7\u00f5es no jogo cl\u00e1ssico decorrem da proje\u00e7\u00e3o isom\u00e9trica 2D (cantos, bordas, termina\u00e7\u00f5es). Em 3D isom\u00e9trica, s\u00e3o reduzidas a um kit modular de 6 pe\u00e7as (reta, canto interno, canto externo, batente de porta, pilar e termina\u00e7\u00e3o)."
+  }
+]
