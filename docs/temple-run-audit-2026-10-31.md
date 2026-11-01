@@ -85,3 +85,13 @@ dotnet run --project tools/TempleInspector/TempleInspector.csproj -- --data-dir 
 ```
 
 Leva cerca de 6 minutos (100 rodadas).
+
+## Atualização: por personagem
+
+Depois da [criação de personagem](character-creation-2026-10-31.md) e do
+[duelo de Cameron](temple-duel-2026-10-31.md), o relatório roda o perfil neutro,
+Narg, Mingan e Chitsa, com duas variantes cada: rota direta, e lança mais cura.
+São 20 sementes por variante (`TEMPLE_RUN_SEEDS` encurta uma conferência).
+Quem não marcou Speech joga o duelo e recupera o equipamento no baú. Os números
+estão no documento do duelo. As tabelas acima são da medição anterior, só com o
+perfil neutro.

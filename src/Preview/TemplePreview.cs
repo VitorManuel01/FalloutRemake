@@ -73,7 +73,7 @@ public partial class TemplePreview : Node3D
 			_hud.LockpickRequested = UseSelectedLockpick;
 			_hud.ExitRequested = UseExit;
 			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
-			_hud.CharacterFocusRequested = FocusCharacter;
+			_hud.CharacterFocusRequested = FocusCharacter; _hud.CharacterSheetRequested = OpenCharacterWindow;
 			_hud.OriginalFloorRequested = ChangeOriginalFloor;
 			_hud.NatureModelsRequested = ChangeNatureModels;
 			_hud.StopRequested = StopWalking;
@@ -108,6 +108,8 @@ public partial class TemplePreview : Node3D
 			if (_directory != null) LoadMap(_directory);
 			else _hud.Status("Escolha a pasta de idioma do Fallout 2 para começar.");
 			if (preferencesNotice != null) NavigationStatus(preferencesNotice);
+			// A person starts by choosing a character; automated runs keep the neutral test profile.
+			if (_map != null && !_test && _capture == null) OpenCharacterWindow();
 			if (_test || _capture != null)
 			{
 				if (_map == null) throw new InvalidDataException("Preview test requires valid game data.");
@@ -126,6 +128,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();
 				if (_test) await CheckCheckpoint();
+				if (_test) await CheckCharacterCreation();
 				if (_test) await CheckCharacterCamera();
 				if (_test) await CheckOriginalFloor();
 				if (_test) await CheckStopWalking();
@@ -169,13 +172,14 @@ public partial class TemplePreview : Node3D
 		var catalog = new MapCatalog(data.Read("data/maps.txt"));
 		var runtimePrototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
 		var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 }, runtimePrototype: runtimePrototypes.Get,
-			templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read));
+			templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read),
+			premade: path => CharacterFile.Read(data.Read(path)));
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
 		_floorArt = new FloorArtCatalog(data.Read); _artLists = new ResourceCatalog(data.Read);
 		_inventoryArt = new InventoryArtCatalog(data.Read); _unavailableItemArt.Clear();
-		LoadObjectText(data);
+		LoadObjectText(data); LoadCharacters(data);
 		BindCurrentArea();
-		_skills.Reset();
+		BindCharacter();
 		_elevation = _map!.Prefix.Header.EnteringElevation; _hud.Elevation(_elevation);
 		BuildWorld(); FocusEntry();
 	}
@@ -352,6 +356,7 @@ public partial class TemplePreview : Node3D
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.I }) CloseInventory();
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.J }) CloseLoot();
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.B }) CloseBag();
+			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.N }) CloseCharacterWindow();
 			return;
 		}
 		if (HandleCombatInput(input)) return;
@@ -368,6 +373,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.K) SaveCheckpoint();
 			if (key.PhysicalKeycode == Key.R) LoadCheckpoint();
 			if (key.PhysicalKeycode == Key.C) FocusCharacter();
+			if (key.PhysicalKeycode == Key.N) OpenCharacterWindow();
 			if (key.PhysicalKeycode == Key.O) ChangeOriginalFloor(!_useOriginalFloor);
 			if (key.PhysicalKeycode == Key.Escape) StopWalking();
 			if (key.PhysicalKeycode == Key.V) ChangeRevealActor(!_revealActor);

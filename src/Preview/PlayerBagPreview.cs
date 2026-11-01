@@ -51,7 +51,9 @@ public partial class TemplePreview
         (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true),
         item => ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true), item => InventoryTexture(item.Map, item.Source),
         item => ProposeExplosivePreparation(item, ExplosiveTimer.DefaultSeconds).Status, PreparationHint, item => BarrierPlacementApproach(item).HasValue,
-        item => _campaign.CanReturnAllItems(item.Map, item.OwnerKey, _walker?.Moving == true), item => _campaign.CanUseDrug(item, _walker?.Moving == true));
+        item => _campaign.CanReturnAllItems(item.Map, item.OwnerKey, _walker?.Moving == true), item => _campaign.CanUseDrug(item, _walker?.Moving == true),
+        (_campaign.Character.Kind == CharacterKind.TestNeutral ? $"Força {CarryWeight.TestStrength} (perfil de teste)" : $"Força {_campaign.Character.Effective.Strength} · {_campaign.Character.Name}")
+            + (_campaign.TempleChestCustody.Length == 0 ? "" : $" · {_campaign.TempleChestCustody.Sum(c => c.Quantity)} unidade(s) no baú do desafio (J ao lado do baú)"));
     // Outside combat a drug costs no AP (CE); the roll uses the fight seed in automated checks, the clock otherwise.
     private void UseDrugFromBag(CarriedItem item)
     {

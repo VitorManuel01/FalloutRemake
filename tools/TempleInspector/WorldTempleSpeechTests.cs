@@ -118,7 +118,7 @@ internal static class WorldTempleSpeechTests
             var (map,profile,world) = Fixture(); world.CommitTempleSpeech(Plan(world,profile),false); var saved = world.Capture("catalog"); byte[] before = State(world);
             WorldSession Restore(WorldCheckpoint snapshot) => WorldSession.Restore(_ => map,new[] { 3,126 },snapshot,"catalog",templeProfile: _ => profile);
             Reject(() => WorldSession.Restore(_ => map,new[] { 3,126 },saved,"catalog"));
-            Reject(() => Restore(saved with { Entries = null, Combat = null, Areas = saved.Areas.Select(a => a with { Consumed = null }).ToArray(), Version = 5, Profile = "neutral-v5" }));
+            Reject(() => Restore(saved with { Entries = null, Combat = null, Character = null, Duel = null, Areas = saved.Areas.Select(a => a with { Consumed = null }).ToArray(), Version = 5, Profile = "neutral-v5" }));
             Reject(() => Restore(saved with { Temple = saved.Temple! with { Profile = "wrong" } }));
             Reject(() => Restore(saved with { Temple = saved.Temple! with { Departure = saved.Temple.Departure with { RemainingTicks = 1 } } }));
             var forged = CheckpointFile.Decode(before); forged.Temple!.Scripts.Blocks[0].Values[14] = 4;
@@ -134,10 +134,10 @@ internal static class WorldTempleSpeechTests
             var (map,_,world) = Fixture(false); var saved = world.Capture("catalog");
             for (int version = 1; version <= 5; version++)
             {
-                var legacy = saved with { Entries = null, Combat = null, Version = version, Profile = $"neutral-v{version}", Areas = saved.Areas.Select(a => a with
+                var legacy = saved with { Entries = null, Combat = null, Character = null, Duel = null, Version = version, Profile = $"neutral-v{version}", Areas = saved.Areas.Select(a => a with
                     { Consumed = null, Taken = version < 2 ? null : a.Taken, Uses = version < 3 ? null : a.Uses, Replacements = version < 4 ? null : a.Replacements }).ToArray() };
                 var restored = WorldSession.Restore(_ => map,new[] { 3,126 },legacy,"catalog");
-                Assert(restored.TempleProgress == null && restored.Capture("catalog").Version == 11 && restored.Current.Doors.Navigation(2).BlockersAt(13728).Any(b => b.Id == 126));
+                Assert(restored.TempleProgress == null && restored.Capture("catalog").Version == 12 && restored.Current.Doors.Navigation(2).BlockersAt(13728).Any(b => b.Id == 126));
             }
         });
         check("NPC departure freezes outside its active elevation and resets invalidate all old actions", () =>
@@ -160,9 +160,9 @@ internal static class WorldTempleSpeechTests
             var missing = JsonNode.Parse(bytes)!; missing.AsObject().Remove("Temple");
             Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes(missing.ToJsonString())));
             string json = Encoding.UTF8.GetString(bytes);
-            Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes(json.Replace("\"Version\": 11", "\"Version\": 11, \"Version\": 11"))));
+            Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes(json.Replace("\"Version\": 12", "\"Version\": 12, \"Version\": 12"))));
             Reject(() => CheckpointFile.Decode(Encoding.UTF8.GetBytes(json.Replace("\"RouteIndex\": 0", "\"RouteIndex\": 0, \"RouteIndex\": 0"))));
-            var legacy = world.Capture("catalog") with { Entries = null, Combat = null, Areas = world.Capture("catalog").Areas.Select(a => a with { Consumed = null }).ToArray(), Version = 5, Profile = "neutral-v5", Temple = null };
+            var legacy = world.Capture("catalog") with { Entries = null, Combat = null, Character = null, Duel = null, Areas = world.Capture("catalog").Areas.Select(a => a with { Consumed = null }).ToArray(), Version = 5, Profile = "neutral-v5", Temple = null };
             var old = JsonNode.Parse(CheckpointFile.Encode(legacy))!; old.AsObject().Remove("Temple");
             Assert(CheckpointFile.Decode(Encoding.UTF8.GetBytes(old.ToJsonString())).Version == 5);
         });

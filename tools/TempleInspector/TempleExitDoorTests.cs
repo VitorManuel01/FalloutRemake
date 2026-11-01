@@ -43,17 +43,17 @@ internal static class TempleExitDoorTests
             var saved = world.Capture("catalog");
             WorldSession Load(WorldCheckpoint value) => WorldSession.Restore(_ => map,new[] { 3 },value,"catalog",templeProfile:_ => profile);
             var restored = Load(CheckpointFile.Decode(CheckpointFile.Encode(saved)));
-            Assert(restored.Location.Hex == 13528 && restored.Current.Doors.Get(key)!.IsOpen && restored.Capture("catalog").Version == 11);
-            Reject(() => Load(saved with { Entries = null, Combat = null, Areas = saved.Areas.Select(a => a with { Consumed = null }).ToArray(), Version = 6,Profile = "neutral-v6" }));
+            Assert(restored.Location.Hex == 13528 && restored.Current.Doors.Get(key)!.IsOpen && restored.Capture("catalog").Version == 12);
+            Reject(() => Load(saved with { Entries = null, Combat = null, Character = null, Duel = null, Areas = saved.Areas.Select(a => a with { Consumed = null }).ToArray(), Version = 6,Profile = "neutral-v6" }));
             Reject(() => Load(saved with { Temple = null }));
             Reject(() => Load(saved with { Temple = saved.Temple! with { Profile = "foreign" } }));
         });
         check("closed v6 Speech progress migrates without opening the exit or changing detached profile identity",() =>
         {
             var (map,profile,world,key) = Fixture(); world.CommitTempleSpeech(WorldTempleSpeechTests.Plan(world,profile),false);
-            var saved = world.Capture("catalog") with { Entries = null, Combat = null, Areas = world.Capture("catalog").Areas.Select(a => a with { Consumed = null }).ToArray(), Version = 6,Profile = "neutral-v6" };
+            var saved = world.Capture("catalog") with { Entries = null, Combat = null, Character = null, Duel = null, Areas = world.Capture("catalog").Areas.Select(a => a with { Consumed = null }).ToArray(), Version = 6,Profile = "neutral-v6" };
             var restored = WorldSession.Restore(_ => map,new[] { 3 },saved,"catalog",templeProfile:_ => profile);
-            Assert(!restored.Current.Doors.Get(key)!.IsOpen && restored.TempleProgress!.Profile == saved.Temple!.Profile && restored.Capture("catalog").Version == 11);
+            Assert(!restored.Current.Doors.Get(key)!.IsOpen && restored.TempleProgress!.Profile == saved.Temple!.Profile && restored.Capture("catalog").Version == 12);
         });
         check("exit adapter refuses a changed native instance binding and owner",() =>
         {

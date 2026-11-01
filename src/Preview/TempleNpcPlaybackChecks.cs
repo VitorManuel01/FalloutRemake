@@ -59,7 +59,12 @@ public partial class TemplePreview
             throw new InvalidDataException("Saving did not pause automatic NPC playback.");
         Toggle(true); Tick(1); LoadCheckpoint(); checkPose();
         if (_templeAutomatic || !saved.SequenceEqual(State()) || _campaign.TempleProgress!.Departure.RemainingTicks != 13)
-            throw new InvalidDataException("Load did not restore the partial wait into paused playback.");
+        {
+            string[] a = System.Text.Encoding.UTF8.GetString(saved).Split('\n'), b = System.Text.Encoding.UTF8.GetString(State()).Split('\n');
+            int at = Enumerable.Range(0, Math.Min(a.Length, b.Length)).FirstOrDefault(i => a[i] != b[i], -1);
+            throw new InvalidDataException($"Load did not restore the partial wait into paused playback (automatic {_templeAutomatic}, ticks {_campaign.TempleProgress!.Departure.RemainingTicks}, "
+                + (at < 0 ? $"lengths {a.Length}/{b.Length}" : $"line {at}: {a[at].Trim()} vs {b[at].Trim()} after {a[Math.Max(0, at - 3)].Trim()}") + ").");
+        }
         Toggle(true); Tick(1.3);
         if (_campaign.TempleProgress.Departure.Phase != NpcDeparturePhase.ToMiddle)
             throw new InvalidDataException("Automatic native event did not release the second leg.");

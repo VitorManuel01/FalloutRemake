@@ -82,7 +82,7 @@ public partial class PlayerBagWindow : AcceptDialog
         Func<CarriedItem, long?> unitWeight, Func<CarriedItem, int, ItemTakeStatus>? canReturn = null, Func<CarriedItem, ItemOriginPlan?>? originRoute = null,
         Func<CarriedItem, Texture2D?>? artwork = null, Func<CarriedItem, ExplosiveProposalStatus>? canPrepareExplosive = null,
         Func<ExplosiveProposalStatus, string>? preparationHint = null, Func<CarriedItem, bool>? canApproachBarrier = null,
-        Func<CarriedItem, ItemTakeStatus>? canReturnAll = null, Func<CarriedItem, DrugUseStatus>? canUseDrug = null)
+        Func<CarriedItem, ItemTakeStatus>? canReturnAll = null, Func<CarriedItem, DrugUseStatus>? canUseDrug = null, string? carrier = null)
     {
         string? selected = SelectedItem == null ? null : RowKey(SelectedItem);
         _text = text; _mapName = mapName; _canReturn = canReturn; _originRoute = originRoute; _canPrepareExplosive = canPrepareExplosive;
@@ -90,7 +90,7 @@ public partial class PlayerBagWindow : AcceptDialog
         _lines.Clear(); _items.Clear(); TreeItem root = _items.CreateItem(); TreeItem? select = null;
         TotalQuantity = items.Sum(i => (long)i.Quantity);
         _summary.Text = items.Length == 0 ? "Sua bolsa está vazia." : $"{TotalQuantity} {(TotalQuantity == 1 ? "unidade" : "unidades")} em {items.Length} {(items.Length == 1 ? "pilha" : "pilhas")}";
-        _summary.Text += $" · Carga: {CarryWeightText.Load(carriedWeight, capacity)} · Força {CarryWeight.TestStrength} (perfil de teste)";
+        _summary.Text += $" · Carga: {CarryWeightText.Load(carriedWeight, capacity)} · {carrier ?? $"Força {CarryWeight.TestStrength} (perfil de teste)"}";
         foreach (CarriedItem item in items)
         {
             string key = RowKey(item); _lines.Add(key, item); TreeItem row = _items.CreateItem(root);

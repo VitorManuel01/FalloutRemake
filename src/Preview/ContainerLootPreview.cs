@@ -27,6 +27,8 @@ public partial class TemplePreview
         if (_loot?.Visible != true && CombatRefuses("recolher itens")) return;
         if (_loot?.Visible == true) { CloseLoot(); return; }
         if (_selected?.Source is not { Subtype: 1 } owner || owner.Header.Pid >> 24 != 0 || _campaign == null) return;
+        // The challenge chest gives back what Cameron's challenge stored (CE looting, take all).
+        if (_campaign.IsTempleChest(owner.Key) && _campaign.TempleChestCustody.Length != 0) { RetrieveFromTempleChest(); return; }
         CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseInventory(); ClearRouteHover(); _lootOwner = owner.Key;
         GetTree().Root.GuiEmbedSubwindows = true;
         var dialog = new ContainerLootWindow { Size = new Vector2I(900, 560), Theme = _hud.GetChild<Control>(0).Theme };
@@ -58,8 +60,8 @@ public partial class TemplePreview
             || owner.Header is not { Id: 100, Pid: 245, Tile: 20132, Elevation: 2, Sid: 50331654, ScriptIndex: 758 }
             || !map.ScriptBindings.Any(b => b.Sid == owner.Header.Sid && b.Index == 758
                 && b.Program.Sha256 == "D80BC3F24D0936D43CA030ED4A24332B4C34CB655982BEFC64402813E451963C")) return null;
-        return "Baú do desafio: no jogo original, recebe os itens do personagem por script. "
-            + "O desafio e a recuperação desses itens ainda não estão disponíveis nesta prévia.";
+        return "Baú do desafio: o desafio de Cameron guarda aqui o equipamento do personagem durante a luta. "
+            + "Depois dela, J ao lado do baú devolve tudo.";
     }
     private void TakeFromContainer(string key, int quantity)
     {
@@ -143,7 +145,7 @@ public partial class TemplePreview
             OpenLoot(); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             if (_loot == null || _loot.Remaining != 0 || !_loot.StatusText.Contains("Baú do desafio")
-                || !_loot.StatusText.Contains("recuperação desses itens ainda não")
+                || !_loot.StatusText.Contains("J ao lado do baú devolve tudo")
                 || _campaign.Current.Items.ContainerStatus(_lootOwner!) != ItemTakeStatus.ScriptRequired
                 || !((Button)_loot.FindChild("TakeOneAction", true, false)).Disabled
                 || !((Button)_loot.FindChild("TakeStackAction", true, false)).Disabled
@@ -164,7 +166,7 @@ public partial class TemplePreview
             if (_campaign.Location != location || _campaign.CarriedCount != 0 || !_doors.Capture().Doors.SequenceEqual(doors.Doors))
                 throw new InvalidDataException("Inspecting scripted storage changed world state.");
             MapLayoutWriter.Verify(_map!); CloseLoot(); ResetWalker();
-            GD.Print("SCRIPTED_CONTAINER_OK: known chest role and recovery limitation, generic fallback/reset, actions disabled, unchanged actor/items/doors/source bytes verified.");
+            GD.Print("SCRIPTED_CONTAINER_OK: known chest role and its recovery after the challenge, generic fallback/reset, actions disabled, unchanged actor/items/doors/source bytes verified.");
         }
         finally { CloseLoot(); _checkingNavigation = false; }
     }

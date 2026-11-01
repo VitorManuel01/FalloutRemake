@@ -32,7 +32,7 @@ internal static class ItemUseCheckpointReport
             throw new InvalidDataException("Partially elapsed logical use failed to complete.");
         var consumed = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 },
             CheckpointFile.Decode(CheckpointFile.Encode(elapsed.Capture(catalog.Source.Sha256))), catalog.Source.Sha256);
-        var legacy = legacySource with { Entries = null, Combat = null, Version = 2, Profile = "neutral-v2", Areas = legacySource.Areas.Select(a => a with { Consumed = null, Uses = null, Replacements = null }).ToArray() };
+        var legacy = legacySource with { Entries = null, Combat = null, Character = null, Duel = null, Version = 2, Profile = "neutral-v2", Areas = legacySource.Areas.Select(a => a with { Consumed = null, Uses = null, Replacements = null }).ToArray() };
         var upgraded = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 }, CheckpointFile.Decode(CheckpointFile.Encode(legacy)), catalog.Source.Sha256);
         if (upgraded.CarriedCount != 1 || upgraded.ItemUses.Length != 0 || consumed.CarriedCount != 0 || consumed.ItemUses.Single().Allocation.Phase != ItemUsePhase.Consumed)
             throw new InvalidDataException("Legacy or consumed ownership restoration failed.");

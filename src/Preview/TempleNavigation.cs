@@ -108,7 +108,7 @@ public partial class TemplePreview
         if (_campaign == null) return;
         DiscardCombat();
         SetCameraFollow(false);
-        _campaign.Reset(); _skills.Reset(); BindCurrentArea();
+        _campaign.Reset(); _skills.Reset(); BindCurrentArea(); RefreshDoorAction();
         ChangeElevation(_travel!.Location.Elevation); FocusEntry();
         NavigationStatus($"Marcador reiniciado · {_reachable!.Count} hexes alcançáveis");
     }

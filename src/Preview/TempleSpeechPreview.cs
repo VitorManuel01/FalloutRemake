@@ -25,16 +25,20 @@ public partial class TemplePreview
         if (_walker.Moving) return "Termine ou pare a caminhada antes de consultar a conversa.";
         if (FalloutGrid.Distance(_walker.CurrentHex, _selected.Source.Header.Tile) > 1) return "Aproxime o personagem a um hex do NPC para consultar a conversa.";
         if (_directory == null || _objectText == null) return "Os textos originais da instalação não estão disponíveis.";
+        if (!_campaign.Character.QualifiesForTempleSpeech)
+            return $"{_campaign.Character.Name} não tem Speech marcado (ou INT abaixo de 4). No original, o caminho é o duelo desarmado com Cameron, ainda não modelado.";
         return null;
     }
+    private int SpeechIntelligence => _campaign?.Character.Effective.Intelligence ?? 5;
     private void RefreshSpeechAction()
     {
         RefreshActiveTempleHud();
         _hud.SpeechRequested = OpenSpeechConsultation;
-        _hud.NpcApproachRequested = ApproachTempleNpc;
+        _hud.NpcApproachRequested = ApproachTempleNpc; _hud.DuelRequested = StartTempleDuel;
         bool actor = _selected?.Source.Offset == 425776 && _map?.Source.Sha256 == TempleBarrierEffectProposal.MapHash;
         string? blocked = SpeechBlockedReason();
         _hud.SpeechAction(actor, blocked == null && !InspectorOpen, blocked ?? "Consultar cinco escolhas originais em um ensaio separado da partida.");
+        RefreshDuelAction(actor);
         int? target = TempleNpcApproachTarget();
         _hud.NpcApproachAction(actor, target.HasValue && target != _walker?.CurrentHex,
             target.HasValue ? "Caminhar até um hex ao lado do NPC. A conversa é aberta separadamente."
@@ -74,7 +78,7 @@ public partial class TemplePreview
             {
                 if (!Active()) return;
                 _speechDraft?.Cancel(); _speechState = profile.CreateInitial();
-                _speechDraft = TempleSpeechDraft.Begin(profile, _speechState, 5, true)!;
+                _speechDraft = TempleSpeechDraft.Begin(profile, _speechState, SpeechIntelligence, _campaign!.Character.TempleSpeechTag)!;
                 Refresh();
             }
             dialog.RestartRequested = Restart;
@@ -84,7 +88,7 @@ public partial class TemplePreview
                 try
                 {
                     var departureProfile = TempleNpcDepartureProfile.Create(_map!,data.Read);
-                    var proposal = _campaign!.PrepareTempleSpeech(departureProfile,_speechState.Capture(),_walker?.Moving == true,5,true);
+                    var proposal = _campaign!.PrepareTempleSpeech(departureProfile,_speechState.Capture(),_walker?.Moving == true,SpeechIntelligence,_campaign.Character.TempleSpeechTag);
                     if (proposal.Status != TempleWorldStatus.Ready || _campaign.CommitTempleSpeech(proposal.Plan,_walker?.Moving == true) != TempleWorldStatus.Ready)
                     { dialog.Notice("A situação mudou. Feche e consulte novamente antes de aplicar a conversa."); return; }
                     CloseSpeechConsultation(); RefreshActiveTempleProjection();
@@ -122,7 +126,7 @@ public partial class TemplePreview
                 {
                     var candidate = TempleSpeechStateFile.Read(SpeechCheckpointPath, profile);
                     _speechDraft?.Cancel(); _speechState = candidate;
-                    _speechDraft = TempleSpeechDraft.Begin(profile, candidate, 5, true);
+                    _speechDraft = TempleSpeechDraft.Begin(profile, candidate, SpeechIntelligence, _campaign!.Character.TempleSpeechTag);
                     Refresh(); dialog.Notice("Ensaio carregado. As escolhas anteriores foram substituídas; a partida permanece no mesmo estado.");
                 }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)

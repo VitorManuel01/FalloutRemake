@@ -16,6 +16,7 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _inventory = new() { Name = "InventoryAction", Text = "Inventário [I]", Disabled = true,
         TooltipText = "Consultar o inventário original do objeto selecionado, sem transferir itens" };
     private readonly Button _focusCharacter = new() { Name = "CharacterFocusAction", Text = "Personagem [C]" };
+    private readonly Button _characterSheet = new() { Name = "CharacterSheetAction", Text = "Ficha [N]", TooltipText = "Escolher Narg, Mingan, Chitsa ou criar um personagem · começa um novo jogo" };
     private readonly Button _originalFloor = new() { Name = "OriginalFloorAction", Text = "Piso original [O]", ToggleMode = true,
         TooltipText = "Comparar com o piso da instalação local" };
     private readonly Button _revealActor = new() { Name = "WallOcclusionAction", Text = "Auto [V]", ToggleMode = true, ButtonPressed = true,
@@ -45,7 +46,7 @@ public partial class PreviewHud : CanvasLayer
     public Action? LockpickRequested;
     public Action? ExitRequested;
     public Action? SaveRequested, LoadRequested;
-    public Action? CharacterFocusRequested;
+    public Action? CharacterFocusRequested, CharacterSheetRequested;
     public Action<bool>? OriginalFloorRequested;
     public Action? StopRequested;
     public Action<bool>? RevealActorRequested;
@@ -54,6 +55,8 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _speech = new() { Name = "SpeechAction", Text = "Conversa · ensaio", Visible = false, Disabled = true };
     public Action? NpcApproachRequested;
     private readonly Button _npcApproach = new() { Name = "NpcApproachAction", Text = "Chegar ao NPC", Visible = false, Disabled = true };
+    public Action? DuelRequested;
+    private readonly Button _duel = new() { Name = "TempleDuelAction", Text = "Desafio de Cameron", Visible = false, Disabled = true };
     public Action<bool>? NavigationGridRequested;
     public Action? FrameRouteRequested;
     public Action? LootRequested;
@@ -98,6 +101,7 @@ public partial class PreviewHud : CanvasLayer
         Button(row, "Entrada  [F]", () => EntryRequested?.Invoke());
         Button(row, "Ver tudo  [Home]", () => FrameRequested?.Invoke());
         _focusCharacter.Pressed += () => CharacterFocusRequested?.Invoke(); row.AddChild(_focusCharacter);
+        _characterSheet.Pressed += () => CharacterSheetRequested?.Invoke(); row.AddChild(_characterSheet);
         _bag.Pressed += () => BagRequested?.Invoke(); row.AddChild(_bag);
         _save.Pressed += () => SaveRequested?.Invoke(); row.AddChild(_save);
         _load.Pressed += () => LoadRequested?.Invoke(); row.AddChild(_load);
@@ -144,6 +148,7 @@ public partial class PreviewHud : CanvasLayer
         _inventory.Pressed += () => InventoryRequested?.Invoke(); selectionActions.AddChild(_inventory);
         _speech.Pressed += () => { if (!_speech.Disabled) SpeechRequested?.Invoke(); }; selectionActions.AddChild(_speech);
         _npcApproach.Pressed += () => { if (!_npcApproach.Disabled) NpcApproachRequested?.Invoke(); }; selectionActions.AddChild(_npcApproach);
+        _duel.Pressed += () => { if (!_duel.Disabled) DuelRequested?.Invoke(); }; selectionActions.AddChild(_duel);
 
         _navigationPanel = new PanelContainer { AnchorTop = 1, AnchorBottom = 1,
             AnchorRight = 1, OffsetLeft = 16, OffsetRight = -316, OffsetTop = -272, OffsetBottom = -64 };
@@ -202,6 +207,8 @@ public partial class PreviewHud : CanvasLayer
     public void InventoryAction(bool enabled) => _inventory.Disabled = !enabled;
     public void SpeechAction(bool visible, bool enabled, string hint)
     { _speech.Visible = visible; _speech.Disabled = !enabled; _speech.TooltipText = hint; }
+    public void DuelAction(bool visible, bool enabled, string hint)
+    { _duel.Visible = visible; _duel.Disabled = !enabled; _duel.TooltipText = hint; }
     public void NpcApproachAction(bool visible, bool enabled, string hint)
     { _npcApproach.Visible = visible; _npcApproach.Disabled = !enabled; _npcApproach.TooltipText = hint; }
     public void NavigationGrid(bool enabled) => _grid.SetPressedNoSignal(enabled);

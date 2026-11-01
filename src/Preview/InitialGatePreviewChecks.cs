@@ -49,6 +49,7 @@ public partial class TemplePreview
                 throw new InvalidDataException("Source NPC approach changed items/XP or arrived elsewhere.");
             _hud.Status("Ao alcance do personagem · consulta da conversa disponível");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "npc-approach.png"));
+            await CheckTempleDuel();
             await CheckSpeechConsultation();
             await CheckActiveTempleSpeech();
             CheckpointFile.Write(CheckpointPath, _campaign.Capture(_mapCatalog.Source.Sha256)); LoadCheckpoint();

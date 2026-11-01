@@ -27,10 +27,10 @@ public sealed partial class WorldSession
     // Damage is what persists between fights: a level-up raises max HP and, as CE critterAdjustHitPoints, current HP alike.
     private int _playerDamage;
     public int Level => CharacterProgression.Level(Experience);
-    public int MaxHitPoints => CharacterProgression.MaxHitPoints(Special.Neutral, Level);
+    public int MaxHitPoints => CharacterProgression.MaxHitPoints(Character, Level);
     public int HitPoints => MaxHitPoints - _playerDamage;
-    public int UnspentSkillPoints => CharacterProgression.UnspentSkillPoints(Special.Neutral, Level);
-    public int PerksAvailable => CharacterProgression.PerksAvailable(Level);
+    public int UnspentSkillPoints => CharacterProgression.UnspentSkillPoints(Character, Level);
+    public int PerksAvailable => CharacterProgression.PerksAvailable(Character, Level);
     /// <summary>Player HP when hurt; null means unhurt. Healing comes from level-ups and drugs (<see cref="UseDrug"/>).</summary>
     public int? PlayerHitPoints => _playerDamage == 0 ? null : HitPoints;
     public bool HasCombatOutcome => _defeated.Count != 0 || _playerDamage != 0;
@@ -54,7 +54,7 @@ public sealed partial class WorldSession
     }
 
     /// <summary>Drops the open fight without applying it (load, reset or a refused outcome).</summary>
-    public void AbandonCombat() => _activeFight = null;
+    public void AbandonCombat() { _activeFight = null; AbandonTempleDuel(); }
 
     public CombatCommitStatus CommitCombat(CombatSession fight)
     {
@@ -64,6 +64,7 @@ public sealed partial class WorldSession
         CombatantState[] players = fight.Combatants.Where(c => c.IsPlayer).ToArray();
         if (players.Length != 1) return CombatCommitStatus.InvalidFight;
         if (!players[0].Alive) return CombatCommitStatus.PlayerDefeated;
+        if (ReferenceEquals(fight, _duelFight)) return CommitTempleDuel(fight, players[0]);
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
         var dead = new List<DefeatedCritter>();
         foreach (CombatantState foe in fight.Combatants.Where(c => !c.IsPlayer))
@@ -103,7 +104,8 @@ public sealed partial class WorldSession
 
     // Atomic with the rest of Restore (runs on the candidate session). Every corpse must be an encounter critter of a
     // restored area lying on geometry it could reach, and the XP must be exactly what those kills award.
-    private void RestoreCombat(SavedCombat? saved)
+    // A killed Cameron (the challenge's lethal outcome) may lie among the corpses besides the encounter creatures.
+    private void RestoreCombat(SavedCombat? saved, bool cameronKilled = false)
     {
         ResetCombat();
         if (saved == null) return;
@@ -116,7 +118,8 @@ public sealed partial class WorldSession
                 throw new InvalidDataException("Checkpoint corpse is duplicated or outside the restored areas.");
             MapObject? source = area.Map.ObjectLayers.SelectMany(l => l.Objects).FirstOrDefault(o => o.Key == dead.Key);
             Prototype? prototype = area.Map.Prototypes.FirstOrDefault(p => p.Pid == dead.Pid);
-            if (source == null || prototype == null || source.Header.Pid != dead.Pid || !EncounterPids.Contains(dead.Pid)
+            bool cameron = cameronKilled && dead.Map == 3 && source?.Offset == 425776;
+            if (source == null || prototype == null || source.Header.Pid != dead.Pid || !(EncounterPids.Contains(dead.Pid) || cameron)
                 || source.Header.Elevation != dead.Elevation || !HexNavigation.Valid(dead.Hex) || (source.Header.Flags & HexNavigation.Hidden) != 0)
                 throw new InvalidDataException("Checkpoint corpse does not match an encounter critter of its MAP.");
             HexNavigation navigation = area.Doors.Navigation(dead.Elevation);
@@ -187,8 +190,8 @@ public sealed partial class WorldSession
         ArgumentNullException.ThrowIfNull(encounter); ArgumentNullException.ThrowIfNull(playerWeapon);
         if (encounter.Player != Location) throw new InvalidOperationException("The encounter belongs to another actor location.");
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
-        var stats = DerivedCombatStats.ForCharacter(Special.Neutral, level: Level);
-        var combatants = new List<CombatantState> { new("player", "Escolhido", null, 0, true, Location.Hex, Location.Elevation, stats,
+        var stats = DerivedCombatStats.ForPlayer(Character, Level);
+        var combatants = new List<CombatantState> { new("player", Character.Name, null, 0, true, Location.Hex, Location.Elevation, stats,
             playerWeapon, HitPoints, healingDoses: HealingDoses) };
         foreach (string key in encounter.FoeKeys)
         {

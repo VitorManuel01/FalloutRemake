@@ -18,17 +18,21 @@ public sealed record TempleSpeechProposal(TempleWorldStatus Status, TempleSpeech
 public sealed record TempleWorldAdvance(TempleWorldStatus Status, int AppliedTicks = 0, int UnusedTicks = 0);
 public sealed record TempleNpcRouteInfo(TempleWorldStatus Status, int[] Tiles, int? BlockedHex = null, string? TargetKey = null);
 
+/// <summary>How the final challenge was passed: Cameron's Speech branch (G10=2) or the won unarmed duel (G10=1).</summary>
+public enum TempleTrialPath { Speech, Duel }
+
 internal sealed class TempleWorldProgress
 {
     internal TempleNpcDepartureProfile Profile { get; }
     internal NpcDepartureSnapshot Departure { get; }
     internal bool InitialGateOpen { get; }
-    internal TempleWorldProgress(TempleNpcDepartureProfile profile, NpcDepartureSnapshot departure, bool initialGateOpen)
-    { profile.Validate(departure); Profile = profile; Departure = departure; InitialGateOpen = initialGateOpen; }
+    internal TempleTrialPath Path { get; }
+    internal TempleWorldProgress(TempleNpcDepartureProfile profile, NpcDepartureSnapshot departure, bool initialGateOpen, TempleTrialPath path = TempleTrialPath.Speech)
+    { profile.Validate(departure); Profile = profile; Departure = departure; InitialGateOpen = initialGateOpen; Path = path; }
     internal ScriptStateSnapshot Scripts()
     {
         var state = Profile.Speech.CreateInitial();
-        var writes = Profile.Speech.AcceptanceWrites().Append(new ScriptVariableWrite(ScriptVariableScope.ScriptLocal,
+        var writes = (Path == TempleTrialPath.Speech ? Profile.Speech.AcceptanceWrites() : Profile.Speech.DuelWrites()).Append(new ScriptVariableWrite(ScriptVariableScope.ScriptLocal,
             Profile.ActorKey, 14, (int)Departure.Phase)).ToArray();
         if (state.Apply(writes, state.SessionToken, 0) != ScriptWriteStatus.Ready) throw new InvalidDataException("Temple progress script projection failed.");
         return state.Capture();
@@ -43,11 +47,14 @@ internal sealed class TempleWorldProgress
     internal static TempleWorldProgress Restore(TempleNpcDepartureProfile profile, SavedTempleProgress saved)
     {
         if (saved == null || saved.Profile != profile.Fingerprint) throw new InvalidDataException("Unsupported Temple world profile.");
-        var candidate = new TempleWorldProgress(profile, saved.Departure, saved.InitialGateOpen);
-        // Expected values are generated from the phase; L14 can never disagree with pose or event.
-        if (saved.Scripts == null || JsonSerializer.Serialize(saved.Scripts) != JsonSerializer.Serialize(candidate.Scripts()))
-            throw new InvalidDataException("Temple script variables disagree with NPC phase.");
-        return candidate;
+        // Expected values are generated from the path and phase; L14 can never disagree with pose or event, and the
+        // variables tell which path passed the challenge.
+        foreach (TempleTrialPath path in Enum.GetValues<TempleTrialPath>())
+        {
+            var candidate = new TempleWorldProgress(profile, saved.Departure, saved.InitialGateOpen, path);
+            if (saved.Scripts != null && JsonSerializer.Serialize(saved.Scripts) == JsonSerializer.Serialize(candidate.Scripts())) return candidate;
+        }
+        throw new InvalidDataException("Temple script variables disagree with NPC phase.");
     }
 }
 
@@ -58,6 +65,7 @@ public sealed partial class WorldSession
     public Guid TempleToken { get; private set; } = Guid.NewGuid();
     public long TempleRevision { get; private set; }
     public SavedTempleProgress? TempleProgress => _templeProgress?.Capture();
+    public TempleTrialPath? TempleTrial => _templeProgress?.Path;
     public TempleNpcRouteInfo InspectTempleNpcRoute()
     {
         if (_templeProgress == null || CurrentMap != 3 || Location.Elevation != 2) return new(TempleWorldStatus.Unavailable,Array.Empty<int>());
@@ -76,13 +84,18 @@ public sealed partial class WorldSession
     }
     public MapObject EffectiveObject(int map, MapObject source) => map == 3 && _templeProgress?.Profile.ActorKey == source.Key
         ? _templeProgress.Profile.Actor(_templeProgress.Departure) : DefeatedObject(map, source);
-    private DoorState? TempleGate(int map, string key) => map == 3 && _templeProgress?.Profile.GateKey == key ? _templeProgress.Gate() : null;
+    private DoorState? TempleGate(int map, string key) => map != 3 ? null
+        : _templeProgress?.Profile.GateKey == key ? _templeProgress.Gate()
+        : _duelProfile?.GateKey == key && _duelOutcome != TempleDuelOutcome.None ? _duelProfile.LockedGate() : null;
     private string TempleWorldStamp() => Convert.ToHexString(SHA256.HashData(CheckpointFile.Encode(Capture("temple-transaction"))));
     private TempleWorldStatus TempleSpeechPreflight(TempleNpcDepartureProfile? profile, ScriptStateSnapshot? accepted, bool moving, int intelligence, bool tagged)
     {
-        if (_templeProgress != null) return TempleWorldStatus.AlreadyAccepted;
+        if (_templeProgress != null || _duelOutcome != TempleDuelOutcome.None) return TempleWorldStatus.AlreadyAccepted;
         if (moving) return TempleWorldStatus.Busy;
-        if (profile == null || accepted == null || intelligence != 5 || !tagged
+        // actemvil Node003 offers line 165 only with Speech tagged (metarule 40, skill 14) at the IN 4+ option level, and
+        // Node015 then passes on "tagged or roll succeeded". The values must be those of the playing character.
+        if (profile == null || accepted == null || intelligence is < 4 or > 10 || !tagged
+            || intelligence != Character.Effective.Intelligence || tagged != Character.TempleSpeechTag
             || profile.Speech.Classify(accepted) != TempleSpeechState.Accepted) return TempleWorldStatus.Unsupported;
         if (CurrentMap != 3 || Location.Elevation != 2 || !profile.Matches(Current.Map)) return TempleWorldStatus.Unavailable;
         var initial = profile.Actor(new(1, profile.Fingerprint, NpcDeparturePhase.ToGate, 0, 0));
@@ -126,7 +139,7 @@ public sealed partial class WorldSession
         var result = candidate.Step(candidate.SessionToken, candidate.Revision, Location);
         if (result != NpcDepartureStatus.Ready) return result switch
         { NpcDepartureStatus.Occupied => TempleWorldStatus.Occupied, NpcDepartureStatus.Complete => TempleWorldStatus.Complete, _ => TempleWorldStatus.NotWalking };
-        _templeProgress = new(current.Profile, candidate.Capture(), current.InitialGateOpen); TempleRevision++;
+        _templeProgress = new(current.Profile, candidate.Capture(), current.InitialGateOpen, current.Path); TempleRevision++;
         return TempleWorldStatus.Ready;
     }
     public TempleWorldAdvance AdvanceTempleNpcTime(int ticks, Guid token, long revision, bool moving)
@@ -135,7 +148,7 @@ public sealed partial class WorldSession
         var current = _templeProgress!; var candidate = current.Profile.Restore(current.Departure);
         var result = candidate.AdvanceDelay(ticks, candidate.SessionToken, candidate.Revision);
         if (result.Status != NpcDepartureStatus.Ready) return new(result.Status == NpcDepartureStatus.Invalid ? TempleWorldStatus.Invalid : TempleWorldStatus.NotWaiting);
-        _templeProgress = new(current.Profile, candidate.Capture(), current.InitialGateOpen); TempleRevision++;
+        _templeProgress = new(current.Profile, candidate.Capture(), current.InitialGateOpen, current.Path); TempleRevision++;
         return new(TempleWorldStatus.Ready, result.AppliedTicks, result.UnusedTicks);
     }
     private void RestoreTempleProgress(SavedTempleProgress? saved)

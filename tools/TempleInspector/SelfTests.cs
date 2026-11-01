@@ -152,6 +152,8 @@ internal static class SelfTests
             CombatTests.Run(Check);
             WorldCombatTests.Run(Check);
         WorldDrugTests.Run(Check);
+        PlayerCharacterTests.Run(Check);
+        TempleDuelTests.Run(Check);
             CharacterProgressionTests.Run(Check);
             MessageTextTests.Run(Check);
             InventoryViewTests.Run(Check);

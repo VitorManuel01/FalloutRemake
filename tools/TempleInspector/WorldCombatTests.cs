@@ -92,7 +92,7 @@ internal static class WorldCombatTests
             Assert(world.CommitCombat(fight) == CombatCommitStatus.Ready, "Setup fight.");
             WorldCheckpoint saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
             DefeatedCritter dead = saved.Combat!.Defeated.Single();
-            Assert(saved.Version == 11 && saved.Profile == "neutral-v11" && saved.Combat.Experience == 25 && saved.Combat.PlayerHitPoints == 26
+            Assert(saved.Version == 12 && saved.Profile == "neutral-v12" && saved.Combat.Experience == 25 && saved.Combat.PlayerHitPoints == 26
                 && dead.Key == "map3:near-ant" && dead.Hex == fight.Get("map3:near-ant").Hex && dead.Pid == AntPid, "Captured outcome.");
             var restored = Load(saved);
             Assert(restored.IsDefeated(3, dead.Key) && restored.CombatExperience == 25 && restored.Experience == world.Experience && restored.PlayerHitPoints == 26
@@ -100,8 +100,8 @@ internal static class WorldCombatTests
                 && restored.EffectiveObject(3, restored.Current.Map.ObjectLayers[0].Objects.Single(o => o.Key == dead.Key)).Header.Tile == dead.Hex, "Restored outcome.");
             var clean = new WorldSession(_ => Map(), new[] { 3, 126 }).Capture("catalog");
             Assert(clean.Combat is { Defeated.Length: 0, Experience: 0, PlayerHitPoints: null }, "Empty v10 combat block.");
-            var legacy = Load(clean with { Version = 9, Profile = "neutral-v9", Combat = null, Areas = clean.Areas.Select(a => a with { Consumed = null }).ToArray() });
-            Assert(!legacy.HasCombatOutcome && legacy.Capture("catalog").Version == 11, "v9 migrates without combat.");
+            var legacy = Load(clean with { Version = 9, Profile = "neutral-v9", Combat = null, Character = null, Duel = null, Areas = clean.Areas.Select(a => a with { Consumed = null }).ToArray() });
+            Assert(!legacy.HasCombatOutcome && legacy.Capture("catalog").Version == 12, "v9 migrates without combat.");
             int wall = FalloutGrid.Neighbor(Tile(95, 100), 0)!.Value;
             var forged = new[]
             {
@@ -114,7 +114,7 @@ internal static class WorldCombatTests
                 saved with { Combat = saved.Combat with { Defeated = new[] { dead with { Elevation = 1 } } } },
                 saved with { Combat = saved.Combat with { Defeated = new[] { dead with { Hex = wall } } } },
                 saved with { Combat = saved.Combat with { Defeated = new[] { dead with { Map = 126 } } } },
-                saved with { Combat = null },
+                saved with { Combat = null, Character = null, Duel = null },
                 saved with { Version = 9, Profile = "neutral-v9" }
             };
             foreach (WorldCheckpoint bad in forged)

@@ -24,6 +24,8 @@ public sealed class ItemTransferSession
     private Dictionary<string, TakenItem> _taken = new(StringComparer.Ordinal);
     private readonly Dictionary<Guid, ItemUseAllocation> _uses = new();
     private readonly Dictionary<string, ConsumedItem> _consumed = new(StringComparer.Ordinal);
+    // Units held by a script container (the Temple challenge chest) until the actor takes them back.
+    private readonly Dictionary<string, ConsumedItem> _custody = new(StringComparer.Ordinal);
     public const int MaxUses = 1024;
     public long Revision { get; private set; }
     public ItemTransferSession(MapDocument map)
@@ -42,7 +44,36 @@ public sealed class ItemTransferSession
     public TakenItem[] Capture() => _taken.Values.OrderBy(t => t.ItemKey, StringComparer.Ordinal).ToArray();
     public ItemUseAllocation[] CaptureUses() => _uses.Values.OrderBy(u => u.Id).ToArray();
     public ConsumedItem[] CaptureConsumed() => _consumed.Values.OrderBy(c => c.ItemKey, StringComparer.Ordinal).ToArray();
-    private int UsedQuantity(string itemKey) => _uses.Values.Where(u => u.ItemKey == itemKey).Sum(u => u.Quantity) + (_consumed.GetValueOrDefault(itemKey)?.Quantity ?? 0);
+    public ConsumedItem[] CaptureCustody() => _custody.Values.OrderBy(c => c.ItemKey, StringComparer.Ordinal).ToArray();
+    private int UsedQuantity(string itemKey) => _uses.Values.Where(u => u.ItemKey == itemKey).Sum(u => u.Quantity) + (_consumed.GetValueOrDefault(itemKey)?.Quantity ?? 0)
+        + (_custody.GetValueOrDefault(itemKey)?.Quantity ?? 0);
+    /// <summary>Moves every carried unit into custody (CE itemMoveAll from the actor), returning what moved.</summary>
+    internal ConsumedItem[] DepositAll()
+    {
+        ConsumedItem[] moved = Carried.Select(c => new ConsumedItem(c.OwnerKey, c.Source.Key, c.Quantity)).ToArray();
+        foreach (ConsumedItem row in moved)
+            _custody[row.ItemKey] = row with { Quantity = row.Quantity + (_custody.GetValueOrDefault(row.ItemKey)?.Quantity ?? 0) };
+        if (moved.Length != 0) Revision++;
+        return moved;
+    }
+    /// <summary>Gives back every unit in custody (taking all from the container).</summary>
+    internal int ReleaseCustody()
+    {
+        int units = _custody.Values.Sum(c => c.Quantity);
+        if (_custody.Count != 0) { _custody.Clear(); Revision++; }
+        return units;
+    }
+    internal void RestoreCustody(ConsumedItem[] rows)
+    {
+        var candidate = new Dictionary<string, ConsumedItem>(StringComparer.Ordinal);
+        foreach (ConsumedItem row in rows ?? throw new InvalidDataException("Missing custody rows."))
+        {
+            if (row == null || row.OwnerKey == null || row.ItemKey == null || row.Quantity <= 0 || _taken.GetValueOrDefault(row.ItemKey)?.OwnerKey != row.OwnerKey
+                || !candidate.TryAdd(row.ItemKey, row) || CarriedQuantity(row.ItemKey) < row.Quantity)
+                throw new InvalidDataException("Custody item source or quantity is invalid.");
+        }
+        _custody.Clear(); foreach (var row in candidate) _custody.Add(row.Key, row.Value); Revision++;
+    }
     private int CarriedQuantity(string itemKey) => (_taken.GetValueOrDefault(itemKey)?.Quantity ?? 0) - UsedQuantity(itemKey);
     public CarriedItem[] Carried => Capture().Select(t => new CarriedItem(MapId, t.OwnerKey,
         _owners[t.OwnerKey].Inventory.Single(e => e.Object.Key == t.ItemKey).Object, CarriedQuantity(t.ItemKey))).Where(i => i.Quantity > 0).ToArray();
@@ -52,9 +83,10 @@ public sealed class ItemTransferSession
         if (entry == null) return null;
         return new(entry.Quantity, entry.Quantity - (_taken.GetValueOrDefault(itemKey)?.Quantity ?? 0), CarriedQuantity(itemKey),
             _uses.Values.Where(u => u.ItemKey == itemKey && u.Phase == ItemUsePhase.Placed).Sum(u => u.Quantity),
-            _uses.Values.Where(u => u.ItemKey == itemKey && u.Phase == ItemUsePhase.Consumed).Sum(u => u.Quantity) + (_consumed.GetValueOrDefault(itemKey)?.Quantity ?? 0));
+            _uses.Values.Where(u => u.ItemKey == itemKey && u.Phase == ItemUsePhase.Consumed).Sum(u => u.Quantity) + (_consumed.GetValueOrDefault(itemKey)?.Quantity ?? 0),
+            _custody.GetValueOrDefault(itemKey)?.Quantity ?? 0);
     }
-    public void Reset() { _taken.Clear(); _uses.Clear(); _consumed.Clear(); Revision++; }
+    public void Reset() { _taken.Clear(); _uses.Clear(); _consumed.Clear(); _custody.Clear(); Revision++; }
     internal Prototype? PrototypeOf(MapObject item) => _prototypes.GetValueOrDefault(item.Header.Pid);
     /// <summary>Uses up carried units of one collected source item; the caller has already checked what the item does.</summary>
     internal ItemUseStatus ConsumeCarried(string ownerKey, string itemKey, int quantity)
@@ -250,6 +282,7 @@ public sealed class ItemTransferSession
         _taken.Clear(); foreach (var row in candidate) _taken.Add(row.Key, row.Value);
         _uses.Clear(); foreach (var row in allocations) _uses.Add(row.Key, row.Value);
         _consumed.Clear(); foreach (var row in eaten) _consumed.Add(row.Key, row.Value);
+        _custody.Clear();
         Revision++;
     }
 }

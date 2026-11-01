@@ -124,6 +124,10 @@ public sealed class TempleNpcDepartureProfile
             throw new InvalidDataException("NPC departure requires the verified completed Speech rehearsal.");
         return new(this, new(1, Fingerprint, NpcDeparturePhase.ToGate, 0, 0));
     }
+    /// <summary>After Cameron yields the duel (L13=2), critter_p_proc walks the same departure as after Speech.</summary>
+    public TempleNpcDeparture BeginAfterDuel() => new(this, new(1, Fingerprint, NpcDeparturePhase.ToGate, 0, 0));
+    /// <summary>The gate as actemvil Node009 leaves it when the duel starts: obj_close (13394) and obj_lock (13404).</summary>
+    public DoorState LockedGate() => new(_gate, _gate.Header.Flags & ~DoorSession.OpenDoorMask, (_gate.State["openFlags"] & ~1) | DoorSession.Locked, true);
     public TempleNpcDeparture Restore(NpcDepartureSnapshot state) { Validate(state); return new(this, state); }
 }
 

@@ -101,6 +101,40 @@ try
         Console.WriteLine(JsonSerializer.Serialize(ArchitectureClearanceReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
+    if (args.Length == 4 && args[2] == "--msg")
+    {
+        var messages = MessageTextFile.Read(new GameData(args[1]).Read(args[3]));
+        foreach (var row in messages.Entries.Values.OrderBy(r => r.Id)) Console.WriteLine($"{row.Id}: {row.Text}");
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--premade-report")
+    {
+        var game = new GameData(args[1]);
+        var paths = game.FindPaths("premade/");
+        MessageTextFile traits = MessageTextFile.Read(game.Read("text/english/game/trait.msg")), skills = MessageTextFile.Read(game.Read("text/english/game/skill.msg"));
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            Paths = paths.Select(p => new { Path = p, Size = game.Read(p).Bytes.Length, Head = Convert.ToHexString(game.Read(p).Bytes.Take(48).ToArray()) }),
+            Characters = paths.Where(p => p.EndsWith(".gcd", StringComparison.OrdinalIgnoreCase)).Select(p => { var c = CharacterFile.Read(game.Read(p)); return new
+                { Path = p, c.Name, Base = c.BaseStats, Bonus = c.BonusStats, c.SkillPoints, c.TaggedSkills, c.Traits, c.CharacterPoints, c.Flags, c.BodyType, c.Experience, c.KillType, c.Source }; }),
+            Sheets = paths.Where(p => p.EndsWith(".gcd", StringComparison.OrdinalIgnoreCase)).Select(p => CharacterFile.Read(game.Read(p))).Where(c => c.CharacterPoints == 0).Select(c =>
+            {
+                var sheet = FalloutRemake.Runtime.PlayerCharacter.FromPremade(c); var e = sheet.Effective; int[] b = c.BaseStats;
+                // Values the character editor stored (base, before trait stat modifiers) against the same CE formulas.
+                var derived = new (string Name, int Index, int Mine)[] { ("HP", 7, sheet.BaseMaxHitPoints), ("AP", 8, 5 + e.Agility / 2), ("AC", 9, e.Agility),
+                    ("MD", 11, Math.Max(e.Strength - 5, 1)), ("Carry", 12, 25 + 25 * e.Strength), ("Sequence", 13, 2 * e.Perception),
+                    ("Healing", 14, Math.Max(e.Endurance / 3, 1)), ("Critical", 15, e.Luck), ("RadRes", 31, 2 * e.Endurance), ("PoisonRes", 32, 5 * e.Endurance) };
+                return new { c.Name, Premade = sheet.Premade, Effective = e.ToArray(), Traits = sheet.Traits.Select(t => traits.Entries.GetValueOrDefault(100 + (int)t)?.Text),
+                    Tags = sheet.TaggedSkills.Select(t => skills.Entries.GetValueOrDefault(100 + t)?.Text), sheet.Age, sheet.Gender,
+                    Mismatches = derived.Where(d => b[d.Index] != d.Mine).Select(d => $"{d.Name}: GCD {b[d.Index]} vs {d.Mine}").ToArray(),
+                    Final = new { HP = sheet.BaseMaxHitPoints, sheet.MaxActionPoints, sheet.ArmorClass, sheet.MeleeDamage, sheet.CarryWeight, sheet.Sequence, sheet.CriticalChance, sheet.HealingRate },
+                    Skills = Enumerable.Range(0, 18).Select(i => $"{skills.Entries.GetValueOrDefault(100 + i)?.Text}{(sheet.IsTagged(i) ? "*" : "")} {sheet.Skill(i)}%").ToArray() };
+            }),
+            TraitNames = Enumerable.Range(0, 16).Select(i => $"{i}: {traits.Entries.GetValueOrDefault(100 + i)?.Text}"),
+            Bios = paths.Where(p => p.EndsWith(".bio", StringComparison.OrdinalIgnoreCase)).Select(p => new { Path = p, Text = System.Text.Encoding.Latin1.GetString(game.Read(p).Bytes) })
+        }, new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
     if (args.Length == 3 && args[2] == "--drug-report")
     {
         var drugs = new PrototypeCatalog(new ResourceCatalog(new GameData(args[1]).Read));

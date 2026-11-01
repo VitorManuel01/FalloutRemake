@@ -10,7 +10,7 @@ namespace FalloutRemake.Runtime;
 public sealed record SavedArea(int Map, string SourceHash, string DependenciesHash, ActorLocation Location, SavedDoorSession Session, TakenItem[]? Taken = null, ItemUseAllocation[]? Uses = null, SceneryReplacement[]? Replacements = null,
     ConsumedItem[]? Consumed = null);
 public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null, SavedWorldEntries? Entries = null,
-    SavedCombat? Combat = null);
+    SavedCombat? Combat = null, SavedCharacter? Character = null, SavedTempleDuel? Duel = null);
 /// <summary>v11 adds <see cref="SavedArea.Consumed"/> (drugs taken from collected items). v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>
 public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defeated, [property: JsonRequired] int Experience, int? PlayerHitPoints);
 
@@ -43,6 +43,10 @@ public static class CheckpointFile
                 throw new InvalidDataException("Checkpoint v9 requires explicit ArroyoGlobals entry state.");
             if (checkpoint.Version >= 10 && (!document.RootElement.TryGetProperty("Combat", out var combat) || combat.ValueKind != JsonValueKind.Object))
                 throw new InvalidDataException("Checkpoint v10 requires an explicit Combat object.");
+            if (checkpoint.Version >= 12 && (!document.RootElement.TryGetProperty("Character", out var character) || character.ValueKind != JsonValueKind.Object))
+                throw new InvalidDataException("Checkpoint v12 requires an explicit Character object.");
+            if (checkpoint.Version >= 12 && (!document.RootElement.TryGetProperty("Duel", out var duel) || duel.ValueKind != JsonValueKind.Object))
+                throw new InvalidDataException("Checkpoint v12 requires an explicit Duel object.");
             return checkpoint;
         }
         catch (JsonException error) { throw new InvalidDataException("Malformed checkpoint JSON.", error); }

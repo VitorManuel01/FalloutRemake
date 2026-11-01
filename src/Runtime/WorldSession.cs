@@ -32,7 +32,17 @@ public sealed partial class WorldSession
     public WorldItemUse[] ItemUses => Areas.SelectMany(a => a.Items.CaptureUses().Select(u => new WorldItemUse(a.Map.Prefix.Header.MapIndex, u))).ToArray();
     public WorldItemUse[] DueItemUses => ItemUses.Where(u => u.Allocation.Phase == ItemUsePhase.Placed && u.Allocation.RemainingTicks == 0).ToArray();
     public long CarriedCount => Carried.Sum(i => (long)i.Quantity);
-    public int CarryCapacity => CarryWeight.TestCapacity;
+    public int CarryCapacity => Character.CarryWeight;
+    /// <summary>Who plays: a premade, a created character or the neutral test profile of earlier milestones.</summary>
+    public PlayerCharacter Character { get; private set; } = PlayerCharacter.Neutral;
+    private readonly Func<string, CharacterFile>? _premade;
+    /// <summary>New game with this character: the whole world returns to its start. Reset keeps the character.</summary>
+    public void StartNewGame(PlayerCharacter character)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        if (character.Kind == CharacterKind.Draft) throw new ArgumentException("An unfinished character cannot start a game.", nameof(character));
+        Reset(); Character = character;
+    }
     public long? UnitWeight(int sourceMap, MapObject item) => _areas.TryGetValue(sourceMap, out WorldArea? area)
         && area.Map.Prototypes.FirstOrDefault(p => p.Pid == item.Header.Pid) is Prototype prototype ? CarryWeight.UnitWeight(prototype, item) : null;
     public long? CarriedWeight => CarryWeight.Total(Carried.Select(item => (UnitWeight(item.Map, item.Source), item.Quantity)));
@@ -121,9 +131,10 @@ public sealed partial class WorldSession
         return _areas[use.SourceMap].Items.Consume(id);
     }
     public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
-        Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null)
+        Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
+        Func<string, CharacterFile>? premade = null)
     {
-        _load = load; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _arroyoProfile = arroyoProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
+        _load = load; _premade = premade; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _arroyoProfile = arroyoProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
         if (!_allowed.Contains(initialMap)) throw new ArgumentException("Initial map must belong to the supported area profile.");
         EnsureArea(initialMap); CurrentMap = initialMap;
         _enteredMaps.Add(initialMap);
@@ -185,7 +196,7 @@ public sealed partial class WorldSession
     public void Reset()
     {
         _templeProgress = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
-        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat();
+        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat(); ResetTempleDuel();
         foreach (WorldArea area in _areas.Values) { area.Scenery.Reset(); area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
     }
@@ -194,19 +205,23 @@ public sealed partial class WorldSession
     public WorldCheckpoint Capture(string catalogHash)
     {
         ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses(); ValidateTempleExit();
-        return new(11, "neutral-v11", catalogHash, InitialMap, CurrentMap,
+        return new(12, "neutral-v12", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
                 DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture(), a.Items.CaptureConsumed())).ToArray(), _templeProgress?.Capture(),CaptureEntries(),
-            CaptureCombat());
+            CaptureCombat(), Character.Capture(), CaptureTempleDuel());
     }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
-        Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null)
+        Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
+        Func<string, CharacterFile>? premade = null)
     {
         if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2"
             || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
             || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5" || checkpoint.Version == 6 && checkpoint.Profile == "neutral-v6"
             || checkpoint.Version == 7 && checkpoint.Profile == "neutral-v7" || checkpoint.Version == 8 && checkpoint.Profile == "neutral-v8"
-            || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9" || checkpoint.Version == 10 && checkpoint.Profile == "neutral-v10" || checkpoint.Version == 11 && checkpoint.Profile == "neutral-v11")
+            || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9" || checkpoint.Version == 10 && checkpoint.Profile == "neutral-v10" || checkpoint.Version == 11 && checkpoint.Profile == "neutral-v11"
+            || checkpoint.Version == 12 && checkpoint.Profile == "neutral-v12")
+            || checkpoint.Version < 12 && checkpoint.Character != null || checkpoint.Version >= 12 && checkpoint.Character == null
+            || checkpoint.Version < 12 && checkpoint.Duel != null || checkpoint.Version >= 12 && checkpoint.Duel == null
             || checkpoint.CatalogHash != catalogHash
             || checkpoint.Version < 10 && checkpoint.Combat != null || checkpoint.Version >= 10 && checkpoint.Combat == null
             || checkpoint.Version < 6 && checkpoint.Temple != null
@@ -219,7 +234,11 @@ public sealed partial class WorldSession
             || checkpoint.Areas.Select(a => a.Map).Distinct().Count() != checkpoint.Areas.Length
             || !checkpoint.Areas.Any(a => a.Map == initialMap) || !checkpoint.Areas.Any(a => a.Map == checkpoint.CurrentMap))
             throw new InvalidDataException("Checkpoint area set is invalid.");
-        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile,arroyoProfile);
+        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile,arroyoProfile, premade);
+        // The character decides the level's HP bound checked by the combat block, so it comes first.
+        try { candidate.Character = checkpoint.Character == null ? PlayerCharacter.Neutral : PlayerCharacter.Restore(checkpoint.Character, premade); }
+        catch (Exception error) when (error is IOException or ArgumentException or KeyNotFoundException)
+        { throw new InvalidDataException("Checkpoint premade character source is unavailable.", error); }
         foreach (SavedArea saved in checkpoint.Areas)
         {
             WorldArea area = candidate.EnsureArea(saved.Map);
@@ -233,14 +252,16 @@ public sealed partial class WorldSession
                 throw new InvalidDataException("Checkpoint item state does not match its schema version.");
             area.Items.Restore(saved.Taken ?? Array.Empty<TakenItem>(), saved.Uses ?? Array.Empty<ItemUseAllocation>(),
                 saved.Consumed ?? Array.Empty<ConsumedItem>(), HealingDrugProfile.Supported);
-            area.Doors.Restore(saved.Session, checkpoint.Version >= 5, checkpoint.Version >= 7 && checkpoint.Temple != null);
+            area.Doors.Restore(saved.Session, checkpoint.Version >= 5, checkpoint.Version >= 7 && checkpoint.Temple != null,
+                checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed);
         }
         var scenes = checkpoint.Areas.Select(a => (Area: candidate._areas[a.Map], Records: a.Replacements ?? Array.Empty<SceneryReplacement>())).ToArray();
         candidate.ValidateScenery(scenes);
         foreach (var scene in scenes) scene.Area.Scenery.ApplyPrepared(ScenerySession.Prepare(scene.Records));
         candidate.RestoreTempleProgress(checkpoint.Temple);
         candidate.RestoreEntries(checkpoint);
-        candidate.RestoreCombat(checkpoint.Combat);
+        candidate.RestoreCombat(checkpoint.Combat, checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed);
+        candidate.RestoreTempleDuel(checkpoint.Duel);
         candidate.ValidateTempleExit();
         candidate.ValidateUses();
         foreach (SavedArea saved in checkpoint.Areas) candidate._areas[saved.Map].Travel.Arrive(saved.Location);

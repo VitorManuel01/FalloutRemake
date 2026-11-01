@@ -43,6 +43,8 @@ public sealed record AttackResolved(string AttackerId, string TargetId, int Chan
     int TargetHitPoints, int ActionPointsSpent) : CombatEvent;
 /// <summary>A healing dose taken: the rolled amount, the HP actually restored (capped at the maximum) and the HP after.</summary>
 public sealed record HealingUsed(string CombatantId, int Rolled, int Healed, int HitPoints, int ActionPointsSpent) : CombatEvent;
+/// <summary>A combatant that yields at the start of its turn (Cameron's combat_p_proc): it leaves the fight alive, awarding no XP.</summary>
+public sealed record CombatantYielded(string CombatantId, int HitPoints) : CombatEvent;
 public sealed record CombatantDied(string CombatantId, string KillerId, int Experience) : CombatEvent;
 public sealed record TurnEnded(string CombatantId, int UnusedActionPoints, int BonusArmorClass) : CombatEvent;
 public sealed record CombatEnded(int? WinningTeam, int ExperienceAwarded) : CombatEvent;

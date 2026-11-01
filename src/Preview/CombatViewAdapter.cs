@@ -84,8 +84,14 @@ public partial class TemplePreview
         ClearRouteHover(); ClearRouteVisual(); ClearSelection();
         _combatWeapon = NamedWeapon(_campaign!.PlayerWeapon());
         _combat = _campaign.BeginCombat(encounter, _combatWeapon, new SeededCombatRandom(_combatSeed ?? (ulong)DateTime.UtcNow.Ticks));
+        OpenCombatView($"{CombatName(encounter.InitiatorKey)} percebeu você · combate iniciado");
+    }
+
+    // Labels, HUD and the first status line of a fight opened by an encounter or by Cameron's challenge.
+    private void OpenCombatView(string message)
+    {
         _combatAiTimer = 0; _combatHoverKey = ""; _combatBusyUntil = 0; _combatFinishPending = false; _combatTweens.Clear();
-        foreach (CombatantState combatant in _combat.Combatants)
+        foreach (CombatantState combatant in _combat!.Combatants)
         {
             Node3D? host = combatant.IsPlayer ? _walkerNode : _bodies.GetValueOrDefault(combatant.Id);
             if (host == null) continue;
@@ -94,13 +100,15 @@ public partial class TemplePreview
             host.AddChild(label); _combatLabels[combatant.Id] = label;
         }
         RefreshCombatView();
-        NavigationStatus($"{CombatName(encounter.InitiatorKey)} percebeu você · combate iniciado");
-        GD.Print($"COMBAT_STARTED: {string.Join(",", _combat.Turn.Order)} at hex {_campaign.Location.Hex}");
+        NavigationStatus(message);
+        GD.Print($"COMBAT_STARTED: {string.Join(",", _combat.Turn.Order)} at hex {_campaign!.Location.Hex}");
     }
 
     private string CombatName(string id)
     {
         if (id == "player") return "Você";
+        // A fight that names its combatant (Cameron, whose PRO is called Dumar) keeps that name; encounters use the PRO text.
+        if (_combat?.Combatants.FirstOrDefault(c => c.Id == id) is { } named && !named.Name.StartsWith("PID ", StringComparison.Ordinal)) return named.Name;
         PreviewObject? obj = _layout?.Objects.FirstOrDefault(o => o.Source.Key == id);
         return obj != null && OriginalText(obj.Source)?.Name is { } name ? ShortName(name) : "Criatura";
     }
@@ -158,7 +166,7 @@ public partial class TemplePreview
             if (key.PhysicalKeycode == Key.H) { UseCombatHealing(); return true; }
             // Camera, view and inspection keys stay available; anything that would act in the world waits.
             if (key.PhysicalKeycode is Key.Q or Key.E or Key.C or Key.Home or Key.V or Key.G or Key.O or Key.F or Key.R) return false;
-            if (key.PhysicalKeycode is Key.M or Key.U or Key.L or Key.Enter or Key.KpEnter or Key.K or Key.J or Key.P or Key.Escape or Key.T)
+            if (key.PhysicalKeycode is Key.M or Key.U or Key.L or Key.Enter or Key.KpEnter or Key.K or Key.J or Key.P or Key.Escape or Key.T or Key.N)
             { CombatRefuses("essa ação"); return true; }
             return false;
         }
@@ -220,6 +228,8 @@ public partial class TemplePreview
                 case HealingUsed used:
                     lines.Add($"{CombatName(used.CombatantId)} usou Healing Powder: +{used.Healed} HP ({used.HitPoints} HP)"
                         + (used.Healed < used.Rolled ? $" · {used.Rolled - used.Healed} além do máximo se perderam" : "") + $" · {used.ActionPointsSpent} AP"); break;
+                case CombatantYielded yielded:
+                    lines.Add($"{CombatName(yielded.CombatantId)} se rende com {yielded.HitPoints} HP"); break;
                 case CombatantDied died:
                     lines.Add($"{CombatName(died.CombatantId)} morreu" + (died.Experience > 0 ? $" · +{died.Experience} XP" : "")); break;
                 case TurnStarted started when started.CombatantId != "player":
@@ -299,7 +309,9 @@ public partial class TemplePreview
         // The corpse and the freed hex come from WorldSession projections; rebuilding keeps every other system unchanged.
         BuildWorld();
         CombatantState player = fight.Get("player");
-        NavigationStatus($"Vitória · +{fight.Turn.ExperienceAwarded} XP · {_campaign.HitPoints}/{_campaign.MaxHitPoints} HP{LevelUpText(levelBefore)} · salve com K para guardar o resultado");
+        string? duel = DuelOutcomeText(fight);
+        NavigationStatus(duel != null ? $"{duel} · {_campaign.HitPoints}/{_campaign.MaxHitPoints} HP{LevelUpText(levelBefore)}"
+            : $"Vitória · +{fight.Turn.ExperienceAwarded} XP · {_campaign.HitPoints}/{_campaign.MaxHitPoints} HP{LevelUpText(levelBefore)} · salve com K para guardar o resultado");
         GD.Print($"COMBAT_WON: {fight.Turn.ExperienceAwarded} XP, player {player.HitPoints} HP, round {fight.Turn.Round}");
     }
 
@@ -307,7 +319,7 @@ public partial class TemplePreview
     private string LevelUpText(int levelBefore)
     {
         if (_campaign == null || _campaign.Level <= levelBefore) return "";
-        var gains = CharacterProgression.Gains(Special.Neutral, levelBefore, _campaign.Level);
+        var gains = CharacterProgression.Gains(_campaign.Character, levelBefore, _campaign.Level);
         return $" · subiu para o nível {_campaign.Level}: +{gains.Sum(g => g.HitPoints)} HP, +{gains.Sum(g => g.SkillPoints)} pontos de perícia"
             + (gains.Any(g => g.PerkAvailable) ? ", perk disponível" : "");
     }
@@ -455,7 +467,7 @@ public partial class TemplePreview
             int corpseHex = corpse.Header.Tile; int? hitPoints = _campaign.PlayerHitPoints;
             SaveCheckpoint();
             WorldCheckpoint saved = CheckpointFile.Read(CheckpointPath);
-            if (saved.Version != 11 || saved.Combat is not { } combat || combat.Experience != reward || combat.PlayerHitPoints != hitPoints
+            if (saved.Version != 12 || saved.Combat is not { } combat || combat.Experience != reward || combat.PlayerHitPoints != hitPoints
                 || combat.Defeated.Single() is not { } dead || dead.Key != ant.Source.Key || dead.Hex != corpseHex
                 || saved.Areas.Single(a => a.Map == _campaign.CurrentMap).Consumed?.SingleOrDefault() != new ConsumedItem(pot.Key, powder.Key, 1))
                 throw new InvalidDataException("Checkpoint v11 did not record the won fight or the used powder.");

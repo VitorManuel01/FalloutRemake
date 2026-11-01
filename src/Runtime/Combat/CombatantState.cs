@@ -28,6 +28,11 @@ public sealed class CombatantState
     public int HealingDoses { get; internal set; }
     public LifeStatus Status => HitPoints <= 0 ? LifeStatus.Dead : LifeStatus.Active;
     public bool Alive => Status == LifeStatus.Active;
+    /// <summary>Yields when its turn starts below half its maximum HP (a duel, not a fight to the death).</summary>
+    public bool YieldsBelowHalf { get; init; }
+    public bool Yielded { get; internal set; }
+    /// <summary>Still taking part: alive and not yielded.</summary>
+    public bool InFight => Alive && !Yielded;
     public int EffectiveArmorClass => Stats.ArmorClass + BonusArmorClass;
 
     public CombatantState(string id, string name, int? pid, int team, bool isPlayer, int hex, int elevation, DerivedCombatStats stats,

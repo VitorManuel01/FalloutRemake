@@ -48,5 +48,19 @@ public static class CharacterProgression
         return gains;
     }
 
+    // The player's sheet: trait-adjusted SPECIAL, Skilled/Gifted skill points and the Skilled perk interval.
+    public static int MaxHitPoints(PlayerCharacter character, int level) =>
+        character.BaseMaxHitPoints + (CheckedLevel(level) - 1) * character.HitPointsPerLevel;
+    public static int UnspentSkillPoints(PlayerCharacter character, int level) =>
+        Math.Min(MaxUnspentSkillPoints, (CheckedLevel(level) - 1) * character.SkillPointsPerLevel);
+    public static int PerksAvailable(PlayerCharacter character, int level) => CheckedLevel(level) / character.PerkInterval;
+    public static IReadOnlyList<LevelGain> Gains(PlayerCharacter character, int fromLevel, int toLevel)
+    {
+        var gains = new List<LevelGain>();
+        for (int level = CheckedLevel(fromLevel) + 1; level <= CheckedLevel(toLevel); level++)
+            gains.Add(new LevelGain(level, character.HitPointsPerLevel, character.SkillPointsPerLevel, level % character.PerkInterval == 0));
+        return gains;
+    }
+
     static int CheckedLevel(int level) => level is >= 1 and <= MaxLevel ? level : throw new ArgumentOutOfRangeException(nameof(level));
 }

@@ -13,25 +13,32 @@ using FalloutRemake.Runtime.Combat;
 internal static class TempleRunAudit
 {
     sealed record FightLog(int Elevation, int Hex, string[] Foes, int Rounds, int HitPointsBefore, int HitPointsAfter, int Experience, string Outcome);
-    sealed record RunLog(ulong Seed, bool Spear, bool Heal, string Result, string? StoppedAt, int Steps, FightLog[] Fights, int FinalHitPoints, int MaxHitPoints,
+    sealed record RunLog(string Character, ulong Seed, bool Spear, bool Heal, string Result, string? StoppedAt, int Steps, FightLog[] Fights, int FinalHitPoints, int MaxHitPoints,
         int Experience, int Level, int LowestHitPoints, int PowdersFound, int PowdersUsed);
 
+    // TEMPLE_RUN_SEEDS shortens a check run; the documented measurement uses 20.
+    static readonly ulong Seeds = ulong.TryParse(Environment.GetEnvironmentVariable("TEMPLE_RUN_SEEDS"), out ulong seeds) && seeds is > 0 and <= 100 ? seeds : 20;
     public static object Create(GameData data)
     {
         var catalog = new MapCatalog(data.Read("data/maps.txt"));
         var prototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
         var runs = new List<RunLog>();
-        foreach (bool heal in new[] { false, true })
-            foreach (bool spear in new[] { false, true })
-                for (ulong seed = 1; seed <= 25; seed++)
-                    runs.Add(Run(data, catalog, prototypes, seed, spear, heal));
-        object Summary(bool spear, bool heal)
+        // The neutral test profile and the three premade characters of the original (premade/*.gcd).
+        var characters = new[] { PlayerCharacter.Neutral }.Concat(new[] { "combat", "stealth", "diplomat" }
+            .Select(name => PlayerCharacter.FromPremade(CharacterFile.Read(data.Read($"premade/{name}.gcd"))))).ToArray();
+        // Two variants each: the direct route bare-handed, and spear plus every reachable Healing Powder.
+        foreach (PlayerCharacter character in characters)
+            foreach (bool kit in new[] { false, true })
+                for (ulong seed = 1; seed <= Seeds; seed++)
+                    runs.Add(Run(data, catalog, prototypes, seed, kit, kit, character));
+        object Summary(string character, bool spear, bool heal)
         {
-            var set = runs.Where(r => r.Spear == spear && r.Heal == heal).ToArray();
+            var set = runs.Where(r => r.Character == character && r.Spear == spear && r.Heal == heal).ToArray();
             return new
             {
-                Spear = spear, Heal = heal, Runs = set.Length, PowdersFound = set.Max(r => r.PowdersFound), AveragePowdersUsed = Math.Round(set.Average(r => r.PowdersUsed), 2), Completed = set.Count(r => r.Result == "Arroyo"), Died = set.Count(r => r.Result == "Died"),
-                Stalled = set.Where(r => r.Result is not ("Arroyo" or "Died")).Select(r => $"{r.Seed}: {r.Result} at {r.StoppedAt}").ToArray(),
+                Character = character, Spear = spear, Heal = heal, Runs = set.Length, PowdersFound = set.Max(r => r.PowdersFound), AveragePowdersUsed = Math.Round(set.Average(r => r.PowdersUsed), 2), Completed = set.Count(r => r.Result == "Arroyo"), Died = set.Count(r => r.Result == "Died"),
+                Blocked = set.Count(r => r.Result == "Blocked"), BlockedAt = set.Where(r => r.Result == "Blocked").Select(r => r.StoppedAt).Distinct().ToArray(),
+                Stalled = set.Where(r => r.Result is not ("Arroyo" or "Died" or "Blocked")).Select(r => $"{r.Seed}: {r.Result} at {r.StoppedAt}").ToArray(),
                 DeathPlaces = set.Where(r => r.Result == "Died").GroupBy(r => r.StoppedAt).Select(g => new { Place = g.Key, Count = g.Count() }).ToArray(),
                 AverageFights = Math.Round(set.Average(r => r.Fights.Length), 2), AverageDamageTaken = Math.Round(set.Average(r => r.Fights.Sum(f => f.HitPointsBefore - f.HitPointsAfter)), 1),
                 LowestHitPoints = set.Min(r => r.LowestHitPoints), AverageFinalHitPoints = Math.Round(set.Where(r => r.Result == "Arroyo").Select(r => (double)r.FinalHitPoints).DefaultIfEmpty(0).Average(), 1),
@@ -49,34 +56,34 @@ internal static class TempleRunAudit
                 + "heal variants collect every reachable Healing Powder and take one (4 AP in a fight, free outside) while HP <= half",
             HealingPowder = HealingDrugProfile.Matches(DrugPrototypeData.Read(prototypes.Get(HealingDrugProfile.Pid)))
                 && HealingDrugProfile.Supported(prototypes.Get(HealingDrugProfile.Pid)) ? "original PRO matches the 8-18 HP profile" : "MISMATCH",
-            Summaries = new[] { Summary(false, false), Summary(true, false), Summary(false, true), Summary(true, true) },
-            Sample = runs.First(r => r.Spear && r.Heal && r.Seed == 1),
-            SampleUnarmed = runs.First(r => !r.Spear && !r.Heal && r.Seed == 1),
-            Runs = runs.Select(r => new { r.Seed, r.Spear, r.Heal, r.Result, r.StoppedAt, Fights = r.Fights.Length, r.FinalHitPoints, r.LowestHitPoints, r.Experience, r.Level, r.PowdersFound, r.PowdersUsed }),
+            Summaries = characters.SelectMany(c => new[] { Summary(c.Name, false, false), Summary(c.Name, true, true) }).ToArray(),
+            Runs = runs.Select(r => new { r.Character, r.Seed, r.Spear, r.Heal, r.Result, r.StoppedAt, Fights = r.Fights.Length, r.FinalHitPoints, r.LowestHitPoints, r.Experience, r.Level, r.PowdersFound, r.PowdersUsed }),
             OriginalReconstruction = "verified"
         };
     }
 
     sealed class Stop(string result, string where) : Exception(where) { public string Result { get; } = result; }
 
-    static RunLog Run(GameData data, MapCatalog catalog, PrototypeCatalog prototypes, ulong seed, bool takeSpear, bool heal)
+    static RunLog Run(GameData data, MapCatalog catalog, PrototypeCatalog prototypes, ulong seed, bool takeSpear, bool heal, PlayerCharacter character)
     {
         var world = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 }, runtimePrototype: prototypes.Get,
-            templeProfile: map => TempleNpcDepartureProfile.Create(map, data.Read), arroyoProfile: map => ArroyoRewardProfile.Create(map, data.Read));
+            templeProfile: map => TempleNpcDepartureProfile.Create(map, data.Read), arroyoProfile: map => ArroyoRewardProfile.Create(map, data.Read),
+            premade: path => CharacterFile.Read(data.Read(path)));
+        world.StartNewGame(character);
         var random = new SeededCombatRandom(seed);
         var fights = new List<FightLog>();
         int steps = 0, lowest = world.HitPoints, found = 0, used = 0;
         string place = "entry";
 
-        void Fight(CombatEncounter encounter)
+        void Fight(CombatEncounter encounter) => Resolve(world.BeginCombat(encounter, world.PlayerWeapon(), random));
+        void Resolve(CombatSession fight)
         {
-            int before = world.HitPoints;
-            CombatSession fight = world.BeginCombat(encounter, world.PlayerWeapon(), random);
+            int before = world.HitPoints; var at = world.Location;
             CombatantState hero = fight.Get("player");
             for (int guard = 0; guard < 600 && !fight.Turn.Over; guard++)
             {
                 if (!fight.Active!.IsPlayer) { ProvisionalMeleeBehavior.TakeTurn(fight); continue; }
-                CombatantState? foe = fight.Combatants.Where(c => !c.IsPlayer && c.Alive).OrderBy(c => FalloutGrid.Distance(c.Hex, hero.Hex)).ThenBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault();
+                CombatantState? foe = fight.Combatants.Where(c => !c.IsPlayer && c.InFight).OrderBy(c => FalloutGrid.Distance(c.Hex, hero.Hex)).ThenBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault();
                 if (foe == null) break;
                 if (heal && hero.HitPoints <= hero.Stats.MaxHitPoints / 2
                     && fight.Preview(CombatActionProposal.UseHealing("player")).Status == CombatActionStatus.Ready)
@@ -91,7 +98,7 @@ internal static class TempleRunAudit
             if (!fight.Turn.Over) { world.AbandonCombat(); throw new Stop("Stalled", $"{place}: fight did not end"); }
             lowest = Math.Min(lowest, hero.HitPoints);
             var status = world.CommitCombat(fight);
-            fights.Add(new FightLog(encounter.Player.Elevation, encounter.Player.Hex, fight.Combatants.Where(c => !c.IsPlayer).Select(c => $"PID {c.Pid:X8}").ToArray(),
+            fights.Add(new FightLog(at.Elevation, at.Hex, fight.Combatants.Where(c => !c.IsPlayer).Select(c => $"PID {c.Pid:X8}").ToArray(),
                 fight.Turn.Round, before, hero.HitPoints, fight.Turn.ExperienceAwarded, status.ToString()));
             if (status == CombatCommitStatus.PlayerDefeated) throw new Stop("Died", place);
             if (status != CombatCommitStatus.Ready) throw new Stop("Refused", $"{place}: {status}");
@@ -192,11 +199,25 @@ internal static class TempleRunAudit
             if (world.Current.Doors.Get(gateKey)?.IsOpen != true) { Walk(Approach(gate)); if (world.Current.Doors.Toggle(gateKey, world.Location.Hex, 2, false) != DoorUseStatus.Ready) throw new Stop("Stalled", $"{place}: gate"); }
             var npc = profile.Actor(new(1, profile.Fingerprint, NpcDeparturePhase.ToGate, 0, 0));
             Walk(Approach(npc));
-            var speech = profile.Speech.CreateInitial(); var draft = TempleSpeechDraft.Begin(profile.Speech, speech, 5, true)!;
-            foreach (int offset in TempleSpeechProfile.ChoiceOffsets) draft.Choose(offset);
-            draft.CommitDetached();
-            var proposal = world.PrepareTempleSpeech(profile, speech.Capture(), false, 5, true);
-            if (proposal.Status != TempleWorldStatus.Ready || world.CommitTempleSpeech(proposal.Plan, false) != TempleWorldStatus.Ready) throw new Stop("Stalled", $"{place}: Speech {proposal.Status}");
+            if (character.QualifiesForTempleSpeech)
+            {
+                var speech = profile.Speech.CreateInitial();
+                var draft = TempleSpeechDraft.Begin(profile.Speech, speech, character.Effective.Intelligence, character.TempleSpeechTag)!;
+                foreach (int offset in TempleSpeechProfile.ChoiceOffsets) draft.Choose(offset);
+                draft.CommitDetached();
+                var proposal = world.PrepareTempleSpeech(profile, speech.Capture(), false, character.Effective.Intelligence, character.TempleSpeechTag);
+                if (proposal.Status != TempleWorldStatus.Ready || world.CommitTempleSpeech(proposal.Plan, false) != TempleWorldStatus.Ready) throw new Stop("Stalled", $"{place}: Speech {proposal.Status}");
+            }
+            else
+            {
+                // No Speech tag: Cameron's unarmed challenge, equipment in the chest, Cameron strikes first.
+                place = "Cameron duel";
+                var ready = world.PrepareTempleDuel(profile, false);
+                if (ready != TempleWorldStatus.Ready) throw new Stop("Stalled", $"{place}: {ready}");
+                Resolve(world.BeginTempleDuel(profile, random));
+                if (world.TempleDuel == TempleDuelOutcome.Killed) throw new Stop("Blocked", "Cameron killed in the duel: the exit door reads G369, not modeled");
+                if (world.TempleDuel != TempleDuelOutcome.Yielded) throw new Stop("Stalled", $"{place}: {world.TempleDuel}");
+            }
             place = "Cameron departure";
             for (int guard = 0; ; guard++)
             {
@@ -212,6 +233,12 @@ internal static class TempleRunAudit
                 }
                 if (status != TempleWorldStatus.Ready) throw new Stop("Stalled", $"{place}: {status}");
             }
+            if (world.TempleChestCustody.Length != 0)
+            {
+                place = "challenge chest"; var chest = Root(o => o.Offset == WorldSession.TempleChestOffset);
+                Walk(Approach(chest));
+                if (world.RetrieveTempleChest(false) != TempleChestStatus.Ready) throw new Stop("Stalled", $"{place}: retrieve refused");
+            }
             place = "door 100";
             var route = world.InspectTempleVillageRoute(false);
             if (route.Status == TempleWorldStatus.DoorRequired)
@@ -225,11 +252,11 @@ internal static class TempleRunAudit
             Walk(route.ExitHex!.Value);
             if (world.UseExit(false).Status != ExitStatus.Ready || world.CurrentMap != 4) throw new Stop("Stalled", $"{place}: travel refused");
             foreach (WorldArea area in world.Areas) MapLayoutWriter.Verify(area.Map);
-            return new RunLog(seed, takeSpear, heal, "Arroyo", null, steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used);
+            return new RunLog(character.Name, seed, takeSpear, heal, "Arroyo", null, steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used);
         }
         catch (Stop stop)
         {
-            return new RunLog(seed, takeSpear, heal, stop.Result, stop.Message, steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used);
+            return new RunLog(character.Name, seed, takeSpear, heal, stop.Result, stop.Message, steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used);
         }
     }
 }

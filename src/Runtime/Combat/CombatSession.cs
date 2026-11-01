@@ -39,7 +39,7 @@ public sealed class CombatSession : ICombatSession
         Movement = new CombatMovement(navigation, _combatants);
         _order = CombatInitiative.Order(_combatants, initiatorId);
         _log.Add(new CombatStarted((string[])_order.Clone()));
-        StartTurn(Get(_order[0]));
+        BeginNextTurn(first: true);
     }
 
     public IReadOnlyList<CombatantState> Combatants => _combatants.AsReadOnly();
@@ -74,7 +74,7 @@ public sealed class CombatSession : ICombatSession
                     InventoryActionPoints, ap - InventoryActionPoints, Array.Empty<int>(), null, null);
             case CombatActionKind.Attack:
                 CombatantState? target = _combatants.FirstOrDefault(c => c.Id == proposal.TargetId);
-                if (target == null || target == actor || !target.Alive) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
+                if (target == null || target == actor || !target.InFight) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
                 if (target.Elevation != actor.Elevation) return CombatActionPreview.Refused(CombatActionStatus.OtherElevation, ap);
                 int attackCost = actor.Weapon.ActionPoints;
                 CombatActionStatus status = CombatResolver.Reach(actor, target) > actor.Weapon.Range ? CombatActionStatus.OutOfRange
@@ -144,16 +144,34 @@ public sealed class CombatSession : ICombatSession
         combatant.BonusArmorClass = combatant.ActionPoints;
         _log.Add(new TurnEnded(combatant.Id, combatant.ActionPoints, combatant.BonusArmorClass));
         combatant.ActionPoints = 0;
-        do
+        BeginNextTurn(first: false);
+    }
+
+    private void BeginNextTurn(bool first)
+    {
+        while (true)
         {
-            if (++_index >= _order.Length) { _round++; _order = CombatInitiative.Order(_combatants); _index = 0; }
-        } while (!Get(_order[_index]).Alive);
-        StartTurn(Get(_order[_index]));
+            if (!first)
+                do
+                {
+                    if (++_index >= _order.Length) { _round++; _order = CombatInitiative.Order(_combatants); _index = 0; }
+                } while (!Get(_order[_index]).InFight);
+            first = false;
+            CombatantState next = Get(_order[_index]);
+            // actemvil combat_p_proc, COMBAT_SUBTYPE_TURN: below half of max HP, the duelist ends the fight.
+            if (next.YieldsBelowHalf && next.HitPoints < next.Stats.MaxHitPoints / 2)
+            {
+                next.Yielded = true; _log.Add(new CombatantYielded(next.Id, next.HitPoints));
+                CheckOver(); if (_over) return;
+                continue;
+            }
+            StartTurn(next); return;
+        }
     }
 
     private void CheckOver()
     {
-        int[] teams = _combatants.Where(c => c.Alive).Select(c => c.Team).Distinct().ToArray();
+        int[] teams = _combatants.Where(c => c.InFight).Select(c => c.Team).Distinct().ToArray();
         if (teams.Length > 1) return;
         _over = true; _winner = teams.Length == 1 ? teams[0] : null;
         _log.Add(new CombatEnded(_winner, _experience));
@@ -174,7 +192,7 @@ public static class ProvisionalMeleeBehavior
         var events = new List<CombatEvent>();
         for (int guard = 0; guard < 64 && session.Active == actor; guard++)
         {
-            CombatantState? enemy = session.Combatants.Where(c => c.Alive && c.Team != actor.Team)
+            CombatantState? enemy = session.Combatants.Where(c => c.InFight && c.Team != actor.Team)
                 .OrderBy(c => CombatResolver.Reach(actor, c)).ThenBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault();
             CombatActionResult result;
             CombatActionPreview attack = enemy == null ? CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, actor.ActionPoints)

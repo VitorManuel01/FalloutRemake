@@ -59,7 +59,8 @@ public sealed class DoorSession
     public DoorState? Get(string key) => ProjectDoor?.Invoke(key) ?? _doors.GetValueOrDefault(key);
     public SavedDoorSession Capture() => new(_doors.Keys.Select(key => Get(key)!).OrderBy(d => d.Source.Key, StringComparer.Ordinal)
         .Select(d => new SavedDoor(d.Source.Key, d.Flags, d.OpenFlags)).ToArray(), _temple?.Snapshot.Locals.ToArray(), _temple?.Snapshot.Experience ?? 0);
-    public void Restore(SavedDoorSession saved, bool allowInitialGateChanges = true, bool allowTempleExitChanges = false)
+    /// <param name="allowInitialGateLock">The gate may also be locked: Cameron's challenge left it closed and locked (actemvil Node009).</param>
+    public void Restore(SavedDoorSession saved, bool allowInitialGateChanges = true, bool allowTempleExitChanges = false, bool allowInitialGateLock = false)
     {
         if (saved?.Doors == null || saved.Doors.Length != _doors.Count)
             throw new InvalidDataException("Checkpoint door count differs from its source MAP.");
@@ -75,7 +76,7 @@ public sealed class DoorSession
             bool templeExit = _templeExitKey == value.Key && allowTempleExitChanges;
             if (changed && source.Scripted && !adapted && !initialGate && !templeExit
                 || ((value.Flags ^ originalFlags) & ~OpenDoorMask) != 0
-                || ((value.OpenFlags ^ originalOpen) & ~(adapted ? 1 | Locked | Jammed : 1)) != 0)
+                || ((value.OpenFlags ^ originalOpen) & ~(adapted ? 1 | Locked | Jammed : initialGate && allowInitialGateLock ? 1 | Locked : 1)) != 0)
                 throw new InvalidDataException("Checkpoint attempts an unsupported door-state change.");
             if (changed && (!adapted && (originalOpen & Locked) != 0
                 || (originalFlags & (HexNavigation.Hidden | HexNavigation.Multihex)) != 0
