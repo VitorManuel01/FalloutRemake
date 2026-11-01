@@ -17,7 +17,9 @@ public sealed class CombatantState
     public bool IsPlayer { get; }
     public int Elevation { get; }
     public DerivedCombatStats Stats { get; }
-    public CombatWeapon Weapon { get; }
+    public CombatWeapon Weapon { get; internal set; }
+    /// <summary>The other hand's blow the player can switch to (bare hands: punch and kick); null when there is none.</summary>
+    public CombatWeapon? AlternateWeapon { get; internal set; }
     public int Experience { get; }
     public int Hex { get; internal set; }
     /// <summary>Facing (0 NE … 5 NW): the MAP rotation, then the last step walked or the last target struck, as CE animations leave it.</summary>

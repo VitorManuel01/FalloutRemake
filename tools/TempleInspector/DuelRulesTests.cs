@@ -56,5 +56,29 @@ internal static class DuelRulesTests
             new CombatSession(new[] { Hero(hammer, hammerStats), Ant() }, new HexNavigation(Array.Empty<MapObject>(), 0), plain, "player").Execute(CombatActionProposal.Attack("player", "ant"));
             Assert(plain.Left == 0, "6 is above the bonus: hit, bonus roll, damage roll.");
         });
+        check("bare hands switch between the left hand's punch and the right hand's kick for no AP, and the world keeps the hand chosen", () =>
+        {
+            var mingan = DerivedCombatStats.ForCharacter(Special.Neutral with { Strength = 5, Agility = 10 });
+            var hero = new CombatantState("player", "p", null, 0, true, Centre, 0, mingan, CombatWeapon.UnarmedFor(mingan, 1), mingan.MaxHitPoints)
+                { AlternateWeapon = CombatWeapon.UnarmedFor(mingan, 1, kick: true) };
+            var fight = Fight(hero, Ant(), "player");
+            var switched = fight.Execute(CombatActionProposal.SwitchHand("player"));
+            Assert(switched.Status == CombatActionStatus.Ready && switched.Events.Single() is HandSwitched { Blow: "Strong Kick" } && hero.Weapon.Kick
+                && hero.AlternateWeapon!.Name == "Strong Punch" && hero.ActionPoints == 10, "Strong Kick, no AP spent.");
+            Assert(fight.Preview(CombatActionProposal.Attack("player", "ant")).ActionPointCost == 4, "The kick costs 4 AP.");
+            var armed = Fight(Hero(WorldCombatTests.Spear()), Ant(), "player");
+            Assert(armed.Preview(CombatActionProposal.SwitchHand("player")).Status == CombatActionStatus.NoItem, "A carried weapon has no other hand here.");
+            var world = new FalloutRemake.Runtime.WorldSession(_ => WorldCombatTests.Map(), new[] { 3, 126 });
+            Assert(!world.UnarmedKick && world.PlayerWeapon() is { Kick: false, Name: "Desarmado" }, "The left hand's punch to start.");
+            world.SetUnarmedHand(true);
+            var opened = world.BeginCombat(WorldCombatTests.NearAnt(world, "map3:far-ant"), world.PlayerWeapon(), new CombatTests.Scripted());
+            var player = opened.Get("player");
+            Assert(player.Weapon.Kick && player.AlternateWeapon is { Kick: false }, "The fight opens with the kick, the punch in the other hand.");
+            for (int guard = 0; guard < 10 && opened.Active != player; guard++) CombatAi.TakeTurn(opened);
+            opened.Execute(CombatActionProposal.SwitchHand("player")); opened.Execute(CombatActionProposal.LeaveCombat("player"));
+            Assert(world.CommitCombat(opened) == FalloutRemake.Runtime.CombatCommitStatus.Ready && !world.UnarmedKick, "The hand it left with stays chosen.");
+            world.SetUnarmedHand(true); world.Reset();
+            Assert(!world.UnarmedKick, "A new game starts with the left hand.");
+        });
     }
 }

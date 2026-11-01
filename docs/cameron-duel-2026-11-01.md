@@ -74,7 +74,36 @@ A auditoria mostrava o Mingan perdendo 16 de 20 duelos com o Cameron. Conferindo
 - **`tools/Validate-Temple.ps1`:** todos os passos aprovados (`COMBAT_SLICE`, `TEMPLE_DUEL`, `TEMPLE_KEY`).
 - **`tools/Run-QuietGodot.ps1`:** aprovado. A captura do início do duelo mostra o Narg com "9/9 AP · AC 17" no turno do Cameron.
 
+## Troca de mão (soco e chute)
+
+- **Como no FO2:** a mão esquerda vazia soca e a direita chuta (`interface.cc`). O jogo começa com a esquerda, e trocar de mão não custa PA.
+- **No projeto:**
+  - `WorldSession.UnarmedKick` guarda a mão escolhida, que vale para o golpe desarmado dentro e fora das lutas.
+  - Na luta, o jogador tem o golpe da outra mão (`CombatantState.AlternateWeapon`) e troca com `CombatActionProposal.SwitchHand`, sem custo de PA (evento `HandSwitched`).
+  - A mão com que ele termina a luta fica escolhida, e um jogo novo volta à esquerda.
+  - Na prévia, a tecla X troca a mão; o B do FO2 já abre a Bolsa. O HUD indica o golpe da outra mão.
+- **Na auditoria:** o jogador fica com a mão de maior dano esperado por turno (dano médio × golpes que os PA permitem). Por esse critério, a Chitsa (2 chutes de 6–8 contra 2 socos de 1–3) e o Narg chutam; o Mingan soca, porque 3 Strong Punches de 4–6 rendem mais que 2 Strong Kicks de 6–8. `TEMPLE_RUN_HAND=punch` mantém o soco.
+
+- **Auditoria com a mão escolhida** (20 sementes por variante; entre parênteses, socando sempre):
+
+| Personagem | Rota direta | Com lança e cura |
+| --- | --- | --- |
+| Neutro | 16/20 (16) | 2/20 (2) |
+| Narg (chuta) | 19/20 (20) | 19/20 (20) |
+| Mingan (soca) | 18/20 (18) | 18/20 (18) |
+| Chitsa (chuta) | 20/20 (14) | 19/20 (7) |
+
+  - **Fato medido:** a Chitsa é quem muda.
+    - O Strong Kick dela (6–8) mata as formigas e os radscorpions com folga.
+    - O dano médio que ela recebe na rota direta cai de 21 para 4,2.
+    - Nenhuma rodada travou.
+- **Validação:**
+  - **Testes:** 410 grupos sintéticos, 1 novo para a troca na luta e no mundo.
+  - **`TEMPLE_DUEL`:** aprovado; nele, o X troca o Narg para o Strong Kick e de volta, sem gastar PA.
+  - **Captura isolada:** aprovada.
+
 ## Diferenças conhecidas
 
-- **Troca de mão.** O jogador sempre soca. Trocar para o chute da mão direita fica para a interface.
+- **Mão no checkpoint.** A mão escolhida não vai no checkpoint: carregar um jogo volta à mão esquerda. O FO2 guarda a mão no save.
+- **Arma carregada.** Com uma arma carregada não há troca de mão. O projeto ainda não tem slots de mão e trata carregar como empunhar.
 - **Modos secundários.** Os golpes secundários (Chop Punch e outros) exigem nível 5 ou mais e não são usados.

@@ -183,7 +183,7 @@ public partial class PreviewHud : CanvasLayer
 
         var footer = Panel(root, 16, -52, -16, -12, true);
         footer.AnchorTop = 1; footer.AnchorBottom = 1;
-        var help = new Label { Text = "W A S D  mover    ·    Botão direito  arrastar    ·    Roda  zoom    ·    Q / E  girar    ·    M  caminhar    ·    U  porta    ·    L  arrombar    ·    Enter  passar",
+        var help = new Label { Text = "W A S D  mover    ·    Botão direito  arrastar    ·    Roda  zoom    ·    Q / E  girar    ·    M  caminhar    ·    U  porta    ·    L  arrombar    ·    X  soco/chute    ·    Enter  passar",
             HorizontalAlignment = HorizontalAlignment.Center, Modulate = new Color("9fb2a8") };
         help.ClipText = true; help.AddThemeFontSizeOverride("font_size", 12); footer.AddChild(help);
     }

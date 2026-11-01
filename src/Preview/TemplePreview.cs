@@ -393,6 +393,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.J) OpenLoot();
 			if (key.PhysicalKeycode == Key.B) OpenBag();
 			if (key.PhysicalKeycode == Key.P) SetArchitecture(!_architectureEnabled);
+			if (key.PhysicalKeycode == Key.X) SwitchUnarmedHand();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;

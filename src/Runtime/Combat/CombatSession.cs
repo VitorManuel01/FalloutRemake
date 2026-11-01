@@ -109,6 +109,9 @@ public sealed class CombatSession : ICombatSession
             case CombatActionKind.LeaveCombat:
                 if (!actor.IsPlayer) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
                 return new(AwareEnemies(actor).Any() ? CombatActionStatus.EnemiesAware : CombatActionStatus.Ready, 0, ap, Array.Empty<int>(), null, null);
+            case CombatActionKind.SwitchHand:
+                return actor.IsPlayer && actor.AlternateWeapon != null ? new(CombatActionStatus.Ready, 0, ap, Array.Empty<int>(), null, null)
+                    : CombatActionPreview.Refused(CombatActionStatus.NoItem, ap);
             case CombatActionKind.UseHealing:
                 if (actor.HealingDoses <= 0) return CombatActionPreview.Refused(CombatActionStatus.NoItem, ap);
                 return new(InventoryActionPoints > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready,
@@ -157,6 +160,10 @@ public sealed class CombatSession : ICombatSession
                 actor.Rotation = OriginalStraightPath.RotationTo(preview.Path.Length > 1 ? preview.Path[^2] : from, preview.Path[^1]);
                 actor.Hex = preview.Path[^1]; actor.ActionPoints -= preview.ActionPointCost;
                 _log.Add(new CombatantMoved(actor.Id, from, actor.Hex, (int[])preview.Path.Clone(), preview.ActionPointCost));
+                break;
+            case CombatActionKind.SwitchHand:
+                (actor.Weapon, actor.AlternateWeapon) = (actor.AlternateWeapon!, actor.Weapon);
+                _log.Add(new HandSwitched(actor.Id, actor.Weapon.Name));
                 break;
             case CombatActionKind.UseHealing:
                 actor.ActionPoints -= preview.ActionPointCost; actor.HealingDoses--;

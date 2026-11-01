@@ -134,8 +134,11 @@ public sealed record CombatWeapon(string Name, int? Pid, WeaponAttackType Attack
     {
         UnarmedBlow blow = UnarmedBlows.Best(kick, secondary: false, stats.Skill(DerivedCombatStats.Unarmed), level, stats.Special);
         return new(blow.Name, null, WeaponAttackType.Unarmed, 1, 2, DamageType.Normal, 1, blow.ActionPoints, 0, DerivedCombatStats.Unarmed)
-            { BonusDamage = blow.BonusDamage, BonusCriticalChance = blow.BonusCriticalChance, Penetrates = blow.Penetrates };
+            { BonusDamage = blow.BonusDamage, BonusCriticalChance = blow.BonusCriticalChance, Penetrates = blow.Penetrates, Kick = kick };
     }
+
+    /// <summary>The right hand's blow (a kick) rather than the left hand's punch.</summary>
+    public bool Kick { get; init; }
 
     /// <summary>Unarmed hit mode bonus damage, added to both ends of the roll (weaponGetDamage).</summary>
     public int BonusDamage { get; init; }

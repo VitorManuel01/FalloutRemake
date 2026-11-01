@@ -22,6 +22,15 @@ internal static class TempleRunAudit
     static readonly bool Packets = Environment.GetEnvironmentVariable("TEMPLE_RUN_AI") != "provisional";
     // TEMPLE_RUN_ONLY=Narg:9:direct replays one run (a diagnosis aid; the summaries then cover that run alone).
     static readonly string? Only = Environment.GetEnvironmentVariable("TEMPLE_RUN_ONLY");
+    // TEMPLE_RUN_HAND=punch keeps the left hand's punch (FO2's start) instead of the better hand.
+    static readonly string? Hand = Environment.GetEnvironmentVariable("TEMPLE_RUN_HAND");
+    static double PerTurn(WorldSession world, bool kick)
+    {
+        var stats = DerivedCombatStats.ForPlayer(world.Sheet, world.Level);
+        CombatWeapon blow = CombatWeapon.UnarmedFor(stats, world.Level, kick);
+        double average = blow.BonusDamage + (blow.MinDamage + blow.MaxDamage + stats.MeleeDamage) / 2.0;
+        return average * (stats.MaxActionPoints / blow.ActionPoints);
+    }
     static readonly int StartDay = int.TryParse(Environment.GetEnvironmentVariable("TEMPLE_RUN_DAY"), out int day) && day is >= 0 and <= 6 ? day : 0;
     public static object Create(GameData data)
     {
@@ -72,6 +81,7 @@ internal static class TempleRunAudit
                 .Select(v => Summary(v.Name, v.Kit, v.Kit)).ToArray(),
             Runs = runs.Select(r => new { r.Character, r.Seed, r.Spear, r.Heal, r.Result, r.StoppedAt, Fights = r.Fights.Length, r.FinalHitPoints, r.LowestHitPoints, r.Experience, r.Level, r.PowdersFound, r.PowdersUsed, r.Poisonings, r.PoisonDamage, r.CriticalsDealt, r.CriticalsTaken, r.Fumbles, r.GameTime, r.Fled, r.Disengaged, r.AimedAtPlayer }),
             Ai = Packets ? "ai.txt packets (CombatAi)" : "provisional melee behavior",
+            Hands = Hand == "punch" ? "left hand punch" : "the hand with more damage per turn",
             StartDay,
             OriginalReconstruction = "verified"
         };
@@ -85,6 +95,8 @@ internal static class TempleRunAudit
             templeProfile: map => TempleNpcDepartureProfile.Create(map, data.Read), arroyoProfile: map => ArroyoRewardProfile.Create(map, data.Read),
             premade: path => CharacterFile.Read(data.Read(path)), aiPackets: Packets ? AiPacketCatalog.Read(data.Read("data/ai.txt").Bytes) : null);
         world.StartNewGame(character);
+        // Bare hands: the hand whose blow deals more per turn (average damage x blows the AP allow), as a player would pick.
+        if (Hand != "punch") world.SetUnarmedHand(PerTurn(world, true) > PerTurn(world, false));
         var random = new SeededCombatRandom(seed);
         // The creatures' wandering draws from its own stream, so fights keep their rolls apart from it.
         var wander = new SeededCombatRandom(seed + 1_000_000);

@@ -109,7 +109,7 @@ public sealed partial class WorldSession
         if (ReferenceEquals(fight, _duelFight))
         {
             CombatCommitStatus duel = fight.Left ? CombatCommitStatus.InvalidFight : CommitTempleDuel(fight, players[0]);
-            if (duel == CombatCommitStatus.Ready) { _poison = players[0].Poison; _gameTime = fight.GameTime; _playerCrippled = players[0].Conditions; }
+            if (duel == CombatCommitStatus.Ready) { _poison = players[0].Poison; _gameTime = fight.GameTime; _playerCrippled = players[0].Conditions; KeepHand(players[0]); }
             return duel;
         }
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
@@ -144,9 +144,18 @@ public sealed partial class WorldSession
         _combatExperience += awarded;
         _playerDamage = players[0].Stats.MaxHitPoints - players[0].HitPoints;
         _poison = players[0].Poison;
-        _gameTime = fight.GameTime; _playerCrippled = players[0].Conditions;
+        _gameTime = fight.GameTime; _playerCrippled = players[0].Conditions; KeepHand(players[0]);
         return CombatCommitStatus.Ready;
     }
+
+    /// <summary>The hand whose blow bare hands strike with: false the left (punch, FO2's start), true the right (kick).</summary>
+    public bool UnarmedKick { get; private set; }
+    public void SetUnarmedHand(bool kick) => UnarmedKick = kick;
+    // Bare hands can switch to the other hand's blow in a fight; a carried weapon has no second hand here.
+    private CombatWeapon? OtherHand(CombatWeapon weapon, DerivedCombatStats stats) =>
+        weapon.IsItem || weapon.AttackType != WeaponAttackType.Unarmed ? null : CombatWeapon.UnarmedFor(stats, Level, !weapon.Kick);
+    // The hand the player ended a fight with stays chosen.
+    private void KeepHand(CombatantState player) { if (!player.Weapon.IsItem && player.Weapon.AttackType == WeaponAttackType.Unarmed) UnarmedKick = player.Weapon.Kick; }
 
     /// <summary>Carried Healing Powder units in a fixed order (map, owner, source key): the order fights use them up.</summary>
     private CarriedItem[] HealingCarried() => Carried.Where(c => _areas[c.Map].Items.PrototypeOf(c.Source) is var p && HealingDrugProfile.Supported(p))
@@ -156,7 +165,7 @@ public sealed partial class WorldSession
     private void ResetCombat()
     {
         _defeated.Clear(); _survivors.Clear(); _combatExperience = 0; _playerDamage = 0; _poison = PoisonState.None; _activeFight = null; ResetWandering();
-        _gameTime = CriticalRules.GameStartTicks; _playerCrippled = DamageFlags.None;
+        _gameTime = CriticalRules.GameStartTicks; _playerCrippled = DamageFlags.None; UnarmedKick = false;
     }
 
     private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints, _survivors.Count == 0 ? null : Survivors.ToArray(),
@@ -249,8 +258,8 @@ public sealed partial class WorldSession
     /// </summary>
     public CombatWeapon PlayerWeapon()
     {
-        // Bare hands strike with the best punch the sheet allows (the left hand's hit mode, CE's default).
-        CombatWeapon best = CombatWeapon.UnarmedFor(DerivedCombatStats.ForPlayer(Sheet, Level), Level);
+        // Bare hands strike with the best blow the sheet allows from the chosen hand: left punches (CE's default), right kicks.
+        CombatWeapon best = CombatWeapon.UnarmedFor(DerivedCombatStats.ForPlayer(Sheet, Level), Level, UnarmedKick);
         foreach (CarriedItem item in Carried.OrderBy(i => i.Source.Header.Pid).ThenBy(i => i.Source.Key, StringComparer.Ordinal))
         {
             if (!_areas.TryGetValue(item.Map, out WorldArea? area)
@@ -298,7 +307,8 @@ public sealed partial class WorldSession
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
         var stats = DerivedCombatStats.ForPlayer(Sheet, Level);
         var combatants = new List<CombatantState> { new("player", Character.Name, null, 0, true, Location.Hex, Location.Elevation, stats,
-            playerWeapon, HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled } };
+            playerWeapon, HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled,
+            AlternateWeapon = OtherHand(playerWeapon, stats) } };
         foreach (string key in encounter.FoeKeys)
         {
             if (!roots.TryGetValue(key, out MapObject? source) || IsDefeated(CurrentMap, key)) throw new InvalidOperationException("Encounter critter is no longer available.");

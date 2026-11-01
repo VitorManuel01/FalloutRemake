@@ -64,10 +64,23 @@ public partial class TemplePreview
                 throw new InvalidDataException("The challenge did not store the equipment, lock the gate and open the fight with Cameron first.");
             if (_combat.Get(actor.Source.Key).Ai?.Number != WorldSession.CameronPacket) throw new InvalidDataException("Cameron fights without actemvil's Dumar packet 143.");
             if (_capture != null) { _focus = Point(actor.Position, 0); _camera.Size = 14; UpdateCamera(); await Capture(Path.ChangeExtension(_capture, "duel-start.png")); }
+            string? switched = null;
             for (int guard = 0; guard < 400 && InCombat; guard++)
             {
                 if (_combat!.Active is { IsPlayer: false }) { UpdateCombat(EnemyTurnDelay); continue; }
                 CombatantState foe = _combat.Combatants.Single(c => !c.IsPlayer);
+                if (switched == null)
+                {
+                    // X swaps to the right hand's kick and back, for no AP; the fight then goes on with the punch the seed was found with.
+                    CombatantState fighter = _combat.Get("player");
+                    int ap = fighter.ActionPoints; string punch = _combatWeapon.Name;
+                    using (var x = new InputEventKey { Pressed = true, PhysicalKeycode = Key.X }) _UnhandledInput(x);
+                    switched = _combatWeapon.Name;
+                    if (switched != "Strong Kick" || fighter.Weapon.ActionPoints != 4 || fighter.ActionPoints != ap || !_hud.CombatLogText.Contains("Strong Kick"))
+                        throw new InvalidDataException($"X did not switch Narg to the Strong Kick ({switched}).");
+                    using (var x = new InputEventKey { Pressed = true, PhysicalKeycode = Key.X }) _UnhandledInput(x);
+                    if (_combatWeapon.Name != punch || fighter.Weapon.Kick || fighter.ActionPoints != ap) throw new InvalidDataException("X did not switch back to the punch.");
+                }
                 if (_combat.Preview(CombatActionProposal.Attack("player", foe.Id)).Status == CombatActionStatus.Ready)
                     ApplyCombatResult(_combat.Execute(CombatActionProposal.Attack("player", foe.Id)));
                 else { using var space = new InputEventKey { Pressed = true, PhysicalKeycode = Key.Space }; _UnhandledInput(space); }
@@ -97,7 +110,7 @@ public partial class TemplePreview
             if (_campaign.CarriedCount != carried || _campaign.TempleChestCustody.Length != 0 || _loot != null)
                 throw new InvalidDataException("J at the challenge chest did not return the equipment.");
             if (_capture != null) { _focus = Point(chest.Position, 0); _camera.Size = 14; UpdateCamera(); await Capture(Path.ChangeExtension(_capture, "duel-chest.png")); }
-            GD.Print($"TEMPLE_DUEL_OK: Narg beside Cameron, challenge button, {carried} unit(s) into the chest, gate closed and locked, Cameron first with his Dumar packet, seeded fight {seed} yielded below half HP (G10=1), departure completed, J at the chest returned the equipment; source bytes verified.");
+            GD.Print($"TEMPLE_DUEL_OK: Narg beside Cameron, challenge button, {carried} unit(s) into the chest, gate closed and locked, Cameron first with his Dumar packet, X switched punch and Strong Kick for 0 AP, seeded fight {seed} yielded below half HP (G10=1), departure completed, J at the chest returned the equipment; source bytes verified.");
             foreach (WorldArea area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
         }
         finally

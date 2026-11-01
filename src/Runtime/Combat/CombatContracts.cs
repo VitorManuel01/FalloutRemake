@@ -7,7 +7,7 @@ public enum DamageType { Normal, Laser, Fire, Plasma, Electrical, Emp, Explosion
 public enum LifeStatus { Active, Dead }
 /// <summary>CE hit locations; Uncalled is the plain attack, which CE resolves on the torso row.</summary>
 public enum HitLocation { Head, LeftArm, RightArm, Torso, RightLeg, LeftLeg, Eyes, Groin, Uncalled }
-public enum CombatActionKind { Move, Attack, EndTurn, UseHealing, LeaveCombat }
+public enum CombatActionKind { Move, Attack, EndTurn, UseHealing, LeaveCombat, SwitchHand }
 public enum CombatActionStatus
 {
     Ready, CombatOver, NotActive, UnknownCombatant, InvalidTarget, AlreadyThere, Unreachable,
@@ -31,6 +31,8 @@ public sealed record CombatActionProposal(string ActorId, CombatActionKind Kind,
     public static CombatActionProposal UseHealing(string actor) => new(actor, CombatActionKind.UseHealing);
     /// <summary>The player's Enter (CE combatAttemptEnd): ends the fight when no enemy still perceives the player.</summary>
     public static CombatActionProposal LeaveCombat(string actor) => new(actor, CombatActionKind.LeaveCombat);
+    /// <summary>The player's hand swap (FO2's item slots: left hand punches, right hand kicks); it costs no AP.</summary>
+    public static CombatActionProposal SwitchHand(string actor) => new(actor, CombatActionKind.SwitchHand);
 }
 
 /// <summary>
@@ -56,6 +58,8 @@ public sealed record TurnStarted(int Round, string CombatantId, int ActionPoints
 public sealed record CombatantMoved(string CombatantId, int From, int To, int[] Path, int ActionPointsSpent) : CombatEvent;
 public sealed record AttackResolved(string AttackerId, string TargetId, int Chance, int Roll, bool Hit, int DamageRoll, int Damage,
     int TargetHitPoints, int ActionPointsSpent, HitLocation Location = HitLocation.Uncalled) : CombatEvent;
+/// <summary>The player switched hands: the blow now used.</summary>
+public sealed record HandSwitched(string CombatantId, string Blow) : CombatEvent;
 /// <summary>A creature runs from the fight (CE _ai_run_away): too hurt, crippled as its packet fears, or unable to hit at all.</summary>
 public sealed record CombatantFleeing(string CombatantId, string Reason) : CombatEvent;
 /// <summary>A creature left the fight at a round's end (CE disengaging maneuver); it stays on the map where it stands.</summary>

@@ -64,8 +64,9 @@ public partial class TemplePreview
         TempleWorldStatus status = _campaign.PrepareTempleDuel(profile, _walker?.Moving == true);
         if (status != TempleWorldStatus.Ready) { NavigationStatus(DuelHint(status)); return; }
         ClearRouteHover(); ClearRouteVisual(); ClearSelection();
-        _combatWeapon = CombatWeapon.Unarmed();
         _combat = _campaign.BeginTempleDuel(profile!, new SeededCombatRandom(_combatSeed ?? (ulong)DateTime.UtcNow.Ticks));
+        // Bare hands: the chosen hand's blow (Strong Punch, Strong Kick…), named as CE names it.
+        _combatWeapon = _combat.Get("player").Weapon;
         _duelFightView = _combat;
         // The gate now projects closed and locked; rebuild before showing the fight.
         BuildWorld();

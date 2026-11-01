@@ -193,6 +193,7 @@ public partial class TemplePreview
         {
             if (key.PhysicalKeycode == Key.Space) { EndCombatTurn(); return true; }
             if (key.PhysicalKeycode == Key.H) { UseCombatHealing(); return true; }
+            if (key.PhysicalKeycode == Key.X) { SwitchCombatHand(); return true; }
             if (key.PhysicalKeycode is Key.Enter or Key.KpEnter) { LeaveCombat(); return true; }
             // Camera, view and inspection keys stay available; anything that would act in the world waits.
             if (key.PhysicalKeycode is Key.Q or Key.E or Key.C or Key.Home or Key.V or Key.G or Key.O or Key.F or Key.R) return false;
@@ -235,6 +236,28 @@ public partial class TemplePreview
         ApplyCombatResult(result);
     }
 
+    // FO2's hand swap: bare hands punch with the left and kick with the right; no AP.
+    private void SwitchCombatHand()
+    {
+        if (_combat?.Active is not { IsPlayer: true } player) { NavigationStatus("Aguarde: é o turno da criatura."); return; }
+        CombatActionResult result = _combat.Execute(CombatActionProposal.SwitchHand(player.Id));
+        if (result.Status != CombatActionStatus.Ready) { NavigationStatus("Ação recusada · a arma carregada não tem outra mão"); return; }
+        _combatWeapon = player.Weapon;
+        ApplyCombatResult(result);
+    }
+
+    // Out of a fight: choose the hand bare hands will strike with.
+    private void SwitchUnarmedHand()
+    {
+        if (_campaign == null || InCombat) return;
+        _campaign.SetUnarmedHand(!_campaign.UnarmedKick);
+        CombatWeapon weapon = _campaign.PlayerWeapon();
+        int meleeDamage = DerivedCombatStats.ForPlayer(_campaign.Sheet, _campaign.Level).MeleeDamage;
+        string hand = _campaign.UnarmedKick ? "direita: chute" : "esquerda: soco";
+        NavigationStatus(weapon.IsItem ? $"Mão {hand} escolhida · a arma carregada segue em uso"
+            : $"Mão {hand} · {weapon.Name} ({weapon.ActionPoints} AP, dano {weapon.BonusDamage + weapon.MinDamage}–{weapon.BonusDamage + weapon.MaxDamage + meleeDamage})");
+    }
+
     private void UseCombatHealing()
     {
         if (_combat?.Active is not { IsPlayer: true } player) { NavigationStatus("Aguarde: é o turno da criatura."); return; }
@@ -269,6 +292,8 @@ public partial class TemplePreview
                     Lunge(_combat.Get(attack.AttackerId), _combat.Get(attack.TargetId));
                     lines.Add($"{CombatName(attack.AttackerId)} ataca {CombatName(attack.TargetId)}{Aimed(attack.Location)}: {attack.Roll} em {attack.Chance}% · "
                         + (attack.Hit ? $"acerto, {attack.Damage} de dano ({attack.TargetHitPoints} HP)" : "erro")); break;
+                case HandSwitched hand:
+                    lines.Add($"Você troca para {hand.Blow} (0 AP)"); break;
                 case CombatantFleeing fleeing:
                     lines.Add($"{CombatName(fleeing.CombatantId)} foge"); break;
                 case CombatantDisengaged gone:
@@ -359,7 +384,8 @@ public partial class TemplePreview
         _hud.Combat(true, $"COMBATE · Rodada {turn.Round} · {(mine ? "seu turno" : $"turno de {CombatName(turn.ActiveId!)}")}",
             $"Você: {player.HitPoints}/{player.Stats.MaxHitPoints} HP · {player.ActionPoints}/{player.Stats.MaxActionPoints} AP · AC {player.EffectiveArmorClass} · {_combatWeapon.Name}{(player.HealingDoses > 0 ? $" · Healing Powder ×{player.HealingDoses}" : "")}{(player.Poison.Active ? $" · envenenado ({player.Poison.Level})" : "")}{State(player)}\n{foes}", mine);
         if (mine && _combatHoverKey.Length == 0) _hud.CombatPreview($"Clique no chão para mover ({player.ActionPointsPerHex} AP por hex) ou na criatura para atacar. Espaço encerra o turno; Enter sai do combate longe da percepção das criaturas."
-            + (player.HealingDoses > 0 ? $" H usa Healing Powder ({CombatSession.InventoryActionPoints} AP)." : ""));
+            + (player.HealingDoses > 0 ? $" H usa Healing Powder ({CombatSession.InventoryActionPoints} AP)." : "")
+            + (player.AlternateWeapon != null ? $" X troca para {player.AlternateWeapon.Name}." : ""));
     }
 
     private void FinishCombat()

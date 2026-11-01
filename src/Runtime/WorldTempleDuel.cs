@@ -103,7 +103,8 @@ public sealed partial class WorldSession
         // Bare hands and no healing dose: the inventory now lies in the chest.
         var sheet = DerivedCombatStats.ForPlayer(Sheet, Level);
         var player = new CombatantState("player", Character.Name, null, 0, true, Location.Hex, 2, sheet,
-            CombatWeapon.UnarmedFor(sheet, Level), HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled };
+            CombatWeapon.UnarmedFor(sheet, Level, UnarmedKick), HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled,
+            AlternateWeapon = CombatWeapon.UnarmedFor(sheet, Level, !UnarmedKick) };
         CombatantState cameron = CombatantState.FromMapCritter(source, CritterPrototypeData.Read(prototype), "Cameron");
         cameron = new CombatantState(cameron.Id, cameron.Name, cameron.Pid, cameron.Team, false, cameron.Hex, cameron.Elevation, cameron.Stats,
             cameron.Weapon, cameron.HitPoints, cameron.Experience) { YieldsBelowHalf = true, KillType = cameron.KillType, Ai = Packet(CameronPacket) };
