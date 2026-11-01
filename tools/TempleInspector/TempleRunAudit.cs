@@ -75,15 +75,17 @@ internal static class TempleRunAudit
             premade: path => CharacterFile.Read(data.Read(path)));
         world.StartNewGame(character);
         var random = new SeededCombatRandom(seed);
+        // The creatures' wandering draws from its own stream, so fights keep their rolls apart from it.
+        var wander = new SeededCombatRandom(seed + 1_000_000);
         var fights = new List<FightLog>();
-        int steps = 0, lowest = world.HitPoints, found = 0, used = 0, poisonings = 0, poisonDamage = 0;
+        int steps = 0, lowest = world.HitPoints, found = 0, used = 0, poisonings = 0, poisonDamage = 0, waits = 0;
         double carry = 0;
         string place = "entry";
-        // Exploration game time: due poison events cost HP; a lethal one ends the run.
+        // Exploration game time: due poison events cost HP (a lethal one ends the run) and the creatures wander.
         void Pass(double ticks)
         {
             carry += ticks; int whole = (int)carry; carry -= whole;
-            PoisonTimeAdvance step = world.AdvanceTime(whole); poisonDamage += step.HitPointsLost;
+            WorldTimeAdvance step = world.AdvanceTime(whole, wander); poisonDamage += step.HitPointsLost;
             if (step.Died) throw new Stop("Died", $"{place} (veneno)");
             lowest = Math.Min(lowest, world.HitPoints);
         }
@@ -151,9 +153,16 @@ internal static class TempleRunAudit
         {
             for (int guard = 0; world.Location.Hex != target; guard++)
             {
-                if (guard > 2000) throw new Stop("Stalled", $"{place}: walk to {target} did not finish");
+                if (guard > 4000) throw new Stop("Stalled", $"{place}: walk to {target} did not finish");
                 HexRoute route = world.Current.Doors.Navigation(world.Location.Elevation).FindRoute(world.Location.Hex, target);
-                if (route.Status != RouteStatus.Ready) throw new Stop("Stalled", $"{place}: no route to {target} ({route.Status})");
+                if (route.Status != RouteStatus.Ready)
+                {
+                    // A wandering creature may stand on the goal or in a corridor: wait a second for it to move on.
+                    if (route.Status is not (RouteStatus.Blocked or RouteStatus.Unreachable) || waits++ > 600) throw new Stop("Stalled", $"{place}: no route to {target} ({route.Status})");
+                    Pass(10);
+                    if (world.FindEncounter(world.Location) is { } waiting) Fight(waiting);
+                    continue;
+                }
                 world.Current.Travel.MoveTo(route.Tiles[1]); steps++; Pass(pace.TicksPerHex);
                 if (world.FindEncounter(world.Location) is { } encounter) Fight(encounter);
             }

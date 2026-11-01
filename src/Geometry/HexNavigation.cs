@@ -124,6 +124,8 @@ public sealed class HexWalker
     public bool StopRequested { get; private set; }
     public double Progress { get; private set; }
     public int NextHex => Moving ? _route[_index + 1] : CurrentHex;
+    /// <summary>Hexes still ahead on the route, next first; empty when standing.</summary>
+    public int[] RemainingRoute => Moving ? _route[(_index + 1)..] : Array.Empty<int>();
     public HexWalker(HexNavigation navigation, int start)
     {
         if (!navigation.Walkable(start)) throw new ArgumentException("Marker start is blocked or outside the grid.", nameof(start));

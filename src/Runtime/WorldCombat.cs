@@ -12,11 +12,15 @@ namespace FalloutRemake.Runtime;
 public enum CombatCommitStatus { Ready, NotOver, PlayerDefeated, InvalidFight, StaleSource, AlreadyDefeated }
 /// <summary>Source critters that notice the player at its current location; the nearest one starts the fight.</summary>
 public sealed record CombatEncounter(ActorLocation Player, string[] FoeKeys, string InitiatorKey);
-public sealed record PoisonTimeAdvance(int HitPointsLost, bool Died, PoisonState Poison);
+/// <summary>What a stretch of exploration time did: poison HP lost (or a lethal event, not applied) and the creatures that wandered.</summary>
+public sealed record WorldTimeAdvance(int HitPointsLost, bool Died, PoisonState Poison, string[] Wandered);
 /// <summary>A source critter killed in a won fight: its record stays intact; the world projects the corpse.</summary>
 public sealed record DefeatedCritter([property: JsonRequired] int Map, [property: JsonRequired] string Key, [property: JsonRequired] int Pid,
     [property: JsonRequired] int Elevation, [property: JsonRequired] int Hex);
-/// <summary>A source critter still standing after the player left the fight: the world projects its hex, HP and facing.</summary>
+/// <summary>
+/// A living source critter standing away from its MAP record (left behind by a fight the player left, or wandered off):
+/// the world projects its hex, HP and facing.
+/// </summary>
 public sealed record SurvivingCritter([property: JsonRequired] int Map, [property: JsonRequired] string Key, [property: JsonRequired] int Pid,
     [property: JsonRequired] int Elevation, [property: JsonRequired] int Hex, [property: JsonRequired] int HitPoints, [property: JsonRequired] int Rotation);
 
@@ -44,17 +48,20 @@ public sealed partial class WorldSession
     public PoisonState Poison => _poison;
 
     /// <summary>
-    /// Exploration game time (CE: one tick per 100 ms outside combat): due poison events cost HP. A lethal event is reported
-    /// (Died) without being applied, so the caller ends the game as a lost fight does.
+    /// Exploration game time (CE: one tick per 100 ms outside combat). Due poison events cost HP; a lethal one is reported
+    /// (Died) without applying anything, so the caller ends the game as a lost fight does. With <paramref name="random"/>,
+    /// the creatures of the current map wander (WorldWander); <paramref name="reserved"/> are hexes the walking player is
+    /// about to enter, which wanderers treat like the player's own hex.
     /// </summary>
-    public PoisonTimeAdvance AdvanceTime(int ticks)
+    public WorldTimeAdvance AdvanceTime(int ticks, ICombatRandom? random = null, IReadOnlyCollection<int>? reserved = null)
     {
         if (ticks < 0) throw new ArgumentOutOfRangeException(nameof(ticks));
-        if (InCombat || !_poison.Active || ticks == 0) return new(0, false, _poison);
+        if (InCombat || ticks == 0) return new(0, false, _poison, Array.Empty<string>());
         PoisonState next = _poison.Advance(ticks, out int lost);
-        if (lost >= HitPoints) return new(lost, true, next);
+        if (lost > 0 && lost >= HitPoints) return new(lost, true, next, Array.Empty<string>());
         _poison = next; _playerDamage += lost;
-        return new(lost, false, _poison);
+        string[] moved = random == null ? Array.Empty<string>() : Wander(ticks, random, reserved);
+        return new(lost, false, _poison, moved);
     }
     public IReadOnlyList<DefeatedCritter> Defeated => _defeated.Values.OrderBy(d => d.Map).ThenBy(d => d.Key, StringComparer.Ordinal).ToArray();
     public bool IsDefeated(int map, string key) => _defeated.ContainsKey((map, key));
@@ -134,7 +141,7 @@ public sealed partial class WorldSession
         .OrderBy(c => c.Map).ThenBy(c => c.OwnerKey, StringComparer.Ordinal).ThenBy(c => c.Source.Key, StringComparer.Ordinal).ToArray();
     public int HealingDoses => HealingCarried().Sum(c => c.Quantity);
 
-    private void ResetCombat() { _defeated.Clear(); _survivors.Clear(); _combatExperience = 0; _playerDamage = 0; _poison = PoisonState.None; _activeFight = null; }
+    private void ResetCombat() { _defeated.Clear(); _survivors.Clear(); _combatExperience = 0; _playerDamage = 0; _poison = PoisonState.None; _activeFight = null; ResetWandering(); }
 
     private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints, _survivors.Count == 0 ? null : Survivors.ToArray(),
         _poison.Active ? new SavedPoison(_poison.Level, _poison.TicksLeft) : null);
