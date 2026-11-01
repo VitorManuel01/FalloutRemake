@@ -121,8 +121,10 @@ public sealed partial class WorldSession
                 || (source.Header.Pid >> 24) != 1) return CombatCommitStatus.StaleSource;
             if (IsDefeated(CurrentMap, foe.Id)) return CombatCommitStatus.AlreadyDefeated;
             if (!foe.Alive) dead.Add(new DefeatedCritter(CurrentMap, foe.Id, source.Header.Pid, foe.Elevation, foe.Hex));
-            else if (fight.Left) standing.Add(new SurvivingCritter(CurrentMap, foe.Id, source.Header.Pid, foe.Elevation, foe.Hex, foe.HitPoints, foe.Rotation,
+            // Alive after the fight: left behind by the player's Enter, or gone from the fight on its own (disengaged).
+            else if (fight.Left || foe.Disengaged) standing.Add(new SurvivingCritter(CurrentMap, foe.Id, source.Header.Pid, foe.Elevation, foe.Hex, foe.HitPoints, foe.Rotation,
                 foe.Conditions & DamageFlags.Crippled));
+            else return CombatCommitStatus.InvalidFight;
         }
         int awarded = fight.Log.OfType<CombatantDied>().Sum(d => d.Experience);
         if (awarded != fight.Turn.ExperienceAwarded || awarded < 0) return CombatCommitStatus.InvalidFight;
@@ -231,6 +233,14 @@ public sealed partial class WorldSession
     public static readonly IReadOnlySet<int> EncounterPids = new HashSet<int> { 0x0100017E, 0x01000005 };
     /// <summary>The radscorpion's zclscorp combat_p_proc may poison the dude on each hit (PoisonRules).</summary>
     public const int RadscorpionPid = 0x01000005;
+    /// <summary>
+    /// AI packets the creatures' map_enter_p_proc sets (critter_add_trait OBJECT_AI_PACKET): zclrat Rat 7, zclscorp Scorpion 8,
+    /// and actemvil gives Cameron Dumar 143 (--combat-ai-report checks the bytecode).
+    /// </summary>
+    public static readonly IReadOnlyDictionary<int, int> ScriptPackets = new Dictionary<int, int> { [0x0100017E] = 7, [0x01000005] = 8 };
+    public const int CameronPacket = 143;
+    private AiPacket? Packet(int number) => number >= 0 && _aiPackets?.TryGetValue(number, out AiPacket? packet) == true ? packet
+        : _aiPackets == null || number < 0 ? null : throw new InvalidDataException($"ai.txt has no packet {number}.");
 
     /// <summary>
     /// Weapon the player fights with: the carried hand weapon (melee or unarmed primary attack) with the highest average
@@ -294,7 +304,7 @@ public sealed partial class WorldSession
             Prototype prototype = Current.Map.Prototypes.FirstOrDefault(p => p.Pid == source.Header.Pid)
                 ?? throw new System.IO.InvalidDataException($"Critter prototype {source.Header.Pid:X8} is not part of the map dependencies.");
             CombatantState foe = CombatantState.FromMapCritter(EffectiveObject(CurrentMap, source), CritterPrototypeData.Read(prototype), $"PID {source.Header.Pid:X8}",
-                poisonsOnHit: source.Header.Pid == RadscorpionPid);
+                poisonsOnHit: source.Header.Pid == RadscorpionPid, ai: Packet(ScriptPackets.GetValueOrDefault(source.Header.Pid, -1)));
             if (_survivors.TryGetValue((CurrentMap, key), out SurvivingCritter? standing)) foe.SetConditions(standing.Crippled);
             combatants.Add(foe);
         }

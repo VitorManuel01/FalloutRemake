@@ -23,6 +23,10 @@ public sealed class CombatSession : ICombatSession
     private bool _over;
     private int? _winner;
     internal CombatMovement Movement { get; }
+    // CE draws the AI's choices (called shots) from the same generator as the attacks.
+    internal ICombatRandom Random => _random;
+    // The AI's own decisions (fleeing) enter the log between the actions they cause.
+    internal void Report(CombatEvent e) => _log.Add(e);
 
     /// <param name="gameTime">The game clock (CE ticks) when the fight opens; it gates criticals and runs 5 s per round.</param>
     public CombatSession(IEnumerable<CombatantState> combatants, HexNavigation navigation, ICombatRandom random, string? initiatorId = null,
@@ -43,6 +47,15 @@ public sealed class CombatSession : ICombatSession
         if (_combatants.Select(c => c.Team).Distinct().Count() < 2) throw new InvalidDataException("A fight needs two teams.");
         if (initiatorId != null && _combatants.All(c => c.Id != initiatorId)) throw new InvalidDataException("Unknown initiator.");
         Movement = new CombatMovement(navigation, _combatants);
+        // _combat_sequence_init sets attacker and defender against each other; every other creature that noticed the player
+        // ran attack_complex in combat, which marks it engaging with the player as its danger (opAttackComplex).
+        CombatantState? player = _combatants.FirstOrDefault(c => c.IsPlayer);
+        if (player != null)
+            foreach (CombatantState foe in _combatants.Where(c => !c.IsPlayer && c.Team != player.Team))
+            {
+                foe.WhoHitMe = player.Id;
+                if (foe.Id == initiatorId) player.WhoHitMe = foe.Id; else foe.Engaging = true;
+            }
         _order = CombatInitiative.Order(_combatants, initiatorId);
         _log.Add(new CombatStarted((string[])_order.Clone()));
         BeginNextTurn(first: true);
@@ -62,10 +75,15 @@ public sealed class CombatSession : ICombatSession
     /// <summary>
     /// Enemies of <paramref name="player"/> that still perceive it (CE _combatai_want_to_stop is false while the danger source
     /// is within perception): PE x 5 in their front cone, PE x 2 around, with no line of sight involved. The knocked out
-    /// are out of the fight's list; one that woke and waits to rejoin always wants to (_combatai_want_to_join).
+    /// are out of the fight's list; one that woke and waits to rejoin always wants to (_combatai_want_to_join). Fleeing and
+    /// disengaging creatures want to stop.
     /// </summary>
     public IEnumerable<CombatantState> AwareEnemies(CombatantState player) => _combatants.Where(c => c.InFight && c.Team != player.Team && !c.KnockedOut
-        && (c.Rejoining || CritterSight.WithinPerception(c.Hex, c.Rotation, false, c.Stats.Special.Perception, player.Hex, inCombat: true)));
+        && !c.Fleeing && !c.Disengaging && (c.Rejoining || CritterSight.WithinPerception(c.Hex, c.Rotation, false, c.Perception, player.Hex, inCombat: true)));
+
+    /// <summary>CE weaponGetActionPointCost: the weapon's (or bare hands') cost, one more when aimed at a location.</summary>
+    public static int AttackCost(CombatantState attacker, HitLocation location) =>
+        attacker.Weapon.ActionPoints + (location is HitLocation.Torso or HitLocation.Uncalled ? 0 : 1);
 
     public CombatActionPreview Preview(CombatActionProposal proposal)
     {
@@ -82,7 +100,7 @@ public sealed class CombatSession : ICombatSession
             case CombatActionKind.Move:
                 if (proposal.TargetHex is not int hex || !HexNavigation.Valid(hex)) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
                 if (hex == actor.Hex) return CombatActionPreview.Refused(CombatActionStatus.AlreadyThere, ap);
-                int[]? path = Movement.Path(actor, hex);
+                int[]? path = proposal.Path == null ? Movement.Path(actor, hex) : Movement.Follows(actor, proposal.Path) ? proposal.Path : null;
                 if (path == null) return CombatActionPreview.Refused(CombatActionStatus.Unreachable, ap);
                 int cost = path.Length * actor.ActionPointsPerHex;
                 return new(cost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready, cost, ap - cost, path, null, null);
@@ -97,13 +115,18 @@ public sealed class CombatSession : ICombatSession
                 CombatantState? target = _combatants.FirstOrDefault(c => c.Id == proposal.TargetId);
                 if (target == null || target == actor || !target.InFight) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
                 if (target.Elevation != actor.Elevation) return CombatActionPreview.Refused(CombatActionStatus.OtherElevation, ap);
-                int attackCost = actor.Weapon.ActionPoints;
+                // Aimed blows need the defender's table for every location: only the player's is whole. The AI's plain blow
+                // names the torso, which every table has.
+                if (proposal.Location is < HitLocation.Head or > HitLocation.Uncalled
+                    || proposal.Location is not (HitLocation.Uncalled or HitLocation.Torso) && !target.IsPlayer)
+                    return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
+                int attackCost = AttackCost(actor, proposal.Location);
                 DamageFlags arms = actor.Conditions & DamageFlags.CrippledArms;
                 CombatActionStatus status = actor.Weapon.IsItem && (arms == DamageFlags.CrippledArms || arms != 0 && actor.Weapon.TwoHanded) ? CombatActionStatus.ArmCrippled
                     : CombatResolver.Reach(actor, target) > actor.Weapon.Range ? CombatActionStatus.OutOfRange
                     : attackCost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready;
                 // The odds are shown even when the attack is not yet possible, so the HUD can explain the refusal.
-                return new(status, attackCost, ap - attackCost, Array.Empty<int>(), CombatResolver.ToHit(actor, target), DamageCalculator.Estimate(actor, target));
+                return new(status, attackCost, ap - attackCost, Array.Empty<int>(), CombatResolver.ToHit(actor, target, proposal.Location), DamageCalculator.Estimate(actor, target));
             default:
                 return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
         }
@@ -150,16 +173,17 @@ public sealed class CombatSession : ICombatSession
                 // randomTranslateRoll: from game day 1 a second d100 may upgrade the hit (margin / 10 + Critical Chance - the
                 // torso's 0 penalty) or the miss (miss margin / 10). The margin is taken from the clamped chance that decided the hit.
                 int criticalRoll = 0, needed = 0;
+                HitLocation location = proposal.Location;
                 if (CriticalRules.CriticalsAllowed(GameTime))
                 {
                     criticalRoll = _random.Between(1, 100);
-                    needed = hit ? margin / 10 + actor.Stats.CriticalChance - CriticalRules.TorsoPenalty : -margin / 10;
+                    needed = hit ? margin / 10 + actor.Stats.CriticalChance - CriticalRules.Penalty(location) : -margin / 10;
                     (critical, failure) = (hit && criticalRoll <= needed, !hit && criticalRoll <= needed);
                 }
                 int damageRoll = 0, damage = 0;
                 if (hit)
                 {
-                    var (multiplier, flags) = critical ? CriticalStrike(actor, target, criticalRoll, needed) : (DamageCalculator.NormalHitMultiplier, DamageFlags.None);
+                    var (multiplier, flags) = critical ? CriticalStrike(actor, target, criticalRoll, needed, location) : (DamageCalculator.NormalHitMultiplier, DamageFlags.None);
                     bool bypass = (flags & DamageFlags.Bypass) != 0;
                     int threshold = bypass ? DamageCalculator.Threshold(target, actor.Weapon, true) : preview.Damage!.Threshold;
                     int resistance = bypass ? DamageCalculator.Resistance(target, actor.Weapon, true) : preview.Damage!.Resistance;
@@ -168,10 +192,11 @@ public sealed class CombatSession : ICombatSession
                     target.HitPoints = Math.Max(0, target.HitPoints - damage);
                     // DAM_DEAD from the table kills whatever HP are left (_damage_object then critterKill).
                     if ((flags & DamageFlags.Dead) != 0) target.HitPoints = 0;
-                    _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, damageRoll, damage, target.HitPoints, preview.ActionPointCost));
+                    _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, damageRoll, damage, target.HitPoints, preview.ActionPointCost, location));
                     if (target.Alive && flags != DamageFlags.None) ApplyResults(target, flags);
                 }
-                else _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, 0, 0, target.HitPoints, preview.ActionPointCost));
+                else _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, 0, 0, target.HitPoints, preview.ActionPointCost, location));
+                AfterAttack(actor, target, damage);
                 // CE runs the attacker's combat_p_proc (fixed_param 2) after every hit on a critter that stood before it.
                 if (hit && actor.PoisonsOnHit && target.IsPlayer) Sting(actor, target);
                 if (!target.Alive)
@@ -191,10 +216,10 @@ public sealed class CombatSession : ICombatSession
     /// attackComputeCriticalHit on the torso row: d100 + Better Criticals picks the effect; a row with a massive check rolls
     /// d10 against the defender's stat + modifier and adds its flags on a failure (statRoll). Returns the multiplier and flags.
     /// </summary>
-    private (int Multiplier, DamageFlags Flags) CriticalStrike(CombatantState attacker, CombatantState target, int roll, int needed)
+    private (int Multiplier, DamageFlags Flags) CriticalStrike(CombatantState attacker, CombatantState target, int roll, int needed, HitLocation location)
     {
         int effectRoll = _random.Between(1, 100) + attacker.Stats.BetterCriticals, effect = CriticalRules.Effect(effectRoll);
-        CriticalEffect row = CriticalRules.Torso(target.IsPlayer, target.KillType, effect);
+        CriticalEffect row = target.IsPlayer ? CriticalRules.Player(location, effect) : CriticalRules.Torso(false, target.KillType, effect);
         DamageFlags flags = row.Flags;
         int message = row.Message, statRoll = 0;
         bool massive = false;
@@ -242,6 +267,31 @@ public sealed class CombatSession : ICombatSession
         ApplyResults(attacker, flags);
         // _combat_attack: an attacker its own failure knocked down gets up at once, unless the turn is lost.
         if ((attacker.Conditions & DamageFlags.KnockedDown) != 0 && (attacker.Conditions & DamageFlags.LoseTurn) == 0) StandUp(attacker);
+    }
+
+    /// <summary>
+    /// _combat_attack and _apply_damage bookkeeping for the AI: the dude takes its target as its danger; a defender left dead
+    /// or knocked out holds its attacker, one still standing retaliates against the stronger of its danger and the attacker
+    /// (_combatai_check_retaliation); damage accumulates; onlookers who perceive the defender engage, and one that sees a
+    /// friend die without perceiving the killer remembers the corpse (_combatai_notify_onlookers).
+    /// </summary>
+    private void AfterAttack(CombatantState attacker, CombatantState defender, int damage)
+    {
+        if (attacker.IsPlayer) attacker.WhoHitMe = defender.Id;
+        if (attacker.Team != defender.Team)
+        {
+            if (!defender.Alive || defender.KnockedOut) defender.WhoHitMe = attacker.Id;
+            else if (defender.WhoHitMe is not string danger || CombatAi.Rating(attacker) > CombatAi.Rating(Get(danger))) defender.WhoHitMe = attacker.Id;
+        }
+        defender.DamageTaken += damage;
+        foreach (CombatantState onlooker in _combatants.Where(c => c.Alive && !c.Engaging))
+        {
+            if (!CritterSight.WithinPerception(onlooker.Hex, onlooker.Rotation, false, onlooker.Perception, defender.Hex, inCombat: true)) continue;
+            onlooker.Engaging = true;
+            if (!defender.Alive && defender.WhoHitMe is string killer
+                && !CritterSight.WithinPerception(onlooker.Hex, onlooker.Rotation, false, onlooker.Perception, Get(killer).Hex, inCombat: true))
+                onlooker.FriendlyDead = defender.Id;
+        }
     }
 
     // _set_new_results: the lasting flags stay on the critter; a knockout (re)schedules the wake-up event.
@@ -350,6 +400,14 @@ public sealed class CombatSession : ICombatSession
     private void NextRound()
     {
         foreach (CombatantState combatant in _combatants) combatant.Rejoining = false;
+        // Disengaging creatures leave the list for good (want_to_join refuses them); _combat_should_end then ends a fight
+        // with no enemy of the player left in it.
+        foreach (CombatantState leaving in _combatants.Where(c => c.InFight && !c.IsPlayer && c.Disengaging))
+        {
+            leaving.Disengaged = true;
+            _log.Add(new CombatantDisengaged(leaving.Id, leaving.HitPoints));
+        }
+        CheckOver(); if (_over) return;
         RoundElapsed();
         if (_over) return;
         _round++;

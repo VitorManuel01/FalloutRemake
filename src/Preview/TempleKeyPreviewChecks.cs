@@ -29,15 +29,15 @@ public partial class TemplePreview
         var prototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
         WorldSession copy = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 }, CheckpointFile.Read(CheckpointPath), catalogHash,
             runtimePrototype: prototypes.Get, templeProfile: map => TempleNpcDepartureProfile.Create(map, data.Read),
-            arroyoProfile: map => ArroyoRewardProfile.Create(map, data.Read), premade: path => CharacterFile.Read(data.Read(path)));
+            arroyoProfile: map => ArroyoRewardProfile.Create(map, data.Read), premade: path => CharacterFile.Read(data.Read(path)), aiPackets: _aiPackets);
         CombatSession opening = copy.BeginTempleDuel(TempleNpcDepartureProfile.Create(copy.Current.Map, data.Read), new SeededCombatRandom(1));
         CombatantState[] start = opening.Combatants.Select(c => new CombatantState(c.Id, c.Name, c.Pid, c.Team, c.IsPlayer, c.Hex, c.Elevation, c.Stats, c.Weapon,
-            c.HitPoints, c.Experience, c.HealingDoses) { YieldsBelowHalf = c.YieldsBelowHalf }).ToArray();
+            c.HitPoints, c.Experience, c.HealingDoses) { YieldsBelowHalf = c.YieldsBelowHalf, Ai = c.Ai, KillType = c.KillType, Rotation = c.Rotation }).ToArray();
         HexNavigation arena = copy.Current.Doors.Navigation(2);
         bool Kills(ulong candidate)
         {
             var fight = new CombatSession(start.Select(c => new CombatantState(c.Id, c.Name, c.Pid, c.Team, c.IsPlayer, c.Hex, c.Elevation, c.Stats, c.Weapon,
-                c.HitPoints, c.Experience, c.HealingDoses) { YieldsBelowHalf = c.YieldsBelowHalf }), arena, new SeededCombatRandom(candidate), profile.ActorKey);
+                c.HitPoints, c.Experience, c.HealingDoses) { YieldsBelowHalf = c.YieldsBelowHalf, Ai = c.Ai, KillType = c.KillType, Rotation = c.Rotation }), arena, new SeededCombatRandom(candidate), profile.ActorKey);
             for (int guard = 0; guard < 400 && !fight.Turn.Over; guard++) PlayDuelTurn(fight);
             return fight.Turn.Over && !fight.Get(profile.ActorKey).Alive && fight.Get("player").Alive;
         }

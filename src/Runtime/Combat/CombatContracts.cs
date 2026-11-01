@@ -5,6 +5,8 @@ namespace FalloutRemake.Runtime.Combat;
 /// <summary>CE damage-type order, shared by weapon PRO damageType and critter DT/DR stat blocks.</summary>
 public enum DamageType { Normal, Laser, Fire, Plasma, Electrical, Emp, Explosion }
 public enum LifeStatus { Active, Dead }
+/// <summary>CE hit locations; Uncalled is the plain attack, which CE resolves on the torso row.</summary>
+public enum HitLocation { Head, LeftArm, RightArm, Torso, RightLeg, LeftLeg, Eyes, Groin, Uncalled }
 public enum CombatActionKind { Move, Attack, EndTurn, UseHealing, LeaveCombat }
 public enum CombatActionStatus
 {
@@ -15,10 +17,15 @@ public enum CombatActionStatus
 }
 
 /// <summary>What a combatant wants to do; previewed and executed through the same rules.</summary>
-public sealed record CombatActionProposal(string ActorId, CombatActionKind Kind, int? TargetHex = null, string? TargetId = null)
+public sealed record CombatActionProposal(string ActorId, CombatActionKind Kind, int? TargetHex = null, string? TargetId = null,
+    HitLocation Location = HitLocation.Uncalled, int[]? Path = null)
 {
     public static CombatActionProposal Move(string actor, int hex) => new(actor, CombatActionKind.Move, TargetHex: hex);
+    /// <summary>A move along given hexes (the CE pathfinder's route for a creature), each one a neighbor of the last.</summary>
+    public static CombatActionProposal MoveAlong(string actor, int[] path) => new(actor, CombatActionKind.Move, TargetHex: path.Length > 0 ? path[^1] : null, Path: (int[])path.Clone());
     public static CombatActionProposal Attack(string actor, string target) => new(actor, CombatActionKind.Attack, TargetId: target);
+    /// <summary>An aimed blow (CE called shot): +1 AP; aimed attacks exist only against the player, whose table has every location.</summary>
+    public static CombatActionProposal Attack(string actor, string target, HitLocation location) => new(actor, CombatActionKind.Attack, TargetId: target, Location: location);
     public static CombatActionProposal EndTurn(string actor) => new(actor, CombatActionKind.EndTurn);
     /// <summary>Takes one carried healing dose (Healing Powder) through the inventory.</summary>
     public static CombatActionProposal UseHealing(string actor) => new(actor, CombatActionKind.UseHealing);
@@ -31,7 +38,7 @@ public sealed record CombatActionProposal(string ActorId, CombatActionKind Kind,
 /// ProneTarget is the +40 against a knocked down or out target.
 /// </summary>
 public sealed record ToHitBreakdown(int Skill, int SkillIndex, int DistanceModifier, int StrengthPenalty, int TargetArmorClass, int Raw, int Chance,
-    int ProneTarget = 0);
+    int ProneTarget = 0, int LocationPenalty = 0, int BlindPenalty = 0);
 
 /// <summary>Damage range of one hit after the target's threshold and resistance, using the exact resolution arithmetic.</summary>
 public sealed record DamageEstimate(DamageType Type, int MinRoll, int MaxRoll, int Threshold, int Resistance, int MinDamage, int MaxDamage);
@@ -48,7 +55,11 @@ public sealed record CombatStarted(string[] Order) : CombatEvent;
 public sealed record TurnStarted(int Round, string CombatantId, int ActionPoints) : CombatEvent;
 public sealed record CombatantMoved(string CombatantId, int From, int To, int[] Path, int ActionPointsSpent) : CombatEvent;
 public sealed record AttackResolved(string AttackerId, string TargetId, int Chance, int Roll, bool Hit, int DamageRoll, int Damage,
-    int TargetHitPoints, int ActionPointsSpent) : CombatEvent;
+    int TargetHitPoints, int ActionPointsSpent, HitLocation Location = HitLocation.Uncalled) : CombatEvent;
+/// <summary>A creature runs from the fight (CE _ai_run_away): too hurt, crippled as its packet fears, or unable to hit at all.</summary>
+public sealed record CombatantFleeing(string CombatantId, string Reason) : CombatEvent;
+/// <summary>A creature left the fight at a round's end (CE disengaging maneuver); it stays on the map where it stands.</summary>
+public sealed record CombatantDisengaged(string CombatantId, int HitPoints) : CombatEvent;
 /// <summary>A healing dose taken: the rolled amount, the HP actually restored (capped at the maximum) and the HP after.</summary>
 public sealed record HealingUsed(string CombatantId, int Rolled, int Healed, int HitPoints, int ActionPointsSpent) : CombatEvent;
 /// <summary>A combatant that yields at the start of its turn (Cameron's combat_p_proc): it leaves the fight alive, awarding no XP.</summary>

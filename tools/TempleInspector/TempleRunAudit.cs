@@ -14,10 +14,14 @@ internal static class TempleRunAudit
 {
     sealed record FightLog(int Elevation, int Hex, string[] Foes, int Rounds, int HitPointsBefore, int HitPointsAfter, int Experience, string Outcome);
     sealed record RunLog(string Character, ulong Seed, bool Spear, bool Heal, string Result, string? StoppedAt, int Steps, FightLog[] Fights, int FinalHitPoints, int MaxHitPoints,
-        int Experience, int Level, int LowestHitPoints, int PowdersFound, int PowdersUsed, int Poisonings, int PoisonDamage, int CriticalsDealt, int CriticalsTaken, int Fumbles, long GameTime);
+        int Experience, int Level, int LowestHitPoints, int PowdersFound, int PowdersUsed, int Poisonings, int PoisonDamage, int CriticalsDealt, int CriticalsTaken, int Fumbles, long GameTime, int Fled, int Disengaged, int AimedAtPlayer);
 
     // TEMPLE_RUN_SEEDS shortens a check run; the documented measurement uses 20.
     static readonly ulong Seeds = ulong.TryParse(Environment.GetEnvironmentVariable("TEMPLE_RUN_SEEDS"), out ulong seeds) && seeds is > 0 and <= 100 ? seeds : 20;
+    // TEMPLE_RUN_AI=provisional measures the old approach-and-attack placeholder instead of the creatures' ai.txt packets.
+    static readonly bool Packets = Environment.GetEnvironmentVariable("TEMPLE_RUN_AI") != "provisional";
+    // TEMPLE_RUN_ONLY=Narg:9:direct replays one run (a diagnosis aid; the summaries then cover that run alone).
+    static readonly string? Only = Environment.GetEnvironmentVariable("TEMPLE_RUN_ONLY");
     static readonly int StartDay = int.TryParse(Environment.GetEnvironmentVariable("TEMPLE_RUN_DAY"), out int day) && day is >= 0 and <= 6 ? day : 0;
     public static object Create(GameData data)
     {
@@ -31,7 +35,7 @@ internal static class TempleRunAudit
         foreach (PlayerCharacter character in characters)
             foreach (bool kit in new[] { false, true })
                 for (ulong seed = 1; seed <= Seeds; seed++)
-                    runs.Add(Run(data, catalog, prototypes, seed, kit, kit, character, WalkTiming.ForGender(data, character.Gender)));
+                    if (Only == null || Only == $"{character.Name}:{seed}:{(kit ? "kit" : "direct")}") runs.Add(Run(data, catalog, prototypes, seed, kit, kit, character, WalkTiming.ForGender(data, character.Gender)));
         object Summary(string character, bool spear, bool heal)
         {
             var set = runs.Where(r => r.Character == character && r.Spear == spear && r.Heal == heal).ToArray();
@@ -51,7 +55,8 @@ internal static class TempleRunAudit
                 AveragePoisonings = Math.Round(set.Average(r => r.Poisonings), 2), AveragePoisonDamage = Math.Round(set.Average(r => r.PoisonDamage), 2),
                 MaxPoisonDamage = set.Max(r => r.PoisonDamage), PoisonDeaths = set.Count(r => r.Result == "Died" && r.StoppedAt?.EndsWith("(veneno)") == true),
                 AverageCriticalsDealt = Math.Round(set.Average(r => r.CriticalsDealt), 2), AverageCriticalsTaken = Math.Round(set.Average(r => r.CriticalsTaken), 2),
-                AverageFumbles = Math.Round(set.Average(r => r.Fumbles), 2), AverageGameHours = Math.Round(set.Average(r => (r.GameTime - StartDay * CriticalRules.TicksPerDay - (StartDay == 0 ? CriticalRules.GameStartTicks : 0)) / 36000.0), 2)
+                AverageFumbles = Math.Round(set.Average(r => r.Fumbles), 2), TotalFled = set.Sum(r => r.Fled), TotalDisengaged = set.Sum(r => r.Disengaged), TotalAimedAtPlayer = set.Sum(r => r.AimedAtPlayer),
+                AverageGameHours = Math.Round(set.Average(r => (r.GameTime - StartDay * CriticalRules.TicksPerDay - (StartDay == 0 ? CriticalRules.GameStartTicks : 0)) / 36000.0), 2)
             };
         }
         return new
@@ -63,8 +68,10 @@ internal static class TempleRunAudit
             WalkTiming = new[] { WalkTiming.ForGender(data, 0), WalkTiming.ForGender(data, 1) },
             HealingPowder = HealingDrugProfile.Matches(DrugPrototypeData.Read(prototypes.Get(HealingDrugProfile.Pid)))
                 && HealingDrugProfile.Supported(prototypes.Get(HealingDrugProfile.Pid)) ? "original PRO matches the 8-18 HP profile" : "MISMATCH",
-            Summaries = characters.SelectMany(c => new[] { Summary(c.Name, false, false), Summary(c.Name, true, true) }).ToArray(),
-            Runs = runs.Select(r => new { r.Character, r.Seed, r.Spear, r.Heal, r.Result, r.StoppedAt, Fights = r.Fights.Length, r.FinalHitPoints, r.LowestHitPoints, r.Experience, r.Level, r.PowdersFound, r.PowdersUsed, r.Poisonings, r.PoisonDamage, r.CriticalsDealt, r.CriticalsTaken, r.Fumbles, r.GameTime }),
+            Summaries = characters.SelectMany(c => new[] { (c.Name, Kit: false), (c.Name, Kit: true) }).Where(v => runs.Any(r => r.Character == v.Name && r.Spear == v.Kit))
+                .Select(v => Summary(v.Name, v.Kit, v.Kit)).ToArray(),
+            Runs = runs.Select(r => new { r.Character, r.Seed, r.Spear, r.Heal, r.Result, r.StoppedAt, Fights = r.Fights.Length, r.FinalHitPoints, r.LowestHitPoints, r.Experience, r.Level, r.PowdersFound, r.PowdersUsed, r.Poisonings, r.PoisonDamage, r.CriticalsDealt, r.CriticalsTaken, r.Fumbles, r.GameTime, r.Fled, r.Disengaged, r.AimedAtPlayer }),
+            Ai = Packets ? "ai.txt packets (CombatAi)" : "provisional melee behavior",
             StartDay,
             OriginalReconstruction = "verified"
         };
@@ -76,13 +83,13 @@ internal static class TempleRunAudit
     {
         var world = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 }, runtimePrototype: prototypes.Get,
             templeProfile: map => TempleNpcDepartureProfile.Create(map, data.Read), arroyoProfile: map => ArroyoRewardProfile.Create(map, data.Read),
-            premade: path => CharacterFile.Read(data.Read(path)));
+            premade: path => CharacterFile.Read(data.Read(path)), aiPackets: Packets ? AiPacketCatalog.Read(data.Read("data/ai.txt").Bytes) : null);
         world.StartNewGame(character);
         var random = new SeededCombatRandom(seed);
         // The creatures' wandering draws from its own stream, so fights keep their rolls apart from it.
         var wander = new SeededCombatRandom(seed + 1_000_000);
         var fights = new List<FightLog>();
-        int steps = 0, lowest = world.HitPoints, found = 0, used = 0, poisonings = 0, poisonDamage = 0, waits = 0, dealt = 0, taken = 0, fumbles = 0;
+        int steps = 0, lowest = world.HitPoints, found = 0, used = 0, poisonings = 0, poisonDamage = 0, waits = 0, dealt = 0, taken = 0, fumbles = 0, fled = 0, gone = 0, aimed = 0;
         // TEMPLE_RUN_DAY=1 starts on game day 1, where criticals apply (as with sfall RemoveCriticalTimelimits); 0 is the original start.
         if (StartDay > 0) world.AdvanceTime((int)(StartDay * CriticalRules.TicksPerDay - world.GameTime));
         double carry = 0;
@@ -103,7 +110,7 @@ internal static class TempleRunAudit
             CombatantState hero = fight.Get("player");
             for (int guard = 0; guard < 600 && !fight.Turn.Over; guard++)
             {
-                if (!fight.Active!.IsPlayer) { ProvisionalMeleeBehavior.TakeTurn(fight); continue; }
+                if (!fight.Active!.IsPlayer) { CombatAi.TakeTurn(fight); continue; }
                 CombatantState? foe = fight.Combatants.Where(c => !c.IsPlayer && c.InFight).OrderBy(c => FalloutGrid.Distance(c.Hex, hero.Hex)).ThenBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault();
                 if (foe == null) break;
                 if (heal && hero.HitPoints <= hero.Stats.MaxHitPoints / 2
@@ -121,6 +128,8 @@ internal static class TempleRunAudit
             poisonings += fight.Log.OfType<PoisonChecked>().Count(p => p.Poisoned); poisonDamage += fight.Log.OfType<PoisonDamage>().Sum(p => p.Lost);
             dealt += fight.Log.OfType<CriticalHit>().Count(c => c.AttackerId == "player"); taken += fight.Log.OfType<CriticalHit>().Count(c => c.TargetId == "player");
             fumbles += fight.Log.OfType<CriticalFailure>().Count(c => c.Flags != DamageFlags.None);
+            fled += fight.Log.OfType<CombatantFleeing>().Count(); gone += fight.Log.OfType<CombatantDisengaged>().Count();
+            aimed += fight.Log.OfType<AttackResolved>().Count(a => a.TargetId == "player" && a.Location is not (HitLocation.Torso or HitLocation.Uncalled));
             var status = world.CommitCombat(fight);
             fights.Add(new FightLog(at.Elevation, at.Hex, fight.Combatants.Where(c => !c.IsPlayer).Select(c => $"PID {c.Pid:X8}").ToArray(),
                 fight.Turn.Round, before, hero.HitPoints, fight.Turn.ExperienceAwarded, status.ToString()));
@@ -260,8 +269,13 @@ internal static class TempleRunAudit
                         if (world.UseTempleKey(door, false) != TempleWorldStatus.Ready || world.Current.Doors.Toggle(door, world.Location.Hex, 2, false) != DoorUseStatus.Ready)
                             throw new Stop("Stalled", $"{place}: door {door}");
                     }
-                    place = "challenge chest"; Walk(Approach(Root(o => o.Offset == WorldSession.TempleChestOffset)));
-                    if (world.RetrieveTempleChest(false) != TempleChestStatus.Ready) throw new Stop("Stalled", $"{place}: retrieve refused");
+                    // Bare-handed runs carried nothing into the challenge: the chest then holds nothing to take back.
+                    place = "challenge chest";
+                    if (world.TempleChestCustody.Length != 0)
+                    {
+                        Walk(Approach(Root(o => o.Offset == WorldSession.TempleChestOffset)));
+                        if (world.RetrieveTempleChest(false) is var retrieved && retrieved != TempleChestStatus.Ready) throw new Stop("Stalled", $"{place}: retrieve refused ({retrieved})");
+                    }
                     place = "Arroyo exit";
                     var nav = world.Current.Doors.Navigation(2); var reach = nav.ReachableFrom(world.Location.Hex);
                     int exitHex = Enumerable.Range(0, 40000).Where(t => nav.IsExit(t) && reach.Distance(t) >= 0 && world.PreviewExitAt(2, t).Destination?.Map == 4)
@@ -270,7 +284,7 @@ internal static class TempleRunAudit
                     Walk(exitHex);
                     if (world.UseExit(false).Status != ExitStatus.Ready || world.CurrentMap != 4) throw new Stop("Stalled", $"{place}: travel refused");
                     foreach (WorldArea area in world.Areas) MapLayoutWriter.Verify(area.Map);
-                    return new RunLog(character.Name, seed, takeSpear, heal, "Arroyo", "Cameron killed", steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used, poisonings, poisonDamage, dealt, taken, fumbles, world.GameTime);
+                    return new RunLog(character.Name, seed, takeSpear, heal, "Arroyo", "Cameron killed", steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used, poisonings, poisonDamage, dealt, taken, fumbles, world.GameTime, fled, gone, aimed);
                 }
                 if (world.TempleDuel != TempleDuelOutcome.Yielded) throw new Stop("Stalled", $"{place}: {world.TempleDuel}");
             }
@@ -293,7 +307,7 @@ internal static class TempleRunAudit
             {
                 place = "challenge chest"; var chest = Root(o => o.Offset == WorldSession.TempleChestOffset);
                 Walk(Approach(chest));
-                if (world.RetrieveTempleChest(false) != TempleChestStatus.Ready) throw new Stop("Stalled", $"{place}: retrieve refused");
+                if (world.RetrieveTempleChest(false) is var retrieved && retrieved != TempleChestStatus.Ready) throw new Stop("Stalled", $"{place}: retrieve refused ({retrieved})");
             }
             place = "door 100";
             var route = world.InspectTempleVillageRoute(false);
@@ -308,11 +322,11 @@ internal static class TempleRunAudit
             Walk(route.ExitHex!.Value);
             if (world.UseExit(false).Status != ExitStatus.Ready || world.CurrentMap != 4) throw new Stop("Stalled", $"{place}: travel refused");
             foreach (WorldArea area in world.Areas) MapLayoutWriter.Verify(area.Map);
-            return new RunLog(character.Name, seed, takeSpear, heal, "Arroyo", null, steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used, poisonings, poisonDamage, dealt, taken, fumbles, world.GameTime);
+            return new RunLog(character.Name, seed, takeSpear, heal, "Arroyo", null, steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used, poisonings, poisonDamage, dealt, taken, fumbles, world.GameTime, fled, gone, aimed);
         }
         catch (Stop stop)
         {
-            return new RunLog(character.Name, seed, takeSpear, heal, stop.Result, stop.Message, steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used, poisonings, poisonDamage, dealt, taken, fumbles, world.GameTime);
+            return new RunLog(character.Name, seed, takeSpear, heal, stop.Result, stop.Message, steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used, poisonings, poisonDamage, dealt, taken, fumbles, world.GameTime, fled, gone, aimed);
         }
     }
 }

@@ -109,9 +109,9 @@ internal static class CombatReport
                 "Melee Damage raises only the maximum of the damage roll (weaponGetDamage)."
             },
             ProjectRules = new[] { "Hit chance clamped to 5..95 (roadmap); CE caps at 95 only.", "Unspent AP add to AC until the combatant's next turn.",
-                "Turns end explicitly; running out of AP does not end them.", "Non-player turns use ProvisionalMeleeBehavior until AI-001." },
-            NotModeled = new[] { "Critical hits and failures", "Aimed shots", "Burst fire", "Line of fire and cover", "Lighting penalty", "Perks, traits, tags",
-                "Difficulty other than normal", "Knockback, knockdown, crippling", "Reload and ammo consumption", "Persistence in checkpoints" },
+                "Turns end explicitly; running out of AP does not end them.", "These seeded duels use ProvisionalMeleeBehavior; fights in the world use CombatAi with the ai.txt packets." },
+            NotModeled = new[] { "Aimed shots by the player", "Burst fire", "Line of fire and cover", "Lighting penalty", "Perks",
+                "Difficulty other than normal", "Knockback", "Reload and ammo consumption" },
             Duels = new[] { Duel(0x0100017E, 2026), Duel(0x01000005, 2026) },
 
             AdditionalDependencies = resources.Identities,

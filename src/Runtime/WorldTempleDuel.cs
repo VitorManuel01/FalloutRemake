@@ -105,7 +105,7 @@ public sealed partial class WorldSession
             CombatWeapon.Unarmed(), HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled };
         CombatantState cameron = CombatantState.FromMapCritter(source, CritterPrototypeData.Read(prototype), "Cameron");
         cameron = new CombatantState(cameron.Id, cameron.Name, cameron.Pid, cameron.Team, false, cameron.Hex, cameron.Elevation, cameron.Stats,
-            cameron.Weapon, cameron.HitPoints, cameron.Experience) { YieldsBelowHalf = true, KillType = cameron.KillType };
+            cameron.Weapon, cameron.HitPoints, cameron.Experience) { YieldsBelowHalf = true, KillType = cameron.KillType, Ai = Packet(CameronPacket) };
         var session = new CombatSession(new[] { player, cameron }, Current.Doors.Navigation(2), random, cameron.Id, _gameTime);
         _activeFight = session; _activeFightMap = 3; _duelFight = session;
         return session;

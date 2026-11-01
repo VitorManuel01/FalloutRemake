@@ -67,7 +67,7 @@ try {
     Invoke-ValidationStep 'build-inspector' $dotnetPath @('build', (Join-Path $projectRoot 'tools/TempleInspector/TempleInspector.csproj'))
     $inspector = Join-Path $projectRoot 'tools/TempleInspector/bin/Debug/net8.0/TempleInspector.dll'
     Invoke-ValidationStep 'synthetic' $dotnetPath @($inspector, '--self-test') @('synthetic test groups passed.')
-    foreach ($reportName in @('temple-chest', 'temple-dialogue', 'temple-state', 'arroyo-elder', 'temple-aftermath', 'temple-npc-departure', 'item-origin-route', 'item-art', 'temple-collection', 'temple-barrier', 'explosive-profile', 'item-use-checkpoint', 'barrier-effect', 'barrier-commit', 'combat', 'critical')) {
+    foreach ($reportName in @('temple-chest', 'temple-dialogue', 'temple-state', 'arroyo-elder', 'temple-aftermath', 'temple-npc-departure', 'item-origin-route', 'item-art', 'temple-collection', 'temple-barrier', 'explosive-profile', 'item-use-checkpoint', 'barrier-effect', 'barrier-commit', 'combat', 'critical', 'combat-ai')) {
         Invoke-ValidationStep $reportName $dotnetPath @($inspector, '--data-dir', $dataPath, ('--' + $reportName + '-report')) -JsonReport
     }
     # No graphical fallback: this command always passes --headless.

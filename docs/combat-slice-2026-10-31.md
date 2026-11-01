@@ -106,7 +106,7 @@ apenas enquanto uma luta está aberta.
 - O veneno do radscorpion está modelado desde 01/11 ([veneno](radscorpion-poison-2026-11-01.md)), assim como os críticos e seus efeitos, que só valem a partir do dia 1 de jogo ([críticos](critical-hits-2026-11-01.md)).
 - A animação é mínima (deslizar e avançar). Não há animação de morte; o cadáver é
   a cápsula deitada.
-- Sem IA tática (AI-001), sem mira, cobertura ou luz.
+- A IA tática (AI-001) segue o `_combat_ai` do CE desde 01/11 ([IA](combat-ai-2026-11-01.md)). Sem mira do jogador, cobertura ou luz.
 - Sem slot de equipar e sem armas de fogo em combate (falta controle de munição).
 - HP do jogador só existe em combate. Não há cura nem HP no HUD de exploração.
 - Uma luta aberta não pode ser salva. Só o resultado de lutas terminadas entra no checkpoint v10 (o roadmap prevê salvar no meio do turno no SAV-001).

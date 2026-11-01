@@ -15,7 +15,7 @@ public partial class TemplePreview
     // Same policy as the scene check below: strike Cameron while the attack is ready, else end the turn.
     private static void PlayDuelTurn(CombatSession fight)
     {
-        if (!fight.Active!.IsPlayer) { ProvisionalMeleeBehavior.TakeTurn(fight); return; }
+        if (!fight.Active!.IsPlayer) { CombatAi.TakeTurn(fight); return; }
         CombatantState foe = fight.Combatants.Single(c => !c.IsPlayer);
         fight.Execute(fight.Preview(CombatActionProposal.Attack("player", foe.Id)).Status == CombatActionStatus.Ready
             ? CombatActionProposal.Attack("player", foe.Id) : CombatActionProposal.EndTurn("player"));
@@ -39,7 +39,7 @@ public partial class TemplePreview
         var prototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
         WorldSession Copy() => WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 }, start, catalogHash, runtimePrototype: prototypes.Get,
             templeProfile: map => TempleNpcDepartureProfile.Create(map, data.Read), arroyoProfile: map => ArroyoRewardProfile.Create(map, data.Read),
-            premade: path => CharacterFile.Read(data.Read(path)));
+            premade: path => CharacterFile.Read(data.Read(path)), aiPackets: _aiPackets);
         // The first seed whose fight Cameron yields, found on a copy of this very world with the same turn policy.
         TempleDuelOutcome Simulate(ulong seed)
         {
@@ -62,6 +62,7 @@ public partial class TemplePreview
                 || _doors!.Get(_doors.InitialTempleGateKey!) is not { IsLocked: true, IsOpen: false } || _combatWeapon.AttackType != WeaponAttackType.Unarmed
                 || _hud.FindChild("CombatBar", true, false) is not Control { Visible: true })
                 throw new InvalidDataException("The challenge did not store the equipment, lock the gate and open the fight with Cameron first.");
+            if (_combat.Get(actor.Source.Key).Ai?.Number != WorldSession.CameronPacket) throw new InvalidDataException("Cameron fights without actemvil's Dumar packet 143.");
             if (_capture != null) { _focus = Point(actor.Position, 0); _camera.Size = 14; UpdateCamera(); await Capture(Path.ChangeExtension(_capture, "duel-start.png")); }
             for (int guard = 0; guard < 400 && InCombat; guard++)
             {
@@ -96,7 +97,7 @@ public partial class TemplePreview
             if (_campaign.CarriedCount != carried || _campaign.TempleChestCustody.Length != 0 || _loot != null)
                 throw new InvalidDataException("J at the challenge chest did not return the equipment.");
             if (_capture != null) { _focus = Point(chest.Position, 0); _camera.Size = 14; UpdateCamera(); await Capture(Path.ChangeExtension(_capture, "duel-chest.png")); }
-            GD.Print($"TEMPLE_DUEL_OK: Narg beside Cameron, challenge button, {carried} unit(s) into the chest, gate closed and locked, Cameron first, seeded fight {seed} yielded below half HP (G10=1), departure completed, J at the chest returned the equipment; source bytes verified.");
+            GD.Print($"TEMPLE_DUEL_OK: Narg beside Cameron, challenge button, {carried} unit(s) into the chest, gate closed and locked, Cameron first with his Dumar packet, seeded fight {seed} yielded below half HP (G10=1), departure completed, J at the chest returned the equipment; source bytes verified.");
             foreach (WorldArea area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
         }
         finally

@@ -36,6 +36,8 @@ public sealed partial class WorldSession
     /// <summary>Who plays: a premade, a created character or the neutral test profile of earlier milestones.</summary>
     public PlayerCharacter Character { get; private set; } = PlayerCharacter.Neutral;
     private readonly Func<string, CharacterFile>? _premade;
+    // data/ai.txt packets; without them creatures keep the provisional melee behavior.
+    private readonly IReadOnlyDictionary<int, AiPacket>? _aiPackets;
     /// <summary>New game with this character: the whole world returns to its start. Reset keeps the character.</summary>
     public void StartNewGame(PlayerCharacter character)
     {
@@ -132,9 +134,9 @@ public sealed partial class WorldSession
     }
     public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
         Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
-        Func<string, CharacterFile>? premade = null)
+        Func<string, CharacterFile>? premade = null, IReadOnlyDictionary<int, AiPacket>? aiPackets = null)
     {
-        _load = load; _premade = premade; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _arroyoProfile = arroyoProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
+        _load = load; _premade = premade; _aiPackets = aiPackets; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _arroyoProfile = arroyoProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
         if (!_allowed.Contains(initialMap)) throw new ArgumentException("Initial map must belong to the supported area profile.");
         EnsureArea(initialMap); CurrentMap = initialMap;
         _enteredMaps.Add(initialMap);
@@ -213,7 +215,7 @@ public sealed partial class WorldSession
     }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
         Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
-        Func<string, CharacterFile>? premade = null)
+        Func<string, CharacterFile>? premade = null, IReadOnlyDictionary<int, AiPacket>? aiPackets = null)
     {
         if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2"
             || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
@@ -236,7 +238,7 @@ public sealed partial class WorldSession
             || checkpoint.Areas.Select(a => a.Map).Distinct().Count() != checkpoint.Areas.Length
             || !checkpoint.Areas.Any(a => a.Map == initialMap) || !checkpoint.Areas.Any(a => a.Map == checkpoint.CurrentMap))
             throw new InvalidDataException("Checkpoint area set is invalid.");
-        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile,arroyoProfile, premade);
+        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile,arroyoProfile, premade, aiPackets);
         // The character decides the level's HP bound checked by the combat block, so it comes first.
         try { candidate.Character = checkpoint.Character == null ? PlayerCharacter.Neutral : PlayerCharacter.Restore(checkpoint.Character, premade); }
         catch (Exception error) when (error is IOException or ArgumentException or KeyNotFoundException)

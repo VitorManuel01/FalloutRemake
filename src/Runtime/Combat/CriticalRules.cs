@@ -22,9 +22,10 @@ public sealed record CriticalEffect(int Multiplier, DamageFlags Flags, int Massi
 
 /// <summary>
 /// CE critical hits and failures. randomTranslateRoll upgrades a hit or a miss only from game day 1 (the clock starts on
-/// day 0 at 302400 ticks), the dude's failures only bite from day 6 (attackComputeCriticalFailure). Attacks are uncalled,
-/// which CE turns into the torso, so only the torso rows apply. Every row, the failure table and the start time were
-/// checked against fallout2.exe (--critical-report).
+/// day 0 at 302400 ticks), the dude's failures only bite from day 6 (attackComputeCriticalFailure). The player's attacks are
+/// uncalled, which CE turns into the torso, so critters need only their torso rows; creatures may aim at the player (called
+/// shots of their AI packet), so the player's table is whole. Every row, the failure table and the start time were checked
+/// against fallout2.exe (--critical-report).
 /// </summary>
 public static class CriticalRules
 {
@@ -59,10 +60,44 @@ public static class CriticalRules
     public static CriticalEffect Torso(bool player, int killType, int effect)
     {
         if (effect is < 0 or > 5) throw new ArgumentOutOfRangeException(nameof(effect));
-        if (player) return PlayerTorso[effect];
+        if (player) return PlayerTable[(int)HitLocation.Torso][effect];
         if (killType is < 0 or >= KillTypeCount) throw new ArgumentOutOfRangeException(nameof(killType));
         return KillTypeTorso[killType][effect];
     }
+
+    /// <summary>The player's row for any hit location (an aimed blow from a creature); uncalled reads the torso, as attackCompute converts it.</summary>
+    public static CriticalEffect Player(HitLocation location, int effect)
+    {
+        if (effect is < 0 or > 5 || location is < HitLocation.Head or > HitLocation.Uncalled) throw new ArgumentOutOfRangeException(nameof(effect));
+        return PlayerTable[(int)(location == HitLocation.Uncalled ? HitLocation.Torso : location)][effect];
+    }
+
+    /// <summary>hit_location_penalty_default: to-hit adjustment (halved for melee and unarmed) and critical chance reduction.</summary>
+    public static int Penalty(HitLocation location) => HitLocationPenalty[(int)location];
+    internal static readonly int[] HitLocationPenalty = { -40, -30, -30, 0, -20, -20, -60, -30, 0 };
+
+    // gPlayerCriticalHitTable, rows in HitLocation order.
+    internal static readonly CriticalEffect[][] PlayerTable =
+    {
+        // Head
+        new CriticalEffect[] { new(3, N, -1, 0, N, 6500, 5000), new(3, Bypass, 2, 3, KnockedDown, 6501, 6503), new(3, Bypass, 2, 0, KnockedDown, 6501, 6503), new(3, KnockedDown | Bypass, 2, 2, KnockedOut, 6503, 6502), new(3, KnockedOut | Bypass, 6, 2, Blind, 6502, 6504), new(6, Bypass, 2, -2, Dead, 6501, 6505) },
+        // Left arm
+        new CriticalEffect[] { new(2, N, -1, 0, N, 6506, 5000), new(2, LoseTurn, -1, 0, N, 6507, 5000), new(3, N, 2, 0, CrippledLeftArm, 6508, 6509), new(3, Bypass, -1, 0, N, 6501, 5000), new(3, CrippledLeftArm | Bypass, -1, 0, N, 6510, 5000), new(3, CrippledLeftArm | Bypass, -1, 0, N, 6510, 5000) },
+        // Right arm
+        new CriticalEffect[] { new(2, N, -1, 0, N, 6506, 5000), new(2, LoseTurn, -1, 0, N, 6507, 5000), new(3, N, 2, 0, CrippledRightArm, 6508, 6509), new(3, Bypass, -1, 0, N, 6501, 5000), new(3, CrippledRightArm | Bypass, -1, 0, N, 6511, 5000), new(3, CrippledRightArm | Bypass, -1, 0, N, 6511, 5000) },
+        // Torso
+        new CriticalEffect[] { new(3, N, -1, 0, N, 6512, 5000), new(3, N, -1, 0, N, 6512, 5000), new(3, Bypass, -1, 0, N, 6508, 5000), new(3, KnockedDown | Bypass, -1, 0, N, 6503, 5000), new(4, KnockedDown | Bypass, -1, 0, N, 6503, 5000), new(4, KnockedDown | Bypass, 6, 2, Dead, 6503, 6513) },
+        // Right leg
+        new CriticalEffect[] { new(3, N, -1, 0, N, 6512, 5000), new(3, KnockedDown, -1, 0, N, 6514, 5000), new(3, KnockedDown, 2, 0, CrippledRightLeg, 6514, 6515), new(4, KnockedDown | CrippledRightLeg | Bypass, -1, 0, N, 6516, 5000), new(4, KnockedDown | CrippledRightLeg | Bypass, -1, 0, N, 6516, 5000), new(4, KnockedOut | CrippledRightLeg | Bypass, -1, 0, N, 6517, 5000) },
+        // Left leg
+        new CriticalEffect[] { new(3, N, -1, 0, N, 6512, 5000), new(3, KnockedDown, -1, 0, N, 6514, 5000), new(3, KnockedDown, 2, 0, CrippledLeftLeg, 6514, 6515), new(4, KnockedDown | CrippledLeftLeg | Bypass, -1, 0, N, 6516, 5000), new(4, KnockedDown | CrippledLeftLeg | Bypass, -1, 0, N, 6516, 5000), new(4, KnockedOut | CrippledLeftLeg | Bypass, -1, 0, N, 6517, 5000) },
+        // Eyes
+        new CriticalEffect[] { new(3, N, -1, 0, N, 6518, 5000), new(3, N, 6, 3, Blind, 6518, 6519), new(3, Bypass, 6, 3, Blind, 6501, 6519), new(4, Bypass | LoseTurn, -1, 0, N, 6520, 5000), new(4, Blind | Bypass | LoseTurn, -1, 0, N, 6521, 5000), new(6, Dead, -1, 0, N, 6522, 5000) },
+        // Groin
+        new CriticalEffect[] { new(3, N, -1, 0, N, 6523, 5000), new(3, N, 2, 0, KnockedDown, 6523, 6524), new(3, KnockedDown, -1, 0, N, 6524, 5000), new(3, KnockedDown, 2, 4, KnockedOut, 6524, 6525), new(4, KnockedDown, 2, 2, KnockedOut, 6524, 6525), new(4, KnockedOut, -1, 0, N, 6526, 5000) },
+        // Uncalled
+        new CriticalEffect[] { new(3, N, -1, 0, N, 6512, 5000), new(3, N, -1, 0, N, 6512, 5000), new(3, Bypass, -1, 0, N, 6508, 5000), new(3, KnockedDown | Bypass, -1, 0, N, 6503, 5000), new(4, KnockedDown | Bypass, -1, 0, N, 6503, 5000), new(4, KnockedDown | Bypass, 6, 2, Dead, 6503, 6513) },
+    };
 
     /// <summary>_cf_table row by the weapon PRO critical failure type (-1, no weapon, uses row 0).</summary>
     public static DamageFlags Failure(int type, int effect)
@@ -71,10 +106,6 @@ public static class CriticalRules
         if (row is < 0 or >= 7 || effect is < 0 or > 4) throw new ArgumentOutOfRangeException(nameof(type));
         return FailureTable[row, effect];
     }
-
-    // gPlayerCriticalHitTable[HIT_LOCATION_TORSO].
-    internal static readonly CriticalEffect[] PlayerTorso =
-        { new(3, N, -1, 0, N, 6512, 5000), new(3, N, -1, 0, N, 6512, 5000), new(3, Bypass, -1, 0, N, 6508, 5000), new(3, KnockedDown | Bypass, -1, 0, N, 6503, 5000), new(4, KnockedDown | Bypass, -1, 0, N, 6503, 5000), new(4, KnockedDown | Bypass, 6, 2, Dead, 6503, 6513) };
 
     // gCriticalHitTables[killType][HIT_LOCATION_TORSO], kill types in CE order.
     internal static readonly CriticalEffect[][] KillTypeTorso =

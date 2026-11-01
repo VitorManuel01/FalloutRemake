@@ -35,10 +35,12 @@ public static class OriginalPathfinder
     }
 
     /// <summary>The rotations of the steps from <paramref name="from"/> to <paramref name="to"/>, or null when CE finds no path.</summary>
-    public static int[]? FindPath(int from, int to, Func<int, bool> blocked, bool inCombat = false)
+    /// <param name="checkDestination">CE a5: refuse a blocked destination up front. The AI's approach passes false and walks
+    /// toward a creature's own hex, dropping the last step.</param>
+    public static int[]? FindPath(int from, int to, Func<int, bool> blocked, bool inCombat = false, bool checkDestination = true)
     {
         ArgumentNullException.ThrowIfNull(blocked);
-        if (!HexNavigation.Valid(from) || !HexNavigation.Valid(to) || blocked(to)) return null;
+        if (!HexNavigation.Valid(from) || !HexNavigation.Valid(to) || checkDestination && blocked(to)) return null;
         var processed = new bool[40000]; processed[from] = true;
         var open = new Node[MaxNodes]; for (int i = 0; i < MaxNodes; i++) open[i].Tile = -1;
         var closed = new Node[MaxNodes];

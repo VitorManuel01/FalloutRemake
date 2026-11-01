@@ -53,7 +53,7 @@ public partial class TemplePreview
                 try
                 {
                     for (int guard = 0; guard < 400 && !fight.Turn.Over && !PlayerCritical(fight); guard++)
-                        if (fight.Active!.IsPlayer) fight.Execute(Decide(fight)); else ProvisionalMeleeBehavior.TakeTurn(fight);
+                        if (fight.Active!.IsPlayer) fight.Execute(Decide(fight)); else CombatAi.TakeTurn(fight);
                     // A critical that ends the fight would close the HUD before its log line can be read.
                     return PlayerCritical(fight) && !fight.Turn.Over;
                 }

@@ -54,9 +54,14 @@ internal static class CriticalReport
             for (int effect = 0; effect < Effects; effect++)
                 if (!Row(exe, KillTable + (uint)(((kind * Locations + Torso) * Effects + effect) * RowBytes)).SequenceEqual(Row(CriticalRules.Torso(false, kind, effect))))
                     throw new InvalidDataException($"Kill type {kind} torso row {effect} differs from fallout2.exe.");
-        for (int effect = 0; effect < Effects; effect++)
-            if (!Row(exe, PlayerTable + (uint)((Torso * Effects + effect) * RowBytes)).SequenceEqual(Row(CriticalRules.Torso(true, 0, effect))))
-                throw new InvalidDataException($"Player torso row {effect} differs from fallout2.exe.");
+        // Creatures aim at the player (called shots), so all nine locations of the player's table are used.
+        for (int location = 0; location < Locations; location++)
+            for (int effect = 0; effect < Effects; effect++)
+                if (!Row(exe, PlayerTable + (uint)((location * Effects + effect) * RowBytes)).SequenceEqual(Row(CriticalRules.PlayerTable[location][effect])))
+                    throw new InvalidDataException($"Player row {(HitLocation)location}/{effect} differs from fallout2.exe.");
+        for (int location = 0; location < Locations; location++)
+            if (exe.Int(HitPenalty + (uint)(4 * location)) != CriticalRules.Penalty((HitLocation)location))
+                throw new InvalidDataException($"Hit penalty of {(HitLocation)location} differs from fallout2.exe.");
         for (int type = 0; type < 7; type++)
             for (int effect = 0; effect < 5; effect++)
                 if (exe.Int(FailureTable + (uint)(4 * (type * 5 + effect))) != (int)CriticalRules.Failure(type, effect))
@@ -90,7 +95,7 @@ internal static class CriticalReport
         {
             Status = "CRITICAL_TABLES_OK",
             Executable = new { Size = bytes.Length, Sha256 = Convert.ToHexString(SHA256.HashData(bytes)) },
-            Verified = new[] { "19 kill-type torso rows x 6 effects", "player torso rows x 6", "critical failure table 7 x 5", "torso hit penalty 0",
+            Verified = new[] { "19 kill-type torso rows x 6 effects", "player rows x 9 locations x 6", "hit penalties of the 9 locations", "critical failure table 7 x 5", "torso hit penalty 0",
                 "game clock starts at 302400 ticks", "criticals from day 1 (randomTranslateRoll)", "player failures from day 6 (attackComputeCriticalFailure)" },
             HoursUntilDay1 = (CriticalRules.TicksPerDay - CriticalRules.GameStartTicks) / 36000.0,
             Critters = critters, Weapons = weapons, Premades = premades,

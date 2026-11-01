@@ -41,8 +41,24 @@ public sealed class CombatantState
     public PoisonState Poison { get => _poison; init => _poison = value.Valid ? value : throw new ArgumentOutOfRangeException(nameof(value)); }
     private PoisonState _poison;
     internal void SetPoison(PoisonState poison) => _poison = poison;
-    /// <summary>Still taking part: alive and not yielded.</summary>
-    public bool InFight => Alive && !Yielded;
+    /// <summary>Still taking part: alive, not yielded and not gone (disengaged).</summary>
+    public bool InFight => Alive && !Yielded && !Disengaged;
+    /// <summary>The ai.txt packet the creature's script gives it (CE combat_ai); null keeps ProvisionalMeleeBehavior.</summary>
+    public AiPacket? Ai { get; init; }
+    /// <summary>CE combat.whoHitMe: the id of the combatant this one holds as its danger (attacker, retaliation, its own target).</summary>
+    public string? WhoHitMe { get; internal set; }
+    /// <summary>CE maneuvers: engaging (noticed the fight), fleeing (runs every turn), disengaging (leaves at the round's end).</summary>
+    public bool Engaging { get; internal set; }
+    public bool Fleeing { get; internal set; }
+    public bool Disengaging { get; internal set; }
+    /// <summary>Left the fight at a round's end; alive, it stays where it stands.</summary>
+    public bool Disengaged { get; internal set; }
+    /// <summary>A friend's corpse it saw fall without seeing the killer (CE aiInfoGetFriendlyDead): it keeps 10 hexes away.</summary>
+    public string? FriendlyDead { get; internal set; }
+    /// <summary>CE combat.damageLastTurn: damage taken since the fight began (only the dude's resets each turn).</summary>
+    public int DamageTaken { get; internal set; }
+    /// <summary>PE as critterGetStat gives it: blindness takes 5, clamped to 1.</summary>
+    public int Perception => Math.Max(1, Stats.Special.Perception - ((_conditions & DamageFlags.Blind) != 0 ? 5 : 0));
     public int EffectiveArmorClass => Stats.ArmorClass + BonusArmorClass;
     /// <summary>PRO kill type, which picks the critical table of a non-player defender (0 Man … 18 Big Bad Boss).</summary>
     public int KillType { get => _killType; init => _killType = value is >= 0 and < CriticalRules.KillTypeCount ? value : throw new ArgumentOutOfRangeException(nameof(value)); }
@@ -77,7 +93,8 @@ public sealed class CombatantState
     }
 
     /// <summary>Map critter: current HP from its serialized instance ("hp"), team and XP from the PRO/instance, natural attack.</summary>
-    public static CombatantState FromMapCritter(MapObject source, CritterPrototypeData prototype, string name, CombatWeapon? weapon = null, bool poisonsOnHit = false)
+    public static CombatantState FromMapCritter(MapObject source, CritterPrototypeData prototype, string name, CombatWeapon? weapon = null, bool poisonsOnHit = false,
+        AiPacket? ai = null)
     {
         ArgumentNullException.ThrowIfNull(source); ArgumentNullException.ThrowIfNull(prototype);
         if (source.Header.Pid != prototype.Pid) throw new InvalidDataException("Critter instance and prototype differ.");
@@ -88,6 +105,6 @@ public sealed class CombatantState
         if (team == 0) throw new InvalidDataException("Team 0 is reserved for the player's side.");
         return new(source.Key, name, prototype.Pid, team, false, source.Header.Tile, source.Header.Elevation, stats,
             weapon ?? CombatWeapon.Unarmed(prototype.DamageType is int natural and >= 0 and <= 6 ? (DamageType)natural : DamageType.Normal),
-            hp, prototype.Experience) { Rotation = source.Header.Rotation, PoisonsOnHit = poisonsOnHit, KillType = prototype.KillType };
+            hp, prototype.Experience) { Rotation = source.Header.Rotation, PoisonsOnHit = poisonsOnHit, KillType = prototype.KillType, Ai = ai };
     }
 }

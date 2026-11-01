@@ -23,6 +23,8 @@ public partial class TemplePreview
     private CombatWeapon _combatWeapon = CombatWeapon.Unarmed();
     private bool _combatEncounters = true;
     private ulong? _combatSeed;
+    // data/ai.txt, read with the map: every world the preview builds or restores gives its creatures their packets.
+    private IReadOnlyDictionary<int, AiPacket>? _aiPackets;
     private double _combatAiTimer;
     private int _encounterCheckedHex = -1;
     private string _combatHoverKey = "";
@@ -139,6 +141,13 @@ public partial class TemplePreview
         if ((flags & DamageFlags.HitSelf) != 0) words.Add("acerta a si mesmo");
         return string.Join(", ", words);
     }
+    // A creature's called shot names its target location; the plain blow (torso or uncalled) says nothing.
+    private static string Aimed(HitLocation location) => location switch
+    {
+        HitLocation.Head => " mirando a cabeça", HitLocation.LeftArm => " mirando o braço esquerdo", HitLocation.RightArm => " mirando o braço direito",
+        HitLocation.RightLeg => " mirando a perna direita", HitLocation.LeftLeg => " mirando a perna esquerda", HitLocation.Eyes => " mirando os olhos",
+        HitLocation.Groin => " mirando a virilha", _ => ""
+    };
     private static string Multiplier(int multiplier) => multiplier % 2 == 0 ? $"×{multiplier / 2}" : $"×{multiplier / 2},5";
 
     // Screen proximity rather than a physics ray: tall kit walls must not swallow a click on a creature behind them.
@@ -235,7 +244,7 @@ public partial class TemplePreview
     private void RunEnemyTurn()
     {
         if (_combat?.Active is not { IsPlayer: false }) return;
-        ApplyCombatEvents(ProvisionalMeleeBehavior.TakeTurn(_combat));
+        ApplyCombatEvents(CombatAi.TakeTurn(_combat));
     }
 
     private void ApplyCombatResult(CombatActionResult result)
@@ -258,8 +267,12 @@ public partial class TemplePreview
                     lines.Add($"{CombatName(moved.CombatantId)} andou {moved.Path.Length} hex(es) · {moved.ActionPointsSpent} AP"); break;
                 case AttackResolved attack:
                     Lunge(_combat.Get(attack.AttackerId), _combat.Get(attack.TargetId));
-                    lines.Add($"{CombatName(attack.AttackerId)} ataca {CombatName(attack.TargetId)}: {attack.Roll} em {attack.Chance}% · "
+                    lines.Add($"{CombatName(attack.AttackerId)} ataca {CombatName(attack.TargetId)}{Aimed(attack.Location)}: {attack.Roll} em {attack.Chance}% · "
                         + (attack.Hit ? $"acerto, {attack.Damage} de dano ({attack.TargetHitPoints} HP)" : "erro")); break;
+                case CombatantFleeing fleeing:
+                    lines.Add($"{CombatName(fleeing.CombatantId)} foge"); break;
+                case CombatantDisengaged gone:
+                    lines.Add($"{CombatName(gone.CombatantId)} deixa a luta com {gone.HitPoints} HP"); break;
                 case HealingUsed used:
                     lines.Add($"{CombatName(used.CombatantId)} usou Healing Powder: +{used.Healed} HP ({used.HitPoints} HP)"
                         + (used.Healed < used.Rolled ? $" · {used.Rolled - used.Healed} além do máximo se perderam" : "") + $" · {used.ActionPointsSpent} AP"); break;
@@ -456,6 +469,9 @@ public partial class TemplePreview
                 throw new InvalidDataException("Combat started mid-step, unseen or with the wrong initiator.");
             // Every creature that saw the actor joins (each one's critter_p_proc attacks on sight).
             string[] foes = _combat.Combatants.Where(c => !c.IsPlayer).Select(c => c.Id).ToArray();
+            // Their scripts' AI packets drive them (zclrat Rat 7, zclscorp Scorpion 8).
+            if (_combat.Combatants.Where(c => !c.IsPlayer).Any(c => c.Ai?.Number != WorldSession.ScriptPackets[c.Pid!.Value]))
+                throw new InvalidDataException("A creature in the fight lacks its script's ai.txt packet.");
             var hud = (Control)_hud.FindChild("CombatBar", true, false);
             if (!hud.Visible || _combatLabels.Count != _combat.Combatants.Count) throw new InvalidDataException("Combat HUD or HP labels missing.");
             if (_capture != null)
@@ -553,7 +569,7 @@ public partial class TemplePreview
                 throw new InvalidDataException("Loading checkpoint v11 lost the corpse, XP, HP or the used powder.");
             ResetWalker();
             MapLayoutWriter.Verify(_map!);
-            GD.Print($"COMBAT_SLICE_OK: PID 0x{ant.Source.Header.Pid:X8} {ant.Source.Key} saw the actor at hex {hexBefore} ({foes.Length} creature(s) joined), carried spear wielded, Healing Powder taken with H for 4 AP and used up on commit, animated creature turn awaited, seeded fight won in {rounds + 1}+ player turns, {reward} XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v11 save/reset/load round trip; source bytes verified.");
+            GD.Print($"COMBAT_SLICE_OK: PID 0x{ant.Source.Header.Pid:X8} {ant.Source.Key} saw the actor at hex {hexBefore} ({foes.Length} creature(s) joined, driven by their ai.txt packets), carried spear wielded, Healing Powder taken with H for 4 AP and used up on commit, animated creature turn awaited, seeded fight won in {rounds + 1}+ player turns, {reward} XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v11 save/reset/load round trip; source bytes verified.");
         }
         finally { _forceCombatAnimation = false; _combatEncounters = encounters; _combatSeed = null; DiscardCombat(); SetNavigationGrid(grid); _checkingNavigation = false; }
     }
