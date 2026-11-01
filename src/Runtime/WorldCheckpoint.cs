@@ -14,7 +14,9 @@ public sealed record WorldCheckpoint(int Version, string Profile, string Catalog
 /// <summary>v11 adds <see cref="SavedArea.Consumed"/> (drugs taken from collected items). v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>
 /// <summary>Survivors (optional, inside v13): critters left standing when the player ended a fight, where they stand.</summary>
 public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defeated, [property: JsonRequired] int Experience, int? PlayerHitPoints,
-    SurvivingCritter[]? Survivors = null);
+    SurvivingCritter[]? Survivors = null, SavedPoison? Poison = null);
+/// <summary>The dude's poison (optional, inside v13): level and game ticks until the next poison event.</summary>
+public sealed record SavedPoison([property: JsonRequired] int Level, [property: JsonRequired] int TicksLeft);
 
 /// <summary>Small project-local checkpoint, not an original Fallout SAV and never an asset archive.</summary>
 public static class CheckpointFile

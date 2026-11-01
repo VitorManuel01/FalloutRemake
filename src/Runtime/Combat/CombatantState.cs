@@ -33,6 +33,14 @@ public sealed class CombatantState
     /// <summary>Yields when its turn starts below half its maximum HP (a duel, not a fight to the death).</summary>
     public bool YieldsBelowHalf { get; init; }
     public bool Yielded { get; internal set; }
+    /// <summary>A hit on the player may poison it (the radscorpion's zclscorp combat_p_proc, see <see cref="PoisonRules"/>).</summary>
+    public bool PoisonsOnHit { get; init; }
+    /// <summary>Poison Resistance in percent, for the player (CE poisons only the dude).</summary>
+    public int PoisonResistance { get; init; }
+    /// <summary>The player's poison, carried into and out of the fight; it acts on every combat round.</summary>
+    public PoisonState Poison { get => _poison; init => _poison = value.Valid ? value : throw new ArgumentOutOfRangeException(nameof(value)); }
+    private PoisonState _poison;
+    internal void SetPoison(PoisonState poison) => _poison = poison;
     /// <summary>Still taking part: alive and not yielded.</summary>
     public bool InFight => Alive && !Yielded;
     public int EffectiveArmorClass => Stats.ArmorClass + BonusArmorClass;
@@ -49,7 +57,7 @@ public sealed class CombatantState
     }
 
     /// <summary>Map critter: current HP from its serialized instance ("hp"), team and XP from the PRO/instance, natural attack.</summary>
-    public static CombatantState FromMapCritter(MapObject source, CritterPrototypeData prototype, string name, CombatWeapon? weapon = null)
+    public static CombatantState FromMapCritter(MapObject source, CritterPrototypeData prototype, string name, CombatWeapon? weapon = null, bool poisonsOnHit = false)
     {
         ArgumentNullException.ThrowIfNull(source); ArgumentNullException.ThrowIfNull(prototype);
         if (source.Header.Pid != prototype.Pid) throw new InvalidDataException("Critter instance and prototype differ.");
@@ -60,6 +68,6 @@ public sealed class CombatantState
         if (team == 0) throw new InvalidDataException("Team 0 is reserved for the player's side.");
         return new(source.Key, name, prototype.Pid, team, false, source.Header.Tile, source.Header.Elevation, stats,
             weapon ?? CombatWeapon.Unarmed(prototype.DamageType is int natural and >= 0 and <= 6 ? (DamageType)natural : DamageType.Normal),
-            hp, prototype.Experience) { Rotation = source.Header.Rotation };
+            hp, prototype.Experience) { Rotation = source.Header.Rotation, PoisonsOnHit = poisonsOnHit };
     }
 }

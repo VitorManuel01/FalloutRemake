@@ -50,7 +50,7 @@ pela mesma conta que o Community Engine faz.
   - esgueirar-se (Sneak);
   - cegueira (`DAM_BLIND`);
   - criaturas que entram numa luta já aberta ao ver o personagem (`PE × 2` em combate);
-  - o veneno do radscorpion (`combat_p_proc` de `zclscorp`, que chama `poison` quando o teste de Resistência falha).
+  - o veneno do radscorpion (`combat_p_proc` de `zclscorp`). Ele chama `poison` quando falha o teste de **Sorte**, e não de Resistência como esta nota dizia antes; está [modelado depois](radscorpion-poison-2026-11-01.md).
 
 ## Dados originais (`--critter-sight-report`)
 

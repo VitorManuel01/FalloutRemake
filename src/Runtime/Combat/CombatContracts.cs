@@ -48,6 +48,10 @@ public sealed record HealingUsed(string CombatantId, int Rolled, int Healed, int
 /// <summary>A combatant that yields at the start of its turn (Cameron's combat_p_proc): it leaves the fight alive, awarding no XP.</summary>
 public sealed record CombatantYielded(string CombatantId, int HitPoints) : CombatEvent;
 public sealed record CombatantDied(string CombatantId, string KillerId, int Experience) : CombatEvent;
+/// <summary>A radscorpion's hit on the player: Luck roll against LK - 1; on a failure, the dose rolled, what resistance let through and the new level.</summary>
+public sealed record PoisonChecked(string AttackerId, string TargetId, int LuckRoll, int Needed, bool Poisoned, int Rolled, int Absorbed, int Level) : CombatEvent;
+/// <summary>A poison event at a round's end: HP lost and the HP and level after.</summary>
+public sealed record PoisonDamage(string CombatantId, int Lost, int HitPoints, int Level) : CombatEvent;
 public sealed record TurnEnded(string CombatantId, int UnusedActionPoints, int BonusArmorClass) : CombatEvent;
 /// <summary>The player ended the fight with enemies still standing (Enter); the fight then ends without a winner.</summary>
 public sealed record CombatLeft(string CombatantId, string[] Survivors) : CombatEvent;

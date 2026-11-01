@@ -167,6 +167,12 @@ try
             new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
+    if (args.Length == 3 && args[2] == "--walk-timing-report")
+    {
+        var walkData = new GameData(args[1]);
+        Console.WriteLine(JsonSerializer.Serialize(new[] { WalkTiming.ForGender(walkData, 0), WalkTiming.ForGender(walkData, 1) }, new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
     if (args.Length == 3 && args[2] == "--critter-sight-report")
     {
         Console.WriteLine(JsonSerializer.Serialize(CritterSightReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));

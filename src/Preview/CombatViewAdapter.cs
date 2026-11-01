@@ -247,7 +247,13 @@ public partial class TemplePreview
                 case CombatantYielded yielded:
                     lines.Add($"{CombatName(yielded.CombatantId)} se rende com {yielded.HitPoints} HP"); break;
                 case CombatantDied died:
-                    lines.Add($"{CombatName(died.CombatantId)} morreu" + (died.Experience > 0 ? $" · +{died.Experience} XP" : "")); break;
+                    lines.Add($"{CombatName(died.CombatantId)} morreu" + (died.KillerId == CombatSession.PoisonKiller ? " envenenado" : "")
+                        + (died.Experience > 0 ? $" · +{died.Experience} XP" : "")); break;
+                case PoisonChecked sting:
+                    lines.Add(sting.Poisoned ? $"Ferroada: Sorte {sting.LuckRoll} acima de {sting.Needed} · veneno {sting.Rolled}, {sting.Absorbed} após resistência · nível {sting.Level}"
+                        : $"Ferroada: Sorte {sting.LuckRoll} até {sting.Needed} · você resistiu ao veneno"); break;
+                case PoisonDamage poisoned:
+                    lines.Add($"Veneno: −{poisoned.Lost} HP ({poisoned.HitPoints} HP) · nível {poisoned.Level}"); break;
                 case CombatLeft left:
                     lines.Add($"Você saiu do combate · {left.Survivors.Length} criatura(s) de pé"); break;
                 case TurnStarted started when started.CombatantId != "player":
@@ -304,7 +310,7 @@ public partial class TemplePreview
         string foes = string.Join("   ", _combat.Combatants.Where(c => !c.IsPlayer).Select(c => $"{CombatName(c.Id)}: {(c.Alive ? $"{c.HitPoints}/{c.Stats.MaxHitPoints} HP · AC {c.EffectiveArmorClass}" : "morto")}"));
         bool mine = _combat.Active?.IsPlayer == true;
         _hud.Combat(true, $"COMBATE · Rodada {turn.Round} · {(mine ? "seu turno" : $"turno de {CombatName(turn.ActiveId!)}")}",
-            $"Você: {player.HitPoints}/{player.Stats.MaxHitPoints} HP · {player.ActionPoints}/{player.Stats.MaxActionPoints} AP · AC {player.EffectiveArmorClass} · {_combatWeapon.Name}{(player.HealingDoses > 0 ? $" · Healing Powder ×{player.HealingDoses}" : "")}\n{foes}", mine);
+            $"Você: {player.HitPoints}/{player.Stats.MaxHitPoints} HP · {player.ActionPoints}/{player.Stats.MaxActionPoints} AP · AC {player.EffectiveArmorClass} · {_combatWeapon.Name}{(player.HealingDoses > 0 ? $" · Healing Powder ×{player.HealingDoses}" : "")}{(player.Poison.Active ? $" · envenenado ({player.Poison.Level})" : "")}\n{foes}", mine);
         if (mine && _combatHoverKey.Length == 0) _hud.CombatPreview("Clique no chão para mover (1 AP por hex) ou na criatura para atacar. Espaço encerra o turno; Enter sai do combate longe da percepção das criaturas."
             + (player.HealingDoses > 0 ? $" H usa Healing Powder ({CombatSession.InventoryActionPoints} AP)." : ""));
     }

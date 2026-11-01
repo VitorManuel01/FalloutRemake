@@ -143,6 +143,8 @@ public sealed class CombatSession : ICombatSession
                     target.HitPoints = Math.Max(0, target.HitPoints - damage);
                 }
                 _log.Add(new AttackResolved(actor.Id, target.Id, preview.ToHit.Chance, roll, hit, damageRoll, damage, target.HitPoints, preview.ActionPointCost));
+                // CE runs the attacker's combat_p_proc (fixed_param 2) after every hit on a critter that stood before it.
+                if (hit && actor.PoisonsOnHit && target.IsPlayer) Sting(actor, target);
                 if (!target.Alive)
                 {
                     int experience = actor.IsPlayer ? target.Experience : 0;
@@ -154,6 +156,29 @@ public sealed class CombatSession : ICombatSession
         }
         return new(CombatActionStatus.Ready, preview, _log.Skip(start).ToArray());
     }
+
+    private void Sting(CombatantState attacker, CombatantState target)
+    {
+        int needed = target.Stats.Special.Luck + PoisonRules.StingLuckModifier, luck = _random.Between(1, 10);
+        if (luck <= needed) { _log.Add(new PoisonChecked(attacker.Id, target.Id, luck, needed, false, 0, 0, target.Poison.Level)); return; }
+        int rolled = _random.Between(PoisonRules.StingMin, PoisonRules.StingMax), absorbed = PoisonRules.Absorb(rolled, target.PoisonResistance);
+        target.SetPoison(target.Poison.Add(absorbed));
+        _log.Add(new PoisonChecked(attacker.Id, target.Id, luck, needed, true, rolled, absorbed, target.Poison.Level));
+    }
+
+    // _combat_sequence adds 5 s of game time after every round; due poison events then cost HP, which can kill.
+    private void RoundElapsed()
+    {
+        foreach (CombatantState combatant in _combatants.Where(c => c.Alive && c.Poison.Active))
+        {
+            combatant.SetPoison(combatant.Poison.AdvanceRound(out int lost));
+            if (lost == 0) continue;
+            combatant.HitPoints = Math.Max(0, combatant.HitPoints - lost);
+            _log.Add(new PoisonDamage(combatant.Id, lost, combatant.HitPoints, combatant.Poison.Level));
+            if (!combatant.Alive) { _log.Add(new CombatantDied(combatant.Id, PoisonKiller, 0)); CheckOver(); }
+        }
+    }
+    public const string PoisonKiller = "poison";
 
     private void StartTurn(CombatantState combatant)
     {
@@ -176,7 +201,7 @@ public sealed class CombatSession : ICombatSession
             if (!first)
                 do
                 {
-                    if (++_index >= _order.Length) { _round++; _order = CombatInitiative.Order(_combatants); _index = 0; }
+                    if (++_index >= _order.Length) { RoundElapsed(); if (_over) return; _round++; _order = CombatInitiative.Order(_combatants); _index = 0; }
                 } while (!Get(_order[_index]).InFight);
             first = false;
             CombatantState next = Get(_order[_index]);

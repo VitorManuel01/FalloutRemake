@@ -49,6 +49,18 @@ internal static class CritterSightReport
                 (0x80BC, null), (0xC001, 1), (0xC001, 5), (0xC001, packet), (0x8102, null), (0x801A, null) };
             if (enter.BodyOffset != mapEnter || !program.ProcedureInstructions(enter.Index).Take(traits.Length).Select(i => (i.Opcode, i.OperandBits)).SequenceEqual(traits))
                 throw new InvalidDataException($"{path} map_enter_p_proc no longer sets team {team} and AI packet {packet}.");
+            // zclscorp combat_p_proc: if fixed_param == 2 (hit) and target_obj == dude_obj and not is_success(do_check(dude_obj, STAT_LUCK, -1))
+            // then poison(target_obj, random(1, 6)). zclrat has no combat_p_proc.
+            IntProcedure? combat = program.Procedures.FirstOrDefault(p => p.Name == "combat_p_proc");
+            if (packet == 8)
+            {
+                (ushort, int?)[] sting = { (0x802B, null), (0xC001, 3432), (0x80F7, null), (0xC001, 2), (0x8033, null), (0x802F, null), (0xC001, 3432), (0x80BE, null),
+                    (0x80BF, null), (0x8033, null), (0x802F, null), (0xC001, 3432), (0x80BF, null), (0xC001, 6), (0xC001, 1), (0x8046, null), (0x80AE, null), (0x80AF, null),
+                    (0x8045, null), (0x802F, null), (0x80BE, null), (0xC001, 1), (0xC001, 6), (0x80B4, null), (0x8122, null) };
+                if (combat?.BodyOffset != 3350 || !program.ProcedureInstructions(combat.Index).Take(sting.Length).Select(i => (i.Opcode, i.OperandBits)).SequenceEqual(sting))
+                    throw new InvalidDataException("zclscorp combat_p_proc is not the audited Luck-checked sting.");
+            }
+            else if (combat != null) throw new InvalidDataException($"{path} gained a combat_p_proc.");
             // _combat_ai flees only below min_hp (absolute), on hurt_too_much results, or when no hit can reach min_to_hit.
             if (!packets.TryGetValue(packetName, out var ai) || ai.GetValueOrDefault("packet_num") != $"{packet}" || ai.GetValueOrDefault("min_hp") != "0"
                 || ai.GetValueOrDefault("min_to_hit") != "0" || ai.GetValueOrDefault("hurt_too_much") != "blind" || ai.ContainsKey("run_away_mode") || ai.ContainsKey("chem_use"))
@@ -74,6 +86,7 @@ internal static class CritterSightReport
             Scripts = Scripts.Select(s => new { s.Path, s.Size, s.Sha256, CritterProcBody = s.Body, MapEnterBody = s.MapEnter, s.Team, AiPacket = s.Packet,
                 Packet = new { Name = s.PacketName, MinHp = packets[s.PacketName]["min_hp"], MinToHit = packets[s.PacketName]["min_to_hit"],
                     HurtTooMuch = packets[s.PacketName]["hurt_too_much"], MaxDist = packets[s.PacketName].GetValueOrDefault("max_dist") } }),
+            Sting = "zclscorp combat_p_proc (offset 3350): after a hit on the dude, do_check(dude_obj, STAT_LUCK, -1); on a failure poison(target_obj, random(1, 6))",
             Flight = "Rat and Scorpion never flee: min_hp 0 (HP is never below it), min_to_hit 0, blindness needs a critical hit (none before game day 1), drug flight is biped-only",
             Critters = critters,
             ByPid = critters.GroupBy(c => c.Pid).Select(g => new { Pid = g.Key, Count = g.Count(), Perception = g.Select(c => c.Perception).Distinct().ToArray(),

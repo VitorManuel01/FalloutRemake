@@ -12,6 +12,7 @@ namespace FalloutRemake.Runtime;
 public enum CombatCommitStatus { Ready, NotOver, PlayerDefeated, InvalidFight, StaleSource, AlreadyDefeated }
 /// <summary>Source critters that notice the player at its current location; the nearest one starts the fight.</summary>
 public sealed record CombatEncounter(ActorLocation Player, string[] FoeKeys, string InitiatorKey);
+public sealed record PoisonTimeAdvance(int HitPointsLost, bool Died, PoisonState Poison);
 /// <summary>A source critter killed in a won fight: its record stays intact; the world projects the corpse.</summary>
 public sealed record DefeatedCritter([property: JsonRequired] int Map, [property: JsonRequired] string Key, [property: JsonRequired] int Pid,
     [property: JsonRequired] int Elevation, [property: JsonRequired] int Hex);
@@ -37,7 +38,24 @@ public sealed partial class WorldSession
     public int PerksAvailable => CharacterProgression.PerksAvailable(Character, Level);
     /// <summary>Player HP when hurt; null means unhurt. Healing comes from level-ups and drugs (<see cref="UseDrug"/>).</summary>
     public int? PlayerHitPoints => _playerDamage == 0 ? null : HitPoints;
-    public bool HasCombatOutcome => _defeated.Count != 0 || _survivors.Count != 0 || _playerDamage != 0;
+    public bool HasCombatOutcome => _defeated.Count != 0 || _survivors.Count != 0 || _playerDamage != 0 || _poison.Active;
+    // The dude's poison (radscorpion stings): it runs on game time, in combat rounds and in exploration (AdvanceTime).
+    private PoisonState _poison;
+    public PoisonState Poison => _poison;
+
+    /// <summary>
+    /// Exploration game time (CE: one tick per 100 ms outside combat): due poison events cost HP. A lethal event is reported
+    /// (Died) without being applied, so the caller ends the game as a lost fight does.
+    /// </summary>
+    public PoisonTimeAdvance AdvanceTime(int ticks)
+    {
+        if (ticks < 0) throw new ArgumentOutOfRangeException(nameof(ticks));
+        if (InCombat || !_poison.Active || ticks == 0) return new(0, false, _poison);
+        PoisonState next = _poison.Advance(ticks, out int lost);
+        if (lost >= HitPoints) return new(lost, true, next);
+        _poison = next; _playerDamage += lost;
+        return new(lost, false, _poison);
+    }
     public IReadOnlyList<DefeatedCritter> Defeated => _defeated.Values.OrderBy(d => d.Map).ThenBy(d => d.Key, StringComparer.Ordinal).ToArray();
     public bool IsDefeated(int map, string key) => _defeated.ContainsKey((map, key));
 
@@ -72,7 +90,13 @@ public sealed partial class WorldSession
         if (players.Length != 1) return CombatCommitStatus.InvalidFight;
         if (!players[0].Alive) return CombatCommitStatus.PlayerDefeated;
         // Cameron's challenge is fought out: the gate is locked behind both duelists.
-        if (ReferenceEquals(fight, _duelFight)) return fight.Left ? CombatCommitStatus.InvalidFight : CommitTempleDuel(fight, players[0]);
+        if (!players[0].Poison.Valid) return CombatCommitStatus.InvalidFight;
+        if (ReferenceEquals(fight, _duelFight))
+        {
+            CombatCommitStatus duel = fight.Left ? CombatCommitStatus.InvalidFight : CommitTempleDuel(fight, players[0]);
+            if (duel == CombatCommitStatus.Ready) _poison = players[0].Poison;
+            return duel;
+        }
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
         var dead = new List<DefeatedCritter>();
         var standing = new List<SurvivingCritter>();
@@ -101,6 +125,7 @@ public sealed partial class WorldSession
         foreach (SurvivingCritter critter in standing) _survivors[(critter.Map, critter.Key)] = critter;
         _combatExperience += awarded;
         _playerDamage = players[0].Stats.MaxHitPoints - players[0].HitPoints;
+        _poison = players[0].Poison;
         return CombatCommitStatus.Ready;
     }
 
@@ -109,9 +134,10 @@ public sealed partial class WorldSession
         .OrderBy(c => c.Map).ThenBy(c => c.OwnerKey, StringComparer.Ordinal).ThenBy(c => c.Source.Key, StringComparer.Ordinal).ToArray();
     public int HealingDoses => HealingCarried().Sum(c => c.Quantity);
 
-    private void ResetCombat() { _defeated.Clear(); _survivors.Clear(); _combatExperience = 0; _playerDamage = 0; _activeFight = null; }
+    private void ResetCombat() { _defeated.Clear(); _survivors.Clear(); _combatExperience = 0; _playerDamage = 0; _poison = PoisonState.None; _activeFight = null; }
 
-    private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints, _survivors.Count == 0 ? null : Survivors.ToArray());
+    private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints, _survivors.Count == 0 ? null : Survivors.ToArray(),
+        _poison.Active ? new SavedPoison(_poison.Level, _poison.TicksLeft) : null);
 
     // Atomic with the rest of Restore (runs on the candidate session). Every corpse must be an encounter critter of a
     // restored area lying on geometry it could reach, and the XP must be exactly what those kills award.
@@ -163,10 +189,18 @@ public sealed partial class WorldSession
         // The level, and so the max HP, comes from the whole restored XP; full HP is stored as null.
         if (saved.PlayerHitPoints is int hp && hp >= MaxHitPoints) throw new InvalidDataException("Checkpoint player HP is not below the level's maximum.");
         _playerDamage = saved.PlayerHitPoints is int hurt ? MaxHitPoints - hurt : 0;
+        if (saved.Poison is { } poison)
+        {
+            var state = new PoisonState(poison.Level, poison.TicksLeft);
+            if (!state.Active || !state.Valid) throw new InvalidDataException("Checkpoint poison level or timer is out of range.");
+            _poison = state;
+        }
     }
 
     // Hostile temple creatures: Giant Ant (PID 382) and Radscorpion (PID 5). Dumar keeps his Speech role.
     public static readonly IReadOnlySet<int> EncounterPids = new HashSet<int> { 0x0100017E, 0x01000005 };
+    /// <summary>The radscorpion's zclscorp combat_p_proc may poison the dude on each hit (PoisonRules).</summary>
+    public const int RadscorpionPid = 0x01000005;
 
     /// <summary>
     /// Weapon the player fights with: the carried hand weapon (melee or unarmed primary attack) with the highest average
@@ -223,13 +257,14 @@ public sealed partial class WorldSession
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
         var stats = DerivedCombatStats.ForPlayer(Sheet, Level);
         var combatants = new List<CombatantState> { new("player", Character.Name, null, 0, true, Location.Hex, Location.Elevation, stats,
-            playerWeapon, HitPoints, healingDoses: HealingDoses) };
+            playerWeapon, HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison } };
         foreach (string key in encounter.FoeKeys)
         {
             if (!roots.TryGetValue(key, out MapObject? source) || IsDefeated(CurrentMap, key)) throw new InvalidOperationException("Encounter critter is no longer available.");
             Prototype prototype = Current.Map.Prototypes.FirstOrDefault(p => p.Pid == source.Header.Pid)
                 ?? throw new System.IO.InvalidDataException($"Critter prototype {source.Header.Pid:X8} is not part of the map dependencies.");
-            combatants.Add(CombatantState.FromMapCritter(EffectiveObject(CurrentMap, source), CritterPrototypeData.Read(prototype), $"PID {source.Header.Pid:X8}"));
+            combatants.Add(CombatantState.FromMapCritter(EffectiveObject(CurrentMap, source), CritterPrototypeData.Read(prototype), $"PID {source.Header.Pid:X8}",
+                poisonsOnHit: source.Header.Pid == RadscorpionPid));
         }
         if (InCombat) throw new InvalidOperationException("A fight is already open.");
         var session = new CombatSession(combatants, Current.Doors.Navigation(Location.Elevation), random, encounter.InitiatorKey);

@@ -103,7 +103,7 @@ apenas enquanto uma luta está aberta.
 ## Limites
 
 - **XP e nível:** resolvido pela [progressão de nível](character-progression-2026-10-31.md). A recompensa de Arroyo vale em qualquer nível, e o XP das lutas faz o personagem subir de nível pelas regras do CE.
-- O radscorpion não envenena: veneno, críticos e efeitos de dano não estão modelados.
+- O veneno do radscorpion está modelado desde 01/11 ([veneno](radscorpion-poison-2026-11-01.md)). Críticos e efeitos de dano não estão.
 - A animação é mínima (deslizar e avançar). Não há animação de morte; o cadáver é
   a cápsula deitada.
 - Sem IA tática (AI-001), sem críticos, mira, cobertura ou luz.

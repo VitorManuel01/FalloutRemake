@@ -126,6 +126,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckDoors();
 				if (_test) await CheckCombat();
 				if (_test) await CheckCombatLeave();
+				if (_test) await CheckPoison();
 				if (_test) await CheckLockpick();
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();
@@ -334,6 +335,7 @@ public partial class TemplePreview : Node3D
 		if (InspectorOpen) return;
 		AdvanceTemplePlayback(delta);
 		AdvanceWalker(delta);
+		AdvanceGameTime(delta);
 		if (!_checkingNavigation) UpdateCombat(delta);
 		float x = (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
 		float z = (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0);
