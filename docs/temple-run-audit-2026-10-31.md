@@ -72,7 +72,7 @@ Em ordem de impacto medido:
 
 1. **Escolha de personagem com tags e traits:** um Unarmed de 70% muda a conta contra os radscorpions.
 2. ~~**Fuga das criaturas por AI packet e saída do combate:** é a forma do original de não lutar até a morte.~~ Em 01/11: as criaturas do Templo não fogem no original, e a saída do jogador com Enter está modelada ([fuga](combat-leave-2026-11-01.md)).
-3. ~~**Críticos:** a chance já é calculada (LK); falta a tabela de efeitos.~~ No Templo eles não acontecem: o CE exige o dia 1 de jogo.
+3. ~~**Críticos:** a chance já é calculada (LK); falta a tabela de efeitos.~~ Modelados em 01/11 ([críticos](critical-hits-2026-11-01.md)). No Templo eles não acontecem: o CE exige o dia 1 de jogo, e a auditoria no início original repete esta medição exatamente. `TEMPLE_RUN_DAY=1` mede o Templo com eles.
 4. ~~**Percepção do CE no início dos encontros:** PE × 5 com linha de visão, no lugar do raio fixo.~~ Feito em 01/11 ([percepção](critter-sight-2026-11-01.md)).
 
 O duelo desarmado com Cameron não foi necessário: a variante usa o ramo de

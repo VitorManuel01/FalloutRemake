@@ -11,7 +11,7 @@ try
     if (args.Length < 2 || args[0] != "--data-dir")
     {
         Console.Error.WriteLine("Usage: TempleInspector --self-test | --data-dir <language-folder> [--map maps/arcaves.map] [--export-local] [--navigation] | --data-dir <language-folder> --script scripts/<name>.int [--instructions] | --data-dir <language-folder> <report>");
-        Console.Error.WriteLine("Reports: --door-adapter-test, --item-transfer-report, --temple-chest-report, --temple-dialogue-report, --temple-state-report, --arroyo-entry-report, --arroyo-elder-report, --temple-aftermath-report, --temple-npc-departure-report, --item-origin-route-report, --item-art-report, --temple-collection-report, --temple-barrier-report, --explosive-profile-report, --item-use-checkpoint-report, --barrier-effect-report, --barrier-commit-report, --combat-report, --critter-sight-report, --temple-run-report, --drug-report");
+        Console.Error.WriteLine("Reports: --door-adapter-test, --item-transfer-report, --temple-chest-report, --temple-dialogue-report, --temple-state-report, --arroyo-entry-report, --arroyo-elder-report, --temple-aftermath-report, --temple-npc-departure-report, --item-origin-route-report, --item-art-report, --temple-collection-report, --temple-barrier-report, --explosive-profile-report, --item-use-checkpoint-report, --barrier-effect-report, --barrier-commit-report, --combat-report, --critical-report, --critter-sight-report, --temple-run-report, --drug-report");
         return 2;
     }
     if (args.Length == 3 && args[2] == "--door-adapter-test")
@@ -171,6 +171,11 @@ try
     {
         var walkData = new GameData(args[1]);
         Console.WriteLine(JsonSerializer.Serialize(new[] { WalkTiming.ForGender(walkData, 0), WalkTiming.ForGender(walkData, 1) }, new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--critical-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(CriticalReport.Create(new GameData(args[1]), args[1]), new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
     if (args.Length == 3 && args[2] == "--critter-sight-report")

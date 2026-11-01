@@ -102,11 +102,11 @@ public sealed partial class WorldSession
         _duelDeposit = deposit.ToArray(); _duelProfile = profile; _duelOutcome = TempleDuelOutcome.InProgress;
         // Bare hands and no healing dose: the inventory now lies in the chest.
         var player = new CombatantState("player", Character.Name, null, 0, true, Location.Hex, 2, DerivedCombatStats.ForPlayer(Sheet, Level),
-            CombatWeapon.Unarmed(), HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison };
+            CombatWeapon.Unarmed(), HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled };
         CombatantState cameron = CombatantState.FromMapCritter(source, CritterPrototypeData.Read(prototype), "Cameron");
         cameron = new CombatantState(cameron.Id, cameron.Name, cameron.Pid, cameron.Team, false, cameron.Hex, cameron.Elevation, cameron.Stats,
-            cameron.Weapon, cameron.HitPoints, cameron.Experience) { YieldsBelowHalf = true };
-        var session = new CombatSession(new[] { player, cameron }, Current.Doors.Navigation(2), random, cameron.Id);
+            cameron.Weapon, cameron.HitPoints, cameron.Experience) { YieldsBelowHalf = true, KillType = cameron.KillType };
+        var session = new CombatSession(new[] { player, cameron }, Current.Doors.Navigation(2), random, cameron.Id, _gameTime);
         _activeFight = session; _activeFightMap = 3; _duelFight = session;
         return session;
     }

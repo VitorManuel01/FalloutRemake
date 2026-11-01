@@ -4,8 +4,8 @@ using FalloutRemake.Geometry;
 namespace FalloutRemake.Runtime.Combat;
 
 /// <summary>
-/// Hit chance from CE attackDetermineToHit, torso target, no perks, traits, lighting, line-of-fire crowding or
-/// knockdown. The only project rule is the final clamp: CE caps at 95 with no floor; the roadmap fixes 5..95.
+/// Hit chance from CE attackDetermineToHit, torso target, no perks, traits, lighting or line-of-fire crowding; +40 against
+/// a prone target. The only project rule is the final clamp: CE caps at 95 with no floor; the roadmap fixes 5..95.
 /// </summary>
 public static class CombatResolver
 {
@@ -26,8 +26,9 @@ public static class CombatResolver
         }
         int strength = Math.Max(0, weapon.MinStrength - attacker.Stats.Special.Strength) * 20;
         int armorClass = Math.Max(0, target.EffectiveArmorClass + (weapon.Ammo?.ArmorClassModifier ?? 0));
-        int raw = skill + distance - strength - armorClass;
-        return new ToHitBreakdown(skill, weapon.SkillIndex, distance, strength, armorClass, raw, Math.Clamp(raw, MinimumChance, MaximumChance));
+        int prone = target.Prone ? CriticalRules.ProneTargetBonus : 0;
+        int raw = skill + distance - strength - armorClass + prone;
+        return new ToHitBreakdown(skill, weapon.SkillIndex, distance, strength, armorClass, raw, Math.Clamp(raw, MinimumChance, MaximumChance), prone);
     }
 
     /// <summary>Percentile hit: rolls 1–100 and hits when the roll does not exceed the chance.</summary>

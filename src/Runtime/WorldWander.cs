@@ -62,7 +62,8 @@ public sealed partial class WorldSession
         Prototype? prototype = Current.Map.Prototypes.FirstOrDefault(p => p.Pid == critter.Header.Pid);
         if (prototype == null) return false;
         int hp = critter.State.TryGetValue("hp", out int stored) ? stored : DerivedCombatStats.FromCritter(CritterPrototypeData.Read(prototype)).MaxHitPoints;
-        _survivors[(CurrentMap, critter.Key)] = new SurvivingCritter(CurrentMap, critter.Key, critter.Header.Pid, critter.Header.Elevation, target, hp, steps[^1]);
+        DamageFlags crippled = _survivors.TryGetValue((CurrentMap, critter.Key), out SurvivingCritter? before) ? before.Crippled : DamageFlags.None;
+        _survivors[(CurrentMap, critter.Key)] = new SurvivingCritter(CurrentMap, critter.Key, critter.Header.Pid, critter.Header.Elevation, target, hp, steps[^1], crippled);
         return true;
     }
 }

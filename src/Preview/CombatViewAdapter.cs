@@ -119,8 +119,27 @@ public partial class TemplePreview
         CombatActionStatus.Unreachable => "sem caminho livre", CombatActionStatus.NotActive => "não é o seu turno",
         CombatActionStatus.AlreadyThere => "você já está aqui", CombatActionStatus.CombatOver => "o combate terminou",
         CombatActionStatus.OtherElevation => "outra elevação", CombatActionStatus.NoItem => "sem Healing Powder na bolsa",
-        CombatActionStatus.EnemiesAware => "inimigos ainda percebem você", _ => "alvo inválido"
+        CombatActionStatus.EnemiesAware => "inimigos ainda percebem você",
+        CombatActionStatus.ArmCrippled => "braço aleijado não segura a arma", _ => "alvo inválido"
     };
+
+    // CE combat results in the HUD's words; the critical tables only ever produce these on the torso.
+    private static string Conditions(DamageFlags flags)
+    {
+        var words = new List<string>();
+        if ((flags & DamageFlags.Dead) != 0) words.Add("morte instantânea");
+        if ((flags & DamageFlags.KnockedOut) != 0) words.Add("nocauteado");
+        else if ((flags & DamageFlags.KnockedDown) != 0) words.Add("caído");
+        if ((flags & DamageFlags.LoseTurn) != 0) words.Add("perde o turno");
+        if ((flags & DamageFlags.CrippledLegs) == DamageFlags.CrippledLegs) words.Add("pernas aleijadas");
+        else if ((flags & DamageFlags.CrippledLegs) != 0) words.Add("perna aleijada");
+        if ((flags & DamageFlags.CrippledArms) == DamageFlags.CrippledArms) words.Add("braços aleijados");
+        else if ((flags & DamageFlags.CrippledArms) != 0) words.Add("braço aleijado");
+        if ((flags & DamageFlags.Blind) != 0) words.Add("cego");
+        if ((flags & DamageFlags.HitSelf) != 0) words.Add("acerta a si mesmo");
+        return string.Join(", ", words);
+    }
+    private static string Multiplier(int multiplier) => multiplier % 2 == 0 ? $"×{multiplier / 2}" : $"×{multiplier / 2},5";
 
     // Screen proximity rather than a physics ray: tall kit walls must not swallow a click on a creature behind them.
     private CombatantState? EnemyAtScreen(Vector2 screen) => _combat?.Combatants
@@ -142,7 +161,7 @@ public partial class TemplePreview
             if (key == _combatHoverKey) return;
             CombatActionPreview attack = _combat.Preview(CombatActionProposal.Attack(player.Id, foe.Id));
             text = AttackSummary(attack, foe)
-                + $"\nAcerto: perícia {attack.ToHit!.Skill} − AC {attack.ToHit.TargetArmorClass}{(attack.ToHit.DistanceModifier != 0 ? $" {attack.ToHit.DistanceModifier:+0;−0} distância" : "")}{(attack.ToHit.StrengthPenalty > 0 ? $" − {attack.ToHit.StrengthPenalty} força" : "")} = {attack.ToHit.Raw}"
+                + $"\nAcerto: perícia {attack.ToHit!.Skill} − AC {attack.ToHit.TargetArmorClass}{(attack.ToHit.DistanceModifier != 0 ? $" {attack.ToHit.DistanceModifier:+0;−0} distância" : "")}{(attack.ToHit.StrengthPenalty > 0 ? $" − {attack.ToHit.StrengthPenalty} força" : "")}{(attack.ToHit.ProneTarget > 0 ? $" + {attack.ToHit.ProneTarget} alvo caído" : "")} = {attack.ToHit.Raw}"
                 + $" · DT {attack.Damage!.Threshold} · DR {attack.Damage.Resistance}%";
         }
         else if (GroundHexAtScreen(screen) is int hex)
@@ -154,7 +173,7 @@ public partial class TemplePreview
                 : move.Status == CombatActionStatus.NotEnoughActionPoints ? $"Mover até hex {hex}: {move.ActionPointCost} AP · você tem {player.ActionPoints}"
                 : $"Hex {hex}: {Refusal(move.Status)}";
         }
-        else { key = "none"; if (key == _combatHoverKey) return; text = "Clique no chão para mover (1 AP por hex) ou na criatura para atacar."; }
+        else { key = "none"; if (key == _combatHoverKey) return; text = $"Clique no chão para mover ({player.ActionPointsPerHex} AP por hex) ou na criatura para atacar."; }
         _combatHoverKey = key; _hud.CombatPreview(text);
     }
 
@@ -254,6 +273,20 @@ public partial class TemplePreview
                         : $"Ferroada: Sorte {sting.LuckRoll} até {sting.Needed} · você resistiu ao veneno"); break;
                 case PoisonDamage poisoned:
                     lines.Add($"Veneno: −{poisoned.Lost} HP ({poisoned.HitPoints} HP) · nível {poisoned.Level}"); break;
+                case CriticalHit critical:
+                    string effects = Conditions(critical.Flags);
+                    lines.Add($"Crítico{(critical.Massive ? " maciço" : "")}! {critical.Roll} até {critical.Needed} · efeito {critical.EffectRoll} · dano {Multiplier(critical.Multiplier)}"
+                        + ((critical.Flags & DamageFlags.Bypass) != 0 ? " · ignora 80% da armadura" : "") + (effects.Length > 0 ? $" · {CombatName(critical.TargetId)}: {effects}" : "")); break;
+                case CriticalFailure failure when failure.Flags != DamageFlags.None:
+                    string fumble = Conditions(failure.Flags);
+                    lines.Add($"Falha crítica de {CombatName(failure.AttackerId)}: {failure.Roll} até {failure.Needed}" + (fumble.Length > 0 ? $" · {fumble}" : "")
+                        + (failure.SelfDamage > 0 ? $" · −{failure.SelfDamage} HP ({failure.HitPoints} HP)" : "")); break;
+                case TurnLost lost:
+                    lines.Add($"{CombatName(lost.CombatantId)} perde o turno ({((lost.Reason & DamageFlags.KnockedOut) != 0 ? "nocauteado" : "turno perdido")})"); break;
+                case StoodUp up:
+                    lines.Add($"{CombatName(up.CombatantId)} se levanta · {up.ActionPointsSpent} AP"); break;
+                case WokeUp woke:
+                    lines.Add($"{CombatName(woke.CombatantId)} recobra a consciência"); break;
                 case CombatLeft left:
                     lines.Add($"Você saiu do combate · {left.Survivors.Length} criatura(s) de pé"); break;
                 case TurnStarted started when started.CombatantId != "player":
@@ -307,11 +340,12 @@ public partial class TemplePreview
             if (_combatLabels.TryGetValue(c.Id, out Label3D? label)) label.Text = c.Alive ? $"{c.HitPoints}/{c.Stats.MaxHitPoints} HP" : "morto";
         CombatantState player = _combat.Get("player");
         CombatTurnState turn = _combat.Turn;
-        string foes = string.Join("   ", _combat.Combatants.Where(c => !c.IsPlayer).Select(c => $"{CombatName(c.Id)}: {(c.Alive ? $"{c.HitPoints}/{c.Stats.MaxHitPoints} HP · AC {c.EffectiveArmorClass}" : "morto")}"));
+        string State(CombatantState c) => Conditions(c.Conditions) is { Length: > 0 } words ? $" · {words}" : "";
+        string foes = string.Join("   ", _combat.Combatants.Where(c => !c.IsPlayer).Select(c => $"{CombatName(c.Id)}: {(c.Alive ? $"{c.HitPoints}/{c.Stats.MaxHitPoints} HP · AC {c.EffectiveArmorClass}{State(c)}" : "morto")}"));
         bool mine = _combat.Active?.IsPlayer == true;
         _hud.Combat(true, $"COMBATE · Rodada {turn.Round} · {(mine ? "seu turno" : $"turno de {CombatName(turn.ActiveId!)}")}",
-            $"Você: {player.HitPoints}/{player.Stats.MaxHitPoints} HP · {player.ActionPoints}/{player.Stats.MaxActionPoints} AP · AC {player.EffectiveArmorClass} · {_combatWeapon.Name}{(player.HealingDoses > 0 ? $" · Healing Powder ×{player.HealingDoses}" : "")}{(player.Poison.Active ? $" · envenenado ({player.Poison.Level})" : "")}\n{foes}", mine);
-        if (mine && _combatHoverKey.Length == 0) _hud.CombatPreview("Clique no chão para mover (1 AP por hex) ou na criatura para atacar. Espaço encerra o turno; Enter sai do combate longe da percepção das criaturas."
+            $"Você: {player.HitPoints}/{player.Stats.MaxHitPoints} HP · {player.ActionPoints}/{player.Stats.MaxActionPoints} AP · AC {player.EffectiveArmorClass} · {_combatWeapon.Name}{(player.HealingDoses > 0 ? $" · Healing Powder ×{player.HealingDoses}" : "")}{(player.Poison.Active ? $" · envenenado ({player.Poison.Level})" : "")}{State(player)}\n{foes}", mine);
+        if (mine && _combatHoverKey.Length == 0) _hud.CombatPreview($"Clique no chão para mover ({player.ActionPointsPerHex} AP por hex) ou na criatura para atacar. Espaço encerra o turno; Enter sai do combate longe da percepção das criaturas."
             + (player.HealingDoses > 0 ? $" H usa Healing Powder ({CombatSession.InventoryActionPoints} AP)." : ""));
     }
 
@@ -480,9 +514,9 @@ public partial class TemplePreview
                     if (!_hud.CombatPreviewText.Contains($"{attack.ToHit!.Chance}%")) throw new InvalidDataException("Hover preview differs from the rules: " + _hud.CombatPreviewText);
                     CombatClickAtScreen(_camera.UnprojectPosition(foePoint));
                 }
-                else if (attack.Status == CombatActionStatus.OutOfRange && player.ActionPoints > 0
+                else if (attack.Status == CombatActionStatus.OutOfRange && player.StepsAffordable(1) > 0
                     && _combat.Movement.Path(player, h => FalloutGrid.Distance(h, foe.Hex) <= _combatWeapon.Range) is { Length: > 0 } path)
-                    ApplyCombatResult(_combat.Execute(CombatActionProposal.Move("player", path[Math.Min(path.Length, player.ActionPoints) - 1])));
+                    ApplyCombatResult(_combat.Execute(CombatActionProposal.Move("player", path[player.StepsAffordable(path.Length) - 1])));
                 else { using var space = new InputEventKey { Pressed = true, PhysicalKeycode = Key.Space }; _UnhandledInput(space); rounds++; }
                 if (_combat != null && _walkerNode!.Position.DistanceTo(Point(FalloutGrid.HexCenter(_combat.Get("player").Hex) - _layout!.Origin, 0)) > .001f)
                     throw new InvalidDataException("Actor marker does not follow the combat position.");

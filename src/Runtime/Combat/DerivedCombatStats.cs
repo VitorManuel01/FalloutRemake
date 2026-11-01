@@ -24,11 +24,16 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
 {
     // CE stat indices.
     public const int MaxHitPointsStat = 7, MaxActionPointsStat = 8, ArmorClassStat = 9, MeleeDamageStat = 11, SequenceStat = 13,
-        CriticalChanceStat = 15, ThresholdStat = 17, ResistanceStat = 24;
+        CriticalChanceStat = 15, BetterCriticalsStat = 16, ThresholdStat = 17, ResistanceStat = 24;
     // CE skills 0–5: small guns, big guns, energy weapons, unarmed, melee weapons, throwing.
     public const int SmallGuns = 0, BigGuns = 1, EnergyWeapons = 2, Unarmed = 3, MeleeWeapons = 4, Throwing = 5;
     static readonly (int Default, int Multiplier, int Stat1, int Stat2)[] SkillRules =
         { (5, 4, 5, -1), (0, 2, 5, -1), (0, 2, 5, -1), (30, 2, 5, 0), (20, 2, 5, 0), (0, 4, 5, -1) };
+
+    /// <summary>Better Criticals (stat 16, -60..100): added to the critical effect roll. Heavy Handed gives the player -30.</summary>
+    public int BetterCriticals { get; init; }
+    /// <summary>The player's Finesse trait: CE adds 30 to the target's DR on every hit that does not bypass armor.</summary>
+    public bool Finesse { get; init; }
 
     public int Threshold(DamageType type) => DamageThreshold[(int)type];
     public int Resistance(DamageType type) => DamageResistance[(int)type];
@@ -50,7 +55,7 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
             Stat(MeleeDamageStat, 0, 500), Stat(SequenceStat, 0, 999), Stat(CriticalChanceStat, 0, 100),
             Enumerable.Range(0, 7).Select(i => Stat(ThresholdStat + i, 0, 999)).ToArray(),
             Enumerable.Range(0, 7).Select(i => Stat(ResistanceStat + i, 0, 100)).ToArray(),
-            Skills(special, critter.Skill));
+            Skills(special, critter.Skill)) { BetterCriticals = Stat(BetterCriticalsStat, -60, 100) };
     }
 
     /// <summary>Character without traits, perks or tags (CE critterUpdateDerivedStats + skillGetValue), with optional worn armor.
@@ -63,7 +68,12 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
         return new(character.Effective, FalloutRemake.Runtime.CharacterProgression.MaxHitPoints(character, level), character.MaxActionPoints,
             character.ArmorClass + (armor?.ArmorClass ?? 0), character.MeleeDamage, character.Sequence, character.CriticalChance,
             threshold.Select(v => Math.Clamp(v, 0, 999)).ToArray(), resistance.Select(v => Math.Clamp(v, 0, 100)).ToArray(),
-            character.Skills.Take(6).ToArray());
+            character.Skills.Take(6).ToArray())
+        {
+            // CE traitGetStatModifier: Heavy Handed -30 Better Criticals; attackComputeDamage: Finesse +30 target DR.
+            BetterCriticals = character.Has(FalloutRemake.Runtime.CharacterTrait.HeavyHanded) ? -30 : 0,
+            Finesse = character.Has(FalloutRemake.Runtime.CharacterTrait.Finesse)
+        };
     }
 
     public static DerivedCombatStats ForCharacter(Special special, ArmorPrototypeData? armor = null, int level = 1)
@@ -99,8 +109,15 @@ public sealed record CombatWeapon(string Name, int? Pid, WeaponAttackType Attack
             _ => weapon.DamageType is 1 or 3 or 4 ? DerivedCombatStats.EnergyWeapons : DerivedCombatStats.SmallGuns
         };
         return new(name, weapon.Pid, type, weapon.MinDamage, weapon.MaxDamage, (DamageType)weapon.DamageType,
-            Math.Max(1, weapon.PrimaryRange), Math.Max(1, weapon.PrimaryActionPoints), weapon.MinStrength, skill, ammo);
+            Math.Max(1, weapon.PrimaryRange), Math.Max(1, weapon.PrimaryActionPoints), weapon.MinStrength, skill, ammo)
+        { CriticalFailureType = weapon.CriticalFailureType, TwoHanded = weapon.TwoHanded };
     }
+
+    /// <summary>PRO critical failure table row; -1 for natural attacks and bare hands (CE weaponGetCriticalFailureType of no weapon).</summary>
+    public int CriticalFailureType { get; init; } = -1;
+    public bool TwoHanded { get; init; }
+    /// <summary>A carried weapon, not bare hands or a natural attack: crippled arms only matter then (CE _combat_check_bad_shot).</summary>
+    public bool IsItem => Pid != null;
 
     public bool AddsMeleeDamage => AttackType is WeaponAttackType.Unarmed or WeaponAttackType.Melee;
     public bool IsRanged => AttackType is WeaponAttackType.Ranged or WeaponAttackType.Throw;

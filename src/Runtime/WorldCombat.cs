@@ -22,7 +22,8 @@ public sealed record DefeatedCritter([property: JsonRequired] int Map, [property
 /// the world projects its hex, HP and facing.
 /// </summary>
 public sealed record SurvivingCritter([property: JsonRequired] int Map, [property: JsonRequired] string Key, [property: JsonRequired] int Pid,
-    [property: JsonRequired] int Elevation, [property: JsonRequired] int Hex, [property: JsonRequired] int HitPoints, [property: JsonRequired] int Rotation);
+    [property: JsonRequired] int Elevation, [property: JsonRequired] int Hex, [property: JsonRequired] int HitPoints, [property: JsonRequired] int Rotation,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] DamageFlags Crippled = DamageFlags.None);
 
 /// <summary>
 /// Outcome of won fights in the live world (roadmap COM-004), saved in checkpoint v10 (<see cref="SavedCombat"/>).
@@ -42,10 +43,16 @@ public sealed partial class WorldSession
     public int PerksAvailable => CharacterProgression.PerksAvailable(Character, Level);
     /// <summary>Player HP when hurt; null means unhurt. Healing comes from level-ups and drugs (<see cref="UseDrug"/>).</summary>
     public int? PlayerHitPoints => _playerDamage == 0 ? null : HitPoints;
-    public bool HasCombatOutcome => _defeated.Count != 0 || _survivors.Count != 0 || _playerDamage != 0 || _poison.Active;
+    public bool HasCombatOutcome => _defeated.Count != 0 || _survivors.Count != 0 || _playerDamage != 0 || _poison.Active || _playerCrippled != DamageFlags.None;
     // The dude's poison (radscorpion stings): it runs on game time, in combat rounds and in exploration (AdvanceTime).
     private PoisonState _poison;
     public PoisonState Poison => _poison;
+    // The game clock (CE gGameTime): it starts at 302400 ticks on day 0; exploration adds a tick per 100 ms, fights 5 s a round.
+    private long _gameTime = CriticalRules.GameStartTicks;
+    public long GameTime => _gameTime;
+    // Crippled limbs outlast fights (CE keeps them in combat.results until a doctor treats them).
+    private DamageFlags _playerCrippled;
+    public DamageFlags PlayerCrippled => _playerCrippled;
 
     /// <summary>
     /// Exploration game time (CE: one tick per 100 ms outside combat). Due poison events cost HP; a lethal one is reported
@@ -60,6 +67,7 @@ public sealed partial class WorldSession
         PoisonState next = _poison.Advance(ticks, out int lost);
         if (lost > 0 && lost >= HitPoints) return new(lost, true, next, Array.Empty<string>());
         _poison = next; _playerDamage += lost;
+        _gameTime = Math.Min(_gameTime + ticks, CriticalRules.GameEndTicks - 1);
         string[] moved = random == null ? Array.Empty<string>() : Wander(ticks, random, reserved);
         return new(lost, false, _poison, moved);
     }
@@ -97,11 +105,11 @@ public sealed partial class WorldSession
         if (players.Length != 1) return CombatCommitStatus.InvalidFight;
         if (!players[0].Alive) return CombatCommitStatus.PlayerDefeated;
         // Cameron's challenge is fought out: the gate is locked behind both duelists.
-        if (!players[0].Poison.Valid) return CombatCommitStatus.InvalidFight;
+        if (!players[0].Poison.Valid || fight.GameTime < _gameTime || (players[0].Conditions & ~DamageFlags.Crippled) != 0) return CombatCommitStatus.InvalidFight;
         if (ReferenceEquals(fight, _duelFight))
         {
             CombatCommitStatus duel = fight.Left ? CombatCommitStatus.InvalidFight : CommitTempleDuel(fight, players[0]);
-            if (duel == CombatCommitStatus.Ready) _poison = players[0].Poison;
+            if (duel == CombatCommitStatus.Ready) { _poison = players[0].Poison; _gameTime = fight.GameTime; _playerCrippled = players[0].Conditions; }
             return duel;
         }
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
@@ -113,7 +121,8 @@ public sealed partial class WorldSession
                 || (source.Header.Pid >> 24) != 1) return CombatCommitStatus.StaleSource;
             if (IsDefeated(CurrentMap, foe.Id)) return CombatCommitStatus.AlreadyDefeated;
             if (!foe.Alive) dead.Add(new DefeatedCritter(CurrentMap, foe.Id, source.Header.Pid, foe.Elevation, foe.Hex));
-            else if (fight.Left) standing.Add(new SurvivingCritter(CurrentMap, foe.Id, source.Header.Pid, foe.Elevation, foe.Hex, foe.HitPoints, foe.Rotation));
+            else if (fight.Left) standing.Add(new SurvivingCritter(CurrentMap, foe.Id, source.Header.Pid, foe.Elevation, foe.Hex, foe.HitPoints, foe.Rotation,
+                foe.Conditions & DamageFlags.Crippled));
         }
         int awarded = fight.Log.OfType<CombatantDied>().Sum(d => d.Experience);
         if (awarded != fight.Turn.ExperienceAwarded || awarded < 0) return CombatCommitStatus.InvalidFight;
@@ -133,6 +142,7 @@ public sealed partial class WorldSession
         _combatExperience += awarded;
         _playerDamage = players[0].Stats.MaxHitPoints - players[0].HitPoints;
         _poison = players[0].Poison;
+        _gameTime = fight.GameTime; _playerCrippled = players[0].Conditions;
         return CombatCommitStatus.Ready;
     }
 
@@ -141,10 +151,15 @@ public sealed partial class WorldSession
         .OrderBy(c => c.Map).ThenBy(c => c.OwnerKey, StringComparer.Ordinal).ThenBy(c => c.Source.Key, StringComparer.Ordinal).ToArray();
     public int HealingDoses => HealingCarried().Sum(c => c.Quantity);
 
-    private void ResetCombat() { _defeated.Clear(); _survivors.Clear(); _combatExperience = 0; _playerDamage = 0; _poison = PoisonState.None; _activeFight = null; ResetWandering(); }
+    private void ResetCombat()
+    {
+        _defeated.Clear(); _survivors.Clear(); _combatExperience = 0; _playerDamage = 0; _poison = PoisonState.None; _activeFight = null; ResetWandering();
+        _gameTime = CriticalRules.GameStartTicks; _playerCrippled = DamageFlags.None;
+    }
 
     private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints, _survivors.Count == 0 ? null : Survivors.ToArray(),
-        _poison.Active ? new SavedPoison(_poison.Level, _poison.TicksLeft) : null);
+        _poison.Active ? new SavedPoison(_poison.Level, _poison.TicksLeft) : null, _gameTime == CriticalRules.GameStartTicks ? null : _gameTime,
+        _playerCrippled == DamageFlags.None ? null : (int)_playerCrippled);
 
     // Atomic with the rest of Restore (runs on the candidate session). Every corpse must be an encounter critter of a
     // restored area lying on geometry it could reach, and the XP must be exactly what those kills award.
@@ -180,6 +195,7 @@ public sealed partial class WorldSession
         {
             if (alive?.Key == null || _survivors.ContainsKey((alive.Map, alive.Key)) || _defeated.ContainsKey((alive.Map, alive.Key))
                 || !_areas.TryGetValue(alive.Map, out WorldArea? area) || alive.Rotation is < 0 or > 5 || !HexNavigation.Valid(alive.Hex)
+                || (alive.Crippled & ~DamageFlags.Crippled) != 0
                 || _survivors.Values.Any(s => s.Map == alive.Map && s.Elevation == alive.Elevation && s.Hex == alive.Hex))
                 throw new InvalidDataException("Checkpoint survivor is duplicated, already dead or outside the restored areas.");
             MapObject? source = area.Map.ObjectLayers.SelectMany(l => l.Objects).FirstOrDefault(o => o.Key == alive.Key);
@@ -202,6 +218,13 @@ public sealed partial class WorldSession
             if (!state.Active || !state.Valid) throw new InvalidDataException("Checkpoint poison level or timer is out of range.");
             _poison = state;
         }
+        // Absent means the start time; a stored clock is past it (or it would have been left out) and before CE's year-13 end.
+        if (saved.GameTime is long time && (time <= CriticalRules.GameStartTicks || time >= CriticalRules.GameEndTicks))
+            throw new InvalidDataException("Checkpoint game time is out of range.");
+        _gameTime = saved.GameTime ?? CriticalRules.GameStartTicks;
+        if (saved.PlayerCrippled is int crippled && (crippled == 0 || (crippled & ~(int)DamageFlags.Crippled) != 0))
+            throw new InvalidDataException("Checkpoint crippled limbs are malformed.");
+        _playerCrippled = (DamageFlags)(saved.PlayerCrippled ?? 0);
     }
 
     // Hostile temple creatures: Giant Ant (PID 382) and Radscorpion (PID 5). Dumar keeps his Speech role.
@@ -264,17 +287,19 @@ public sealed partial class WorldSession
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
         var stats = DerivedCombatStats.ForPlayer(Sheet, Level);
         var combatants = new List<CombatantState> { new("player", Character.Name, null, 0, true, Location.Hex, Location.Elevation, stats,
-            playerWeapon, HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison } };
+            playerWeapon, HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled } };
         foreach (string key in encounter.FoeKeys)
         {
             if (!roots.TryGetValue(key, out MapObject? source) || IsDefeated(CurrentMap, key)) throw new InvalidOperationException("Encounter critter is no longer available.");
             Prototype prototype = Current.Map.Prototypes.FirstOrDefault(p => p.Pid == source.Header.Pid)
                 ?? throw new System.IO.InvalidDataException($"Critter prototype {source.Header.Pid:X8} is not part of the map dependencies.");
-            combatants.Add(CombatantState.FromMapCritter(EffectiveObject(CurrentMap, source), CritterPrototypeData.Read(prototype), $"PID {source.Header.Pid:X8}",
-                poisonsOnHit: source.Header.Pid == RadscorpionPid));
+            CombatantState foe = CombatantState.FromMapCritter(EffectiveObject(CurrentMap, source), CritterPrototypeData.Read(prototype), $"PID {source.Header.Pid:X8}",
+                poisonsOnHit: source.Header.Pid == RadscorpionPid);
+            if (_survivors.TryGetValue((CurrentMap, key), out SurvivingCritter? standing)) foe.SetConditions(standing.Crippled);
+            combatants.Add(foe);
         }
         if (InCombat) throw new InvalidOperationException("A fight is already open.");
-        var session = new CombatSession(combatants, Current.Doors.Navigation(Location.Elevation), random, encounter.InitiatorKey);
+        var session = new CombatSession(combatants, Current.Doors.Navigation(Location.Elevation), random, encounter.InitiatorKey, _gameTime);
         _activeFight = session; _activeFightMap = CurrentMap;
         return session;
     }

@@ -44,6 +44,26 @@ public sealed class CombatantState
     /// <summary>Still taking part: alive and not yielded.</summary>
     public bool InFight => Alive && !Yielded;
     public int EffectiveArmorClass => Stats.ArmorClass + BonusArmorClass;
+    /// <summary>PRO kill type, which picks the critical table of a non-player defender (0 Man … 18 Big Bad Boss).</summary>
+    public int KillType { get => _killType; init => _killType = value is >= 0 and < CriticalRules.KillTypeCount ? value : throw new ArgumentOutOfRangeException(nameof(value)); }
+    private readonly int _killType;
+    /// <summary>
+    /// Lasting results of criticals (CE combat.results): knocked out or down, a lost turn, crippled limbs. Crippled limbs
+    /// outlast the fight; the rest end with it.
+    /// </summary>
+    public DamageFlags Conditions { get => _conditions; init => _conditions = (value & ~DamageFlags.Results) == 0 && (value & DamageFlags.Dead) == 0 ? value : throw new ArgumentOutOfRangeException(nameof(value)); }
+    private DamageFlags _conditions;
+    internal void SetConditions(DamageFlags conditions) => _conditions = conditions;
+    /// <summary>Game time the knockout event fires (meaningful while KnockedOut).</summary>
+    public long WakeAt { get; internal set; }
+    /// <summary>Woke at the last round's end: outside the turn order until the end of this round (CE _combat_add_noncoms).</summary>
+    public bool Rejoining { get; internal set; }
+    public bool KnockedOut => (_conditions & DamageFlags.KnockedOut) != 0;
+    /// <summary>Knocked down or out (CE _critter_is_prone): +40 to hit it, and standing up costs AP.</summary>
+    public bool Prone => (_conditions & (DamageFlags.KnockedOut | DamageFlags.KnockedDown)) != 0;
+    public int ActionPointsPerHex => CriticalRules.ActionPointsPerHex(_conditions);
+    /// <summary>Hexes of a path this combatant can walk with its AP (crippled legs make each one dearer).</summary>
+    public int StepsAffordable(int pathLength) => Math.Min(pathLength, ActionPoints / ActionPointsPerHex);
 
     public CombatantState(string id, string name, int? pid, int team, bool isPlayer, int hex, int elevation, DerivedCombatStats stats,
         CombatWeapon weapon, int hitPoints, int experience = 0, int healingDoses = 0)
@@ -68,6 +88,6 @@ public sealed class CombatantState
         if (team == 0) throw new InvalidDataException("Team 0 is reserved for the player's side.");
         return new(source.Key, name, prototype.Pid, team, false, source.Header.Tile, source.Header.Elevation, stats,
             weapon ?? CombatWeapon.Unarmed(prototype.DamageType is int natural and >= 0 and <= 6 ? (DamageType)natural : DamageType.Normal),
-            hp, prototype.Experience) { Rotation = source.Header.Rotation, PoisonsOnHit = poisonsOnHit };
+            hp, prototype.Experience) { Rotation = source.Header.Rotation, PoisonsOnHit = poisonsOnHit, KillType = prototype.KillType };
     }
 }

@@ -13,6 +13,8 @@ public partial class PreviewHud
         TooltipText = "Só quando nenhuma criatura percebe você: mais de PE × 5 hexes à frente dela e mais de PE × 2 em volta." };
     public Action? CombatEndTurnRequested, CombatLeaveRequested;
     public string CombatPreviewText => _combatPreview.Text;
+    public string CombatLogText => _combatLog.Text;
+    public string CombatStatsText => _combatStats.Text;
 
     private void AddCombatBar(Control root)
     {
