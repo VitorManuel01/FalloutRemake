@@ -279,7 +279,7 @@ public sealed partial class WorldSession
         ArgumentNullException.ThrowIfNull(encounter); ArgumentNullException.ThrowIfNull(playerWeapon);
         if (encounter.Player != Location) throw new InvalidOperationException("The encounter belongs to another actor location.");
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
-        var stats = DerivedCombatStats.ForPlayer(Sheet, Level);
+        var stats = PlayerStats();
         var combatants = new List<CombatantState> { new("player", Character.Name, null, 0, true, Location.Hex, Location.Elevation, stats,
             playerWeapon, HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled,
             AlternateWeapon = HandWeapon(Other(ActiveHand)), RightHandActive = ActiveHand == Hand.Right } };

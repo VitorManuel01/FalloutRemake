@@ -60,6 +60,8 @@ public partial class TemplePreview
         dialog.BarrierApproachRequested = ApproachBarrierForPlacement;
         dialog.WieldRequested = (item, hand) => { if (_bag == dialog && _campaign?.SessionToken == sessionToken) WieldFromBag(item, hand); };
         dialog.PutAwayRequested = hand => { if (_bag == dialog && _campaign?.SessionToken == sessionToken) PutAwayFromBag(hand); };
+        dialog.WearRequested = item => { if (_bag == dialog && _campaign?.SessionToken == sessionToken) WearFromBag(item); };
+        dialog.TakeOffRequested = () => { if (_bag == dialog && _campaign?.SessionToken == sessionToken) TakeOffFromBag(); };
         RefreshBag(); dialog.PopupCenteredClamped(new Vector2I(960, 680), .92f);
     }
     private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName, _campaign.CarriedWeight, _campaign.CarryCapacity,
@@ -71,7 +73,7 @@ public partial class TemplePreview
         item => _campaign.CanReturnAllItems(item.Map, item.OwnerKey, _walker?.Moving == true), item => _campaign.CanUseDrug(item, _walker?.Moving == true),
         (_campaign.Character.Kind == CharacterKind.TestNeutral ? $"Força {CarryWeight.TestStrength} (perfil de teste)" : $"Força {_campaign.Character.Effective.Strength} · {_campaign.Character.Name}")
             + (_campaign.TempleChestCustody.Length == 0 ? "" : $" · {_campaign.TempleChestCustody.Sum(c => c.Quantity)} unidade(s) no baú do desafio (J ao lado do baú)"),
-        HeldIn, (item, hand) => _campaign.CanWield(item, hand, _walker?.Moving == true));
+        HeldIn, (item, hand) => _campaign.CanWield(item, hand, _walker?.Moving == true), IsWorn, item => _campaign.CanWear(item, _walker?.Moving == true));
     // Outside combat a drug costs no AP (CE); the roll uses the fight seed in automated checks, the clock otherwise.
     private void UseDrugFromBag(CarriedItem item)
     {

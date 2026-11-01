@@ -66,6 +66,8 @@ public sealed record InventoryOpened(string CombatantId, int ActionPointsSpent) 
 public sealed record InventoryClosed(string CombatantId) : CombatEvent;
 /// <summary>Inside the open inventory the player changed what its hands hold: the blows of the active and the other hand.</summary>
 public sealed record WeaponsChanged(string CombatantId, string Blow, string OtherHand) : CombatEvent;
+/// <summary>Inside the open inventory the player put on armor (its name) or took it off (null): the armor class it now has.</summary>
+public sealed record ArmorChanged(string CombatantId, string? Armor, int ArmorClass) : CombatEvent;
 /// <summary>The player switched hands: the blow now used.</summary>
 public sealed record HandSwitched(string CombatantId, string Blow) : CombatEvent;
 /// <summary>A creature runs from the fight (CE _ai_run_away): too hurt, crippled as its packet fears, or unable to hit at all.</summary>

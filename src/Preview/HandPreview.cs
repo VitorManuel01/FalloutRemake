@@ -11,15 +11,17 @@ public partial class TemplePreview
         : _campaign.Held(Hand.Left) is { } left && left.Map == item.Map && left.ItemKey == item.Source.Key ? Hand.Left
         : _campaign.Held(Hand.Right) is { } right && right.Map == item.Map && right.ItemKey == item.Source.Key ? Hand.Right : null;
 
-    private string HandBlowName(Hand hand)
-    {
-        if (_campaign!.Held(hand) is { } held && _campaign.Carried.FirstOrDefault(c => c.Map == held.Map && c.Source.Key == held.ItemKey) is { } item)
-            return CarriedText(item)?.Name is { } name ? ShortName(name) : $"PID {item.Source.Header.Pid}";
-        return _campaign.HandWeapon(hand).Name;
-    }
+    private bool IsWorn(CarriedItem item) => _campaign?.Worn is { } worn && worn.Map == item.Map && worn.ItemKey == item.Source.Key;
+
+    private string CarriedName(HeldItem held, string fallback) =>
+        _campaign!.Carried.FirstOrDefault(c => c.Map == held.Map && c.Source.Key == held.ItemKey) is { } item
+            ? CarriedText(item)?.Name is { } name ? ShortName(name) : $"PID {item.Source.Header.Pid}" : fallback;
+
+    private string HandBlowName(Hand hand) => _campaign!.Held(hand) is { } held ? CarriedName(held, _campaign.HandWeapon(hand).Name) : _campaign.HandWeapon(hand).Name;
 
     private string HandsLine() => _campaign == null ? ""
-        : $"Mãos: esquerda {HandBlowName(Hand.Left)}{(_campaign.ActiveHand == Hand.Left ? " (ativa)" : "")} · direita {HandBlowName(Hand.Right)}{(_campaign.ActiveHand == Hand.Right ? " (ativa)" : "")}";
+        : $"Mãos: esquerda {HandBlowName(Hand.Left)}{(_campaign.ActiveHand == Hand.Left ? " (ativa)" : "")} · direita {HandBlowName(Hand.Right)}{(_campaign.ActiveHand == Hand.Right ? " (ativa)" : "")}"
+            + (_campaign.Worn is { } worn ? $" · Armadura: {CarriedName(worn, "?")} (CA {_campaign.PlayerStats().ArmorClass})" : "");
 
     // The status panel's second line: what each hand holds and which one strikes.
     private string HandsSuffix() => _campaign == null ? "" : "\n" + HandsLine();
@@ -46,13 +48,34 @@ public partial class TemplePreview
         RefreshBag(); RefreshDoorAction();
     }
 
+    // FO2's armor slot: in a fight the change shows in the combat log (ArmorChanged).
+    private void WearFromBag(CarriedItem item)
+    {
+        if (_campaign == null) return;
+        int logged = _combat?.Log.Count ?? 0;
+        HandStatus status = _campaign.Wear(item, _walker?.Moving == true);
+        if (status == HandStatus.Ready && _combat != null) ApplyCombatEvents(_combat.Log.Skip(logged).ToArray());
+        NavigationStatus(status == HandStatus.Ready ? $"Armadura vestida · {HandsLine()}" : PlayerBagWindow.WearHint(status));
+        RefreshBag(); RefreshDoorAction();
+    }
+
+    private void TakeOffFromBag()
+    {
+        if (_campaign == null) return;
+        int logged = _combat?.Log.Count ?? 0;
+        HandStatus status = _campaign.TakeOff(_walker?.Moving == true);
+        if (status == HandStatus.Ready && _combat != null) ApplyCombatEvents(_combat.Log.Skip(logged).ToArray());
+        NavigationStatus(status == HandStatus.Ready ? $"Armadura tirada · CA {_campaign.PlayerStats().ArmorClass} · {HandsLine()}" : PlayerBagWindow.WearHint(status));
+        RefreshBag(); RefreshDoorAction();
+    }
+
     // Out of a fight: X makes the other hand the active one (FO2's swap; B already opens the bag here).
     private void SwitchUnarmedHand()
     {
         if (_campaign == null || InCombat) return;
         _campaign.SetActiveHand(WorldSession.Other(_campaign.ActiveHand));
         CombatWeapon weapon = _campaign.PlayerWeapon();
-        int meleeDamage = weapon.AddsMeleeDamage ? DerivedCombatStats.ForPlayer(_campaign.Sheet, _campaign.Level).MeleeDamage : 0;
+        int meleeDamage = weapon.AddsMeleeDamage ? _campaign.PlayerStats().MeleeDamage : 0;
         NavigationStatus($"Mão {(_campaign.ActiveHand == Hand.Left ? "esquerda" : "direita")} ativa · {HandBlowName(_campaign.ActiveHand)} ({weapon.ActionPoints} AP, dano "
             + $"{weapon.BonusDamage + weapon.MinDamage}–{weapon.BonusDamage + weapon.MaxDamage + meleeDamage}) · {HandsLine()}");
         RefreshDoorAction();

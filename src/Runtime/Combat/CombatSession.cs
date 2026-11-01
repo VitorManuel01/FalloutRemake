@@ -39,6 +39,21 @@ public sealed class CombatSession : ICombatSession
         return true;
     }
 
+    /// <summary>
+    /// The player put on or took off armor inside the open inventory: its stats (AC, DR, DT) now include the armor worn,
+    /// null when none. Hit points and AP are unchanged.
+    /// </summary>
+    public bool ChangeArmor(DerivedCombatStats stats, string? armor)
+    {
+        ArgumentNullException.ThrowIfNull(stats);
+        if (!InventoryOpen || Active is not { IsPlayer: true } player) return false;
+        if (stats.MaxHitPoints != player.Stats.MaxHitPoints || stats.MaxActionPoints != player.Stats.MaxActionPoints)
+            throw new ArgumentException("Armor changes AC, DR and DT only.", nameof(stats));
+        player.Stats = stats;
+        _log.Add(new ArmorChanged(player.Id, armor, stats.ArmorClass));
+        return true;
+    }
+
     // The AI's own decisions (fleeing) enter the log between the actions they cause.
     internal void Report(CombatEvent e) => _log.Add(e);
 

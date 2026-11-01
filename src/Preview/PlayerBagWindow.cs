@@ -28,10 +28,17 @@ public partial class PlayerBagWindow : AcceptDialog
     private readonly Button _wieldLeft = new() { Name = "WieldLeftAction", Text = "Mão esquerda", Visible = false, Disabled = true },
         _wieldRight = new() { Name = "WieldRightAction", Text = "Mão direita", Visible = false, Disabled = true },
         _putAway = new() { Name = "PutAwayAction", Text = "Guardar na bolsa", Visible = false, Disabled = true };
+    // FO2's armor slot: one carried armor is worn and adds its AC, DR and DT.
+    private readonly Button _wear = new() { Name = "WearAction", Text = "Vestir", Visible = false, Disabled = true },
+        _takeOff = new() { Name = "TakeOffAction", Text = "Tirar", Visible = false, Disabled = true };
     private Func<CarriedItem, Hand?>? _heldIn;
     private Func<CarriedItem, Hand, HandStatus>? _canWield;
+    private Func<CarriedItem, bool>? _worn;
+    private Func<CarriedItem, HandStatus>? _canWear;
     public Action<CarriedItem, Hand>? WieldRequested;
     public Action<Hand>? PutAwayRequested;
+    public Action<CarriedItem>? WearRequested;
+    public Action? TakeOffRequested;
     private Func<CarriedItem, DrugUseStatus>? _canUseDrug;
     public Action<CarriedItem>? UseDrugRequested;
     public Action<CarriedItem>? PrepareExplosiveRequested;
@@ -73,6 +80,9 @@ public partial class PlayerBagWindow : AcceptDialog
         _wieldLeft.Pressed += () => { if (!_wieldLeft.Disabled && SelectedItem != null) WieldRequested?.Invoke(SelectedItem, Hand.Left); };
         _wieldRight.Pressed += () => { if (!_wieldRight.Disabled && SelectedItem != null) WieldRequested?.Invoke(SelectedItem, Hand.Right); };
         _putAway.Pressed += () => { if (!_putAway.Disabled && SelectedItem != null && _heldIn?.Invoke(SelectedItem) is Hand hand) PutAwayRequested?.Invoke(hand); };
+        actions.AddChild(_wear); actions.AddChild(_takeOff);
+        _wear.Pressed += () => { if (!_wear.Disabled && SelectedItem != null) WearRequested?.Invoke(SelectedItem); };
+        _takeOff.Pressed += () => { if (!_takeOff.Disabled && SelectedItem != null && _worn?.Invoke(SelectedItem) == true) TakeOffRequested?.Invoke(); };
         actions.AddChild(_prepareExplosive);
         actions.AddChild(_barrierApproach);
         _useDrug.Pressed += () => { if (!_useDrug.Disabled && SelectedItem != null) UseDrugRequested?.Invoke(SelectedItem); };
@@ -94,9 +104,10 @@ public partial class PlayerBagWindow : AcceptDialog
         Func<CarriedItem, Texture2D?>? artwork = null, Func<CarriedItem, ExplosiveProposalStatus>? canPrepareExplosive = null,
         Func<ExplosiveProposalStatus, string>? preparationHint = null, Func<CarriedItem, bool>? canApproachBarrier = null,
         Func<CarriedItem, ItemTakeStatus>? canReturnAll = null, Func<CarriedItem, DrugUseStatus>? canUseDrug = null, string? carrier = null,
-        Func<CarriedItem, Hand?>? heldIn = null, Func<CarriedItem, Hand, HandStatus>? canWield = null)
+        Func<CarriedItem, Hand?>? heldIn = null, Func<CarriedItem, Hand, HandStatus>? canWield = null,
+        Func<CarriedItem, bool>? worn = null, Func<CarriedItem, HandStatus>? canWear = null)
     {
-        _heldIn = heldIn; _canWield = canWield;
+        _heldIn = heldIn; _canWield = canWield; _worn = worn; _canWear = canWear;
         string? selected = SelectedItem == null ? null : RowKey(SelectedItem);
         _text = text; _mapName = mapName; _canReturn = canReturn; _originRoute = originRoute; _canPrepareExplosive = canPrepareExplosive;
         _preparationHint = preparationHint; _canApproachBarrier = canApproachBarrier; _canReturnAll = canReturnAll; _canUseDrug = canUseDrug;
@@ -107,7 +118,7 @@ public partial class PlayerBagWindow : AcceptDialog
         foreach (CarriedItem item in items)
         {
             string key = RowKey(item); _lines.Add(key, item); TreeItem row = _items.CreateItem(root);
-            string held = heldIn?.Invoke(item) switch { Hand.Left => " · mão esquerda", Hand.Right => " · mão direita", _ => "" };
+            string held = heldIn?.Invoke(item) switch { Hand.Left => " · mão esquerda", Hand.Right => " · mão direita", _ => worn?.Invoke(item) == true ? " · vestida" : "" };
             row.SetText(0, (text(item)?.Name ?? "Item sem nome") + held); row.SetText(1, item.Quantity.ToString()); row.SetText(2, CarryWeightText.Stack(unitWeight(item), item.Quantity));
             row.SetText(3, mapName(item.Map)); row.SetMetadata(0, key);
             row.SetTooltipText(0, $"ID {item.Source.Header.Id} · PID {item.Source.Header.Pid} · {item.Source.Key}");
@@ -120,7 +131,7 @@ public partial class PlayerBagWindow : AcceptDialog
         _returnStatus.Text = ""; _quantity.Configure(0, "Devolver quantidade", null);
         _prepareExplosive.Visible = false; _prepareExplosive.Disabled = true;
         _useDrug.Visible = false; _useDrug.Disabled = true;
-        _wieldLeft.Visible = _wieldRight.Visible = _putAway.Visible = false;
+        _wieldLeft.Visible = _wieldRight.Visible = _putAway.Visible = _wear.Visible = _takeOff.Visible = false;
         _barrierApproach.Visible = false; _barrierApproach.Disabled = true;
         if (select != null) { select.Select(0); ShowSelected(); }
     }
@@ -148,6 +159,14 @@ public partial class PlayerBagWindow : AcceptDialog
         HandStatus.NoItem => "Você já não carrega este item.",
         _ => "Este item não é uma arma."
     };
+    public static string WearHint(HandStatus status) => status switch
+    {
+        HandStatus.Ready => "Vestir: a CA, a resistência (RD) e o limiar de dano (LD) da armadura passam a valer.",
+        HandStatus.Busy => "Pare de andar para trocar de armadura.",
+        HandStatus.InCombat => "Em combate, abra a bolsa no seu turno (4 AP) para trocar de armadura.",
+        HandStatus.NoItem => "Você já não carrega este item.",
+        _ => "Este item não é uma armadura."
+    };
     private static string RowKey(CarriedItem item) => $"{item.Map}:{item.Source.Key}";
     private void ShowSelected()
     {
@@ -169,6 +188,9 @@ public partial class PlayerBagWindow : AcceptDialog
         _wieldLeft.Disabled = left != HandStatus.Ready || holding == Hand.Left; _wieldRight.Disabled = right != HandStatus.Ready || holding == Hand.Right;
         _wieldLeft.TooltipText = _wieldRight.TooltipText = HandHint(left);
         _putAway.Visible = holding != null; _putAway.Disabled = holding == null;
+        HandStatus wear = _canWear?.Invoke(item) ?? HandStatus.NotArmor; bool wearing = _worn?.Invoke(item) == true;
+        _wear.Visible = wear != HandStatus.NotArmor; _wear.Disabled = wear != HandStatus.Ready || wearing; _wear.TooltipText = WearHint(wear);
+        _takeOff.Visible = wearing; _takeOff.Disabled = !wearing;
         _art.Texture = selected.GetIcon(0); _art.Visible = _art.Texture != null;
         _detail.Text = $"{text?.Name ?? "Item sem nome"}\n\n{text?.Description ?? "Descrição indisponível."}\n\nEncontrado em {_mapName!(item.Map)}.";
         ItemTakeStatus status = _canReturn?.Invoke(item, 1) ?? ItemTakeStatus.Unsupported;

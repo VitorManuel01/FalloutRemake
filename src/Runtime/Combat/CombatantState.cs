@@ -16,7 +16,8 @@ public sealed class CombatantState
     public int Team { get; }
     public bool IsPlayer { get; }
     public int Elevation { get; }
-    public DerivedCombatStats Stats { get; }
+    /// <summary>Effective stats; the player's change only when it puts on or takes off armor in the open inventory.</summary>
+    public DerivedCombatStats Stats { get; internal set; }
     public CombatWeapon Weapon { get; internal set; }
     /// <summary>The other hand's blow the player can switch to (bare hands: punch and kick); null when there is none.</summary>
     public CombatWeapon? AlternateWeapon { get; internal set; }

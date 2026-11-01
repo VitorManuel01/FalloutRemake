@@ -284,6 +284,8 @@ public partial class TemplePreview
                     lines.Add($"Você abre a bolsa · {opened.ActionPointsSpent} AP"); break;
                 case WeaponsChanged changed:
                     lines.Add($"Nas mãos: {changed.Blow} (ativa) · {changed.OtherHand}"); break;
+                case ArmorChanged armor:
+                    lines.Add(armor.Armor == null ? $"Você tira a armadura · CA {armor.ArmorClass}" : $"Você veste a armadura · CA {armor.ArmorClass}"); break;
                 case HandSwitched hand:
                     lines.Add($"Você troca para {hand.Blow} (0 AP)"); break;
                 case CombatantFleeing fleeing:

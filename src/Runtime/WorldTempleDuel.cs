@@ -101,7 +101,7 @@ public sealed partial class WorldSession
             deposit.AddRange(area.Items.DepositAll().Select(c => new CustodyItem(area.Map.Prefix.Header.MapIndex, c.OwnerKey, c.ItemKey, c.Quantity)));
         _duelDeposit = deposit.ToArray(); _duelProfile = profile; _duelOutcome = TempleDuelOutcome.InProgress;
         // Bare hands and no healing dose: the inventory now lies in the chest.
-        var sheet = DerivedCombatStats.ForPlayer(Sheet, Level);
+        var sheet = PlayerStats();
         var player = new CombatantState("player", Character.Name, null, 0, true, Location.Hex, 2, sheet,
             HandWeapon(ActiveHand), HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled,
             AlternateWeapon = HandWeapon(Other(ActiveHand)), RightHandActive = ActiveHand == Hand.Right };

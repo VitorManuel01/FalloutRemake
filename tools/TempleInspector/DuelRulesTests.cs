@@ -35,6 +35,24 @@ internal static class DuelRulesTests
         return world;
     }
 
+    // Synthetic armor PRO (no armor lies in maps 3, 4 or 126): AC 15, normal DR 25% and DT 2, no perk, like leather armor.
+    static Prototype Armor() => CombatTests.Item(1, 0, 129, 0, put => { put(57, 15); put(61, 25); put(89, 2); put(117, -1); });
+    static MapDocument WorldWithArmorMap()
+    {
+        MapDocument map = WorldWithSpearMap();
+        MapObject pot = map.ObjectLayers[0].Objects.Single(o => o.Key == "map3:pot"), spear = pot.Inventory.First().Object;
+        MapObject armor = spear with { Key = "map3:armor", Subtype = 0, Header = spear.Header with { Pid = 1 } };
+        pot = pot with { InventoryCount = 3, Inventory = pot.Inventory.Append(new InventoryEntry(0, 1, armor)).ToArray() };
+        return map with { ObjectLayers = new[] { map.ObjectLayers[0] with { Objects = map.ObjectLayers[0].Objects.Select(o => o.Key == pot.Key ? pot : o).ToArray() } },
+            Prototypes = map.Prototypes.Append(Armor()).ToArray() };
+    }
+    static WorldSession WorldWithArmor()
+    {
+        var world = new WorldSession(_ => WorldWithArmorMap(), new[] { 3, 126 });
+        world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:spear", 1), new TakenItem("map3:pot", "map3:armor", 1) });
+        return world;
+    }
+
     public static void Run(Action<string, Action> check)
     {
         check("AC counts the AP a combatant holds outside its own turn, and every round starts by refilling everyone's AP (CE critterGetStat, _combat_set_move_all)", () =>
@@ -156,6 +174,48 @@ internal static class DuelRulesTests
             Assert(Load(saved with { Combat = saved.Combat with { Hands = null } }) is { ActiveHand: Hand.Left } older && older.Held(Hand.Left) == null, "Older saves: empty hands, left active.");
             world.Reset();
             Assert(world.ActiveHand == Hand.Left && world.Held(Hand.Left) == null, "A new game starts empty-handed on the left.");
+        });
+        check("the player wears one carried armor: its AC, DR and DT join the combat stats (CE _adjust_ac), in a fight only inside the open inventory", () =>
+        {
+            var world = WorldWithArmor();
+            CarriedItem spear = world.Carried.Single(c => c.Source.Header.Pid == 7), armor = world.Carried.Single(c => c.Source.Header.Pid == 1);
+            DerivedCombatStats bare = world.PlayerStats();
+            Assert(world.Worn == null && world.WornArmor() == null && bare.Resistance(DamageType.Normal) == 0, "Nothing worn at first.");
+            Assert(world.Wear(spear, false) == HandStatus.NotArmor && world.Wear(armor, true) == HandStatus.Busy && world.Wield(armor, Hand.Left, false) == HandStatus.NotWeapon,
+                "Only armor, not while walking; armor is not held in a hand.");
+            Assert(world.Wear(armor, false) == HandStatus.Ready && world.Worn == new HeldItem(3, "map3:armor"), "Worn.");
+            DerivedCombatStats worn = world.PlayerStats();
+            Assert(worn.ArmorClass == bare.ArmorClass + 15 && worn.Resistance(DamageType.Normal) == 25 && worn.Threshold(DamageType.Normal) == 2
+                && worn.Resistance(DamageType.Laser) == 0 && worn.MaxHitPoints == bare.MaxHitPoints, "AC +15, normal DR 25% and DT 2.");
+            var fight = world.BeginCombat(new CombatEncounter(world.Location, new[] { "map3:far-ant" }, "player"), world.PlayerWeapon(), new CombatTests.Scripted());
+            var player = fight.Get("player");
+            Assert(player.Stats.ArmorClass == worn.ArmorClass && player.Stats.Resistance(DamageType.Normal) == 25, "The fight starts with the armor on.");
+            Assert(world.TakeOff(false) == HandStatus.InCombat && world.Worn != null, "Closed inventory: it stays on.");
+            for (int guard = 0; guard < 10 && fight.Active != player; guard++) CombatAi.TakeTurn(fight);
+            fight.Execute(CombatActionProposal.OpenInventory("player"));
+            int ap = player.ActionPoints;
+            Assert(world.TakeOff(false) == HandStatus.Ready && player.Stats.ArmorClass == bare.ArmorClass && player.Stats.Resistance(DamageType.Normal) == 0
+                && fight.Log.OfType<ArmorChanged>().Last() is { Armor: null } off && off.ArmorClass == bare.ArmorClass && player.ActionPoints == ap, "Off, for nothing more.");
+            Assert(world.Wear(armor, false) == HandStatus.Ready && player.Stats.ArmorClass == worn.ArmorClass && fight.Log.OfType<ArmorChanged>().Last().Armor == "PID 1", "On again.");
+            Assert(player.HitPoints <= player.Stats.MaxHitPoints && player.ActionPoints == ap, "HP and AP untouched.");
+        });
+        check("worn armor leaves the slot with the inventory and survives the checkpoint; forged armor is refused", () =>
+        {
+            var world = WorldWithArmor();
+            WorldSession Load(WorldCheckpoint checkpoint) => WorldSession.Restore(_ => WorldWithArmorMap(), new[] { 3, 126 }, checkpoint, "catalog");
+            world.Wear(world.Carried.Single(c => c.Source.Header.Pid == 1), false);
+            var saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
+            Assert(saved.Combat!.Hands == new SavedHands(null, null, null, new HeldItem(3, "map3:armor")), "Armor alone is saved.");
+            Assert(Load(saved) is var loaded && loaded.Worn == new HeldItem(3, "map3:armor") && loaded.PlayerStats().Resistance(DamageType.Normal) == 25, "It comes back worn.");
+            SavedHands hands = saved.Combat.Hands!;
+            foreach (SavedHands bad in new[] { hands with { Armor = new HeldItem(3, "map3:spear") }, hands with { Armor = new HeldItem(3, "map3:ghost") } })
+                try { Load(saved with { Combat = saved.Combat with { Hands = bad } }); throw new Exception($"Forged armor accepted: {bad}."); }
+                catch (InvalidDataException) { }
+            world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:spear", 1) });
+            Assert(world.Worn == null && world.PlayerStats().Resistance(DamageType.Normal) == 0, "Returned to the pot: no longer worn.");
+            world.Wear(world.Carried.Single(c => c.Source.Header.Pid == 7), false);
+            world.Reset();
+            Assert(world.Worn == null, "A new game starts without armor.");
         });
     }
 }

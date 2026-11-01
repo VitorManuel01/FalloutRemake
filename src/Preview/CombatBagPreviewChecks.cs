@@ -40,6 +40,9 @@ public partial class TemplePreview
             if (_bag.Select(_campaign.Carried.Single(c => c.Source.Key == spear.Item.Key)) != true) throw new InvalidDataException("The spear is missing from the bag.");
             var wield = (Button)_bag.FindChild("WieldLeftAction", true, false);
             if (!wield.Visible || wield.Disabled) throw new InvalidDataException("The bag does not offer the left hand in the fight.");
+            // No armor lies in these maps: the armor slot's buttons stay hidden for a weapon.
+            if (((Button)_bag.FindChild("WearAction", true, false)).Visible || ((Button)_bag.FindChild("TakeOffAction", true, false)).Visible || _campaign.Worn != null)
+                throw new InvalidDataException("The bag offers to wear a weapon.");
             wield.EmitSignal(Button.SignalName.Pressed);
             if (player.Weapon.Pid != 7 || _combatWeapon.Pid != 7 || player.ActionPoints != before - CombatSession.InventoryActionPoints || !_hud.CombatLogText.Contains("Nas mãos"))
                 throw new InvalidDataException("Wielding inside the open inventory did not arm the fight at no further cost.");
