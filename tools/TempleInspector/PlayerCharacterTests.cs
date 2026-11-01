@@ -109,7 +109,7 @@ internal static class PlayerCharacterTests
             world.Current.Items.Restore(Array.Empty<TakenItem>());
             var narg = Narg(); world.StartNewGame(narg);
             Assert(world.Character == narg && world.Location.Hex == 20100 && world.MaxHitPoints == 44 && world.HitPoints == 44 && world.CarryCapacity == 250, "Started.");
-            var fight = world.BeginCombat(world.FindEncounter(world.Location)!, CombatWeapon.Unarmed(), new CombatTests.Scripted());
+            var fight = world.BeginCombat(WorldCombatTests.NearAnt(world), CombatWeapon.Unarmed(), new CombatTests.Scripted());
             var hero = fight.Get("player");
             Assert(hero.Name == "Narg" && hero.HitPoints == 44 && hero.Stats.MaxActionPoints == 9 && hero.Stats.MeleeDamage == 8 && hero.Stats.Skill(DerivedCombatStats.MeleeWeapons) == 64, "Fighter.");
             world.AbandonCombat(); world.Reset();

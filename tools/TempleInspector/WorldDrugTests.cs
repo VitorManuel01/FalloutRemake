@@ -32,7 +32,7 @@ internal static class WorldDrugTests
     // the player stands at 26/30 leading round 3.
     static CombatSession Hurt(WorldSession world, params int[] rest)
     {
-        var fight = world.BeginCombat(world.FindEncounter(world.Location)!, WorldCombatTests.Spear(), new CombatTests.Scripted(new[] { 1, 4 }.Concat(rest).ToArray()));
+        var fight = world.BeginCombat(WorldCombatTests.NearAnt(world), WorldCombatTests.Spear(), new CombatTests.Scripted(new[] { 1, 4 }.Concat(rest).ToArray()));
         ProvisionalMeleeBehavior.TakeTurn(fight); fight.Execute(CombatActionProposal.EndTurn("player")); fight.Execute(CombatActionProposal.EndTurn("player"));
         ProvisionalMeleeBehavior.TakeTurn(fight);
         Assert(fight.Active!.IsPlayer && fight.Get("player").HitPoints == 26, "Hurt setup.");

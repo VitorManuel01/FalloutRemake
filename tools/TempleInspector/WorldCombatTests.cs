@@ -24,12 +24,18 @@ internal static class WorldCombatTests
             Prototypes = new[] { CombatTests.AntPrototype() } };
     }
     internal static CombatWeapon Spear() => CombatWeapon.Primary("Lança", WeaponPrototypeData.Read(CombatTests.Spear()));
+    // The near ant waits behind the closed door: fights against it are opened directly, as if it had seen the player.
+    internal static CombatEncounter NearAnt(WorldSession world, string key = "map3:near-ant") => new(world.Location, new[] { key }, key);
+    // The player starts on the exit grid, where doors refuse U: the door is opened from the hex beside it.
+    static DoorUseStatus OpenDoor(WorldSession world) => world.Current.Doors.Toggle("map3:door", Tile(98, 101), 0, false);
 
     public static void Run(Action<string, Action> check)
     {
-        check("world combat notices only reachable ants within five hexes and opens the fight with the noticing ant first", () =>
+        check("world combat starts when an ant sees the player: the closed door hides the near ant, the open door lets it act first", () =>
         {
             var world = new WorldSession(_ => Map(), new[] { 3, 126 });
+            Assert(world.FindEncounter(world.Location) == null, "Closed door, walls and distance hide every ant.");
+            Assert(OpenDoor(world) == DoorUseStatus.Ready, "Door opened.");
             var encounter = world.FindEncounter(world.Location);
             Assert(encounter != null && encounter.FoeKeys.SequenceEqual(new[] { "map3:near-ant" }) && encounter.InitiatorKey == "map3:near-ant", "Only the near ant notices.");
             Assert(world.FindEncounter(world.Location with { Elevation = 1 }) == null && world.FindEncounter(world.Location with { Map = 126 }) == null, "Other elevation or map.");
@@ -43,7 +49,7 @@ internal static class WorldCombatTests
         {
             var world = new WorldSession(_ => Map(), new[] { 3, 126 });
             int before = world.Experience;
-            var fight = world.BeginCombat(world.FindEncounter(world.Location)!, Spear(), new CombatTests.Scripted(1, 11));
+            var fight = world.BeginCombat(NearAnt(world), Spear(), new CombatTests.Scripted(1, 11));
             Assert(world.CommitCombat(fight) == CombatCommitStatus.NotOver, "Open fight committed.");
             ProvisionalMeleeBehavior.TakeTurn(fight);
             var ant = fight.Get("map3:near-ant");
@@ -58,18 +64,19 @@ internal static class WorldCombatTests
                 && source.Header.Flags == 0, "Corpse projection keeps the source record.");
             var navigation = world.Current.Doors.Navigation(0);
             Assert(navigation.Walkable(ant.Hex) && navigation.Walkable(Tile(99, 103)), "Corpse and the ant's old hex are free.");
-            Assert(world.FindEncounter(world.Location) == null, "Dead ant does not notice.");
+            OpenDoor(world);
+            Assert(world.FindEncounter(world.Location) == null, "Dead ant does not notice through the open door.");
             Assert(world.CommitCombat(fight) == CombatCommitStatus.AlreadyDefeated && world.CombatExperience == 25, "Single commit.");
-            world.Reset();
+            world.Reset(); OpenDoor(world);
             Assert(!world.HasCombatOutcome && world.Experience == before && !world.IsDefeated(3, ant.Id) && world.FindEncounter(world.Location) != null, "Reset.");
         });
         check("an open fight projects its creatures where they stand, so exploration routes reach their source hexes; one fight at a time", () =>
         {
             var world = new WorldSession(_ => Map(), new[] { 3, 126 });
             int source = Tile(99, 103);
-            var fight = world.BeginCombat(world.FindEncounter(world.Location)!, Spear(), new CombatTests.Scripted(99));
+            var fight = world.BeginCombat(NearAnt(world), Spear(), new CombatTests.Scripted(99));
             Assert(world.InCombat, "Fight registered.");
-            try { world.BeginCombat(world.FindEncounter(world.Location) ?? new CombatEncounter(world.Location, new[] { "map3:near-ant" }, "map3:near-ant"), Spear(), new CombatTests.Scripted()); throw new Exception("Second fight opened."); }
+            try { world.BeginCombat(NearAnt(world), Spear(), new CombatTests.Scripted()); throw new Exception("Second fight opened."); }
             catch (InvalidOperationException) { }
             ProvisionalMeleeBehavior.TakeTurn(fight);
             var ant = fight.Get("map3:near-ant");
@@ -85,7 +92,7 @@ internal static class WorldCombatTests
         {
             WorldSession Load(WorldCheckpoint checkpoint) => WorldSession.Restore(_ => Map(), new[] { 3, 126 }, checkpoint, "catalog");
             var world = new WorldSession(_ => Map(), new[] { 3, 126 });
-            var fight = world.BeginCombat(world.FindEncounter(world.Location)!, Spear(), new CombatTests.Scripted(1, 4, 1, 11));
+            var fight = world.BeginCombat(NearAnt(world), Spear(), new CombatTests.Scripted(1, 4, 1, 11));
             ProvisionalMeleeBehavior.TakeTurn(fight);
             fight.Execute(CombatActionProposal.EndTurn("player")); fight.Execute(CombatActionProposal.EndTurn("player"));
             ProvisionalMeleeBehavior.TakeTurn(fight); fight.Execute(CombatActionProposal.Attack("player", "map3:near-ant"));
@@ -130,11 +137,13 @@ internal static class WorldCombatTests
             var spear = Item("map3:spear", 7); var pistol = Item("map3:pistol", 8);
             var pot = CombatTests.Blocker(Tile(97, 100), 0, 0x000000FA, "map3:pot") with { Subtype = 1, InventoryCount = 2, State = new Dictionary<string, int> { ["flags"] = 0 },
                 Inventory = new[] { new InventoryEntry(0, 1, spear), new InventoryEntry(0, 1, pistol) } };
-            var scorpion = CombatTests.Critter(Tile(100, 102), 0x01000005, 10, 1, "map3:scorpion");
+            // Two hexes south-west of the player, off the line that crosses the door.
+            var scorpion = CombatTests.Critter(Tile(97, 101), 0x01000005, 10, 1, "map3:scorpion");
             var baseMap = Map();
             var map = baseMap with { ObjectLayers = new[] { baseMap.ObjectLayers[0] with { Objects = baseMap.ObjectLayers[0].Objects.Append(pot).Append(scorpion).ToArray(),
                     DeclaredCount = baseMap.ObjectLayers[0].Objects.Length + 2 } },
-                Prototypes = baseMap.Prototypes.Append(CombatTests.Spear()).Append(CombatTests.Pistol()).Append(CombatTests.Item(0xFA, 1, 65, 0, _ => { })).ToArray() };
+                Prototypes = baseMap.Prototypes.Append(CombatTests.Spear()).Append(CombatTests.Pistol()).Append(CombatTests.Item(0xFA, 1, 65, 0, _ => { }))
+                    .Append(CombatTests.AntPrototype(pid: 0x01000005)).ToArray() };
             var world = new WorldSession(_ => map, new[] { 3, 126 });
             Assert(world.PlayerWeapon() is { Pid: null, AttackType: FalloutRemake.Import.WeaponAttackType.Unarmed, ActionPoints: 3 }, "Empty bag fights bare-handed.");
             world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:pistol", 1) });
@@ -142,12 +151,15 @@ internal static class WorldCombatTests
             world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:pistol", 1), new TakenItem("map3:pot", "map3:spear", 1) });
             Assert(world.PlayerWeapon() is { Pid: 7, Range: 2, ActionPoints: 4, MinDamage: 3, MaxDamage: 10 }, "Carried spear is wielded.");
             var encounter = world.FindEncounter(world.Location);
-            Assert(encounter != null && encounter.FoeKeys.Contains("map3:scorpion") && encounter.FoeKeys.Contains("map3:near-ant")
-                && encounter.InitiatorKey == "map3:scorpion", "Radscorpion (2 hexes) notices before the ant (3 hexes).");
+            Assert(encounter != null && encounter.FoeKeys.SequenceEqual(new[] { "map3:scorpion" }), "The radscorpion (2 hexes, within PE) notices; the ant stays behind the door.");
+            OpenDoor(world);
+            encounter = world.FindEncounter(world.Location);
+            Assert(encounter != null && encounter.FoeKeys.SequenceEqual(new[] { "map3:scorpion", "map3:near-ant" }) && encounter.InitiatorKey == "map3:scorpion",
+                "Through the open door both notice; the nearer radscorpion starts.");
         });        check("world combat keeps the wounded player's HP for the next fight and refuses lost, foreign or forged fights atomically", () =>
         {
             var world = new WorldSession(_ => Map(), new[] { 3, 126 });
-            var fight = world.BeginCombat(world.FindEncounter(world.Location)!, Spear(), new CombatTests.Scripted(1, 4, 1, 11));
+            var fight = world.BeginCombat(NearAnt(world), Spear(), new CombatTests.Scripted(1, 4, 1, 11));
             ProvisionalMeleeBehavior.TakeTurn(fight);
             // Round 1 ends with the player; round 2 re-sorts by Sequence (player 10 > ant 9), so the player waits twice.
             fight.Execute(CombatActionProposal.EndTurn("player")); fight.Execute(CombatActionProposal.EndTurn("player"));

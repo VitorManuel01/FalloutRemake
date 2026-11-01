@@ -3,19 +3,19 @@
 31/10/2026 · worktree `C:\Dev\FalloutRemakeClaude`, branch `agent/claude-work`.
 
 O núcleo da Fase 2 ([combat-core](combat-core-2026-10-31.md)) agora está ligado ao
-`TemplePreview`. Quem anda pelo Templo e chega a até 5 hexes de uma formiga
-gigante (PID `0x0100017E`) ou de um radscorpion (PID `0x01000005`) é percebido
-pela criatura, e a luta acontece por turnos sobre a grade hexagonal. É o primeiro
+`TemplePreview`. Quem anda pelo Templo e é visto por uma formiga gigante (PID
+`0x0100017E`) ou por um radscorpion (PID `0x01000005`) entra em luta, que acontece
+por turnos sobre a grade hexagonal. É o primeiro
 **gameplay de combate integrado**, ainda sem IA tática. O Dumar mantém o papel do
 Speech e não entra em combate.
 
 ## Fluxo
 
 1. **Encontro** (`WorldSession.FindEncounter`): uma criatura de encontro viva,
-   sem `HIDDEN`, de time diferente de 0, na mesma elevação, a no máximo 5 hexes e
-   com caminho de até 10 passos até o jogador. Uma criatura atrás de parede, em
-   outra sala, não inicia luta. Se o personagem estiver andando, a luta começa no próximo hex
-   inteiro.
+   sem `HIDDEN`, de time diferente de 0, na mesma elevação, que **vê** o jogador
+   pela regra do CE ([percepção](critter-sight-2026-11-01.md), desde 01/11; antes
+   era um raio fixo de 5 hexes) e tem caminho até ele. Se o personagem estiver
+   andando, a luta começa no próximo hex inteiro.
 2. **Início** (`WorldSession.BeginCombat`): a criatura que percebeu o jogador age
    primeiro (`_combat_sequence_init` do CE). As rodadas seguintes seguem a ordem de
    Sequence e Sorte. O jogador entra com o HP que restou da luta anterior.
@@ -80,10 +80,13 @@ apenas enquanto uma luta está aberta.
   ferroada tem 70% (Unarmed 75 − AC 5).
 - **`--preview-test` headless e gráfico isolado:**
   - Depois de abrir a primeira porta, o personagem caminha até uma formiga e é
-    percebido no vão da porta (hex 24308).
+    percebido no vão da porta (hex 24308). Desde a [percepção do
+    CE](critter-sight-2026-11-01.md), a formiga 215712 o vê a 6 hexes (hex 21885) e
+    uma segunda formiga entra na luta.
   - A lança carregada é a arma usada.
   - O primeiro turno da criatura é animado e a ação seguinte espera a animação, que termina no hex lógico.
-  - A luta, com semente 2026, termina na rodada 2.
+  - A luta, com semente 2026, termina na rodada 2. Com as duas formigas, a vitória
+    leva pelo menos 6 turnos do jogador e rende 50 XP.
   - A prévia ao passar o mouse coincide com a resolução.
   - O marcador acompanha cada movimento.
   - As ações de mundo e o salvamento no meio da luta são recusados, e o arquivo de

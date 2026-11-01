@@ -366,12 +366,12 @@ public partial class TemplePreview
             _campaign.Current.Items.Restore(new[] { new TakenItem(spear.Owner.Key, spear.Item.Key, 1), new TakenItem(pot.Key, powder.Key, 1) });
             if (_campaign.HealingDoses != 1) throw new InvalidDataException("The original Healing Powder is not a supported dose.");
             var ants = _layout.Objects.Where(o => o.Source.Header.Pid == 0x0100017E && o.Source.Header.Elevation == 0).ToArray();
-            // Walk toward the first reachable ant with encounters on: the actor stops on a whole hex once noticed.
+            // Walk toward the first reachable ant with encounters on: the actor stops on a whole hex once the ant sees it.
             int target = -1;
             foreach (PreviewObject candidate in ants.OrderBy(o => o.Source.Offset))
             {
                 target = Enumerable.Range(0, 6).Select(d => FalloutGrid.Neighbor(candidate.Source.Header.Tile, d) ?? -1)
-                    .Where(t => t >= 0 && _reachable!.Distance(t) > WorldSession.EncounterDistance).OrderBy(t => _reachable!.Distance(t)).FirstOrDefault(-1);
+                    .Where(t => t >= 0 && _reachable!.Distance(t) > 5).OrderBy(t => _reachable!.Distance(t)).FirstOrDefault(-1);
                 if (target >= 0) break;
             }
             if (target < 0) throw new InvalidDataException("No reachable approach to an elevation-0 ant.");
@@ -385,8 +385,12 @@ public partial class TemplePreview
             }
             if (_combat == null) throw new InvalidDataException("Approaching the ant did not start combat.");
             PreviewObject ant = _layout!.Objects.Single(o => o.Source.Key == _combat.Turn.Order[0]);
-            if (_walker!.Moving || !WorldSession.EncounterPids.Contains(ant.Source.Header.Pid) || FalloutGrid.Distance(_campaign.Location.Hex, ant.Source.Header.Tile) > WorldSession.EncounterDistance
-                || _combat.Get("player").Hex != _campaign.Location.Hex) throw new InvalidDataException("Combat started mid-step, out of range or with the wrong initiator.");
+            int perception = CritterSight.Perception(CritterPrototypeData.Read(_campaign.Current.Map.Prototypes.Single(p => p.Pid == ant.Source.Header.Pid)));
+            if (_walker!.Moving || !WorldSession.EncounterPids.Contains(ant.Source.Header.Pid) || _combat.Get("player").Hex != _campaign.Location.Hex
+                || !CritterSight.Sees(ant.Source, perception, _campaign.Location.Hex, _campaign.Current.Doors.Navigation(_campaign.Location.Elevation)))
+                throw new InvalidDataException("Combat started mid-step, unseen or with the wrong initiator.");
+            // Every creature that saw the actor joins (each one's critter_p_proc attacks on sight).
+            string[] foes = _combat.Combatants.Where(c => !c.IsPlayer).Select(c => c.Id).ToArray();
             var hud = (Control)_hud.FindChild("CombatBar", true, false);
             if (!hud.Visible || _combatLabels.Count != _combat.Combatants.Count) throw new InvalidDataException("Combat HUD or HP labels missing.");
             if (_capture != null)
@@ -450,10 +454,11 @@ public partial class TemplePreview
                     throw new InvalidDataException("Actor marker does not follow the combat position.");
             }
             if (InCombat) throw new InvalidDataException("Seeded fight did not end.");
-            if (!_campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key)) throw new InvalidDataException("Seeded fight was lost; expected the documented victory.");
+            if (!foes.All(f => _campaign.IsDefeated(_campaign.CurrentMap, f))) throw new InvalidDataException("Seeded fight was lost; expected the documented victory.");
             if (_combatWeapon.Pid != 7 || !_combatWeapon.Name.Contains("Spear", StringComparison.OrdinalIgnoreCase) || _combatWeapon.Range != 2)
                 throw new InvalidDataException($"The carried spear was not used ({_combatWeapon.Name}).");
-            int reward = CritterPrototypeData.Read(_campaign.Current.Map.Prototypes.Single(p => p.Pid == ant.Source.Header.Pid)).Experience;
+            var sources = _campaign.Current.Map.ObjectLayers.SelectMany(l => l.Objects).Where(o => foes.Contains(o.Key)).ToArray();
+            int reward = sources.Sum(o => CritterPrototypeData.Read(_campaign.Current.Map.Prototypes.Single(p => p.Pid == o.Header.Pid)).Experience);
             if (_campaign.Experience != xpBefore + reward || _campaign.CombatExperience != reward) throw new InvalidDataException("Creature XP was not awarded once.");
             if (_campaign.HealingDoses != 0 || _campaign.Current.Items.Balance(pot.Key, powder.Key) is not { Consumed: 1, Carried: 0 } || _campaign.PlayerWeapon().Pid != 7)
                 throw new InvalidDataException("The dose taken in the won fight was not used up, or the spear went with it.");
@@ -468,18 +473,19 @@ public partial class TemplePreview
             SaveCheckpoint();
             WorldCheckpoint saved = CheckpointFile.Read(CheckpointPath);
             if (saved.Version != 13 || saved.Combat is not { } combat || combat.Experience != reward || combat.PlayerHitPoints != hitPoints
-                || combat.Defeated.Single() is not { } dead || dead.Key != ant.Source.Key || dead.Hex != corpseHex
+                || !combat.Defeated.Select(d => d.Key).OrderBy(k => k, StringComparer.Ordinal).SequenceEqual(foes.OrderBy(k => k, StringComparer.Ordinal))
+                || combat.Defeated.Single(d => d.Key == ant.Source.Key).Hex != corpseHex
                 || saved.Areas.Single(a => a.Map == _campaign.CurrentMap).Consumed?.SingleOrDefault() != new ConsumedItem(pot.Key, powder.Key, 1))
                 throw new InvalidDataException("Checkpoint v11 did not record the won fight or the used powder.");
             ResetWalker();
-            if (_campaign.HasCombatOutcome || _campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key) || InCombat) throw new InvalidDataException("Reset kept the combat outcome.");
+            if (_campaign.HasCombatOutcome || foes.Any(f => _campaign.IsDefeated(_campaign.CurrentMap, f)) || InCombat) throw new InvalidDataException("Reset kept the combat outcome.");
             LoadCheckpoint();
-            if (!_campaign.IsDefeated(_campaign.CurrentMap, ant.Source.Key) || _campaign.Experience != xpBefore + reward || _campaign.PlayerHitPoints != hitPoints
+            if (!foes.All(f => _campaign.IsDefeated(_campaign.CurrentMap, f)) || _campaign.Experience != xpBefore + reward || _campaign.PlayerHitPoints != hitPoints
                 || !_bodies[ant.Source.Key].HasMeta("defeated") || !_navigation!.Walkable(corpseHex) || InCombat || _campaign.HealingDoses != 0 || _campaign.PlayerWeapon().Pid != 7)
                 throw new InvalidDataException("Loading checkpoint v11 lost the corpse, XP, HP or the used powder.");
             ResetWalker();
             MapLayoutWriter.Verify(_map!);
-            GD.Print($"COMBAT_SLICE_OK: PID 0x{ant.Source.Header.Pid:X8} {ant.Source.Key} noticed the actor, carried spear wielded, Healing Powder taken with H for 4 AP and used up on commit, animated creature turn awaited, seeded fight won in {rounds + 1}+ player turns, {reward} XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v11 save/reset/load round trip; source bytes verified.");
+            GD.Print($"COMBAT_SLICE_OK: PID 0x{ant.Source.Header.Pid:X8} {ant.Source.Key} saw the actor at hex {hexBefore} ({foes.Length} creature(s) joined), carried spear wielded, Healing Powder taken with H for 4 AP and used up on commit, animated creature turn awaited, seeded fight won in {rounds + 1}+ player turns, {reward} XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v11 save/reset/load round trip; source bytes verified.");
         }
         finally { _forceCombatAnimation = false; _combatEncounters = encounters; _combatSeed = null; DiscardCombat(); SetNavigationGrid(grid); _checkingNavigation = false; }
     }

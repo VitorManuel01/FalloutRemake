@@ -154,11 +154,11 @@ public sealed partial class WorldSession
         }
         return best;
     }
-    public const int EncounterDistance = 5, EncounterApproach = 10;
-
     /// <summary>
-    /// Hostile encounter critters within <see cref="EncounterDistance"/> hexes that can reach the player in at most
-    /// <see cref="EncounterApproach"/> steps (a critter behind a wall in another room never starts a fight).
+    /// Hostile encounter critters that see the player (<see cref="CritterSight.Sees"/>, the obj_can_see_obj test their
+    /// critter_p_proc makes before attacking), nearest first. CE starts the fight even when the critter has no way to the
+    /// player; here a critter must also reach a hex beside the player, because leaving combat out of sight is not modelled
+    /// and such a fight could never end.
     /// </summary>
     public CombatEncounter? FindEncounter(ActorLocation player)
     {
@@ -168,17 +168,17 @@ public sealed partial class WorldSession
         HexNavigation navigation = Current.Doors.Navigation(player.Elevation);
         var noticing = new List<string>();
         foreach (MapObject foe in layer.Objects.Where(o => EncounterPids.Contains(o.Header.Pid) && HexNavigation.Valid(o.Header.Tile)
-                     && (o.Header.Flags & HexNavigation.Hidden) == 0 && !IsDefeated(CurrentMap, o.Key)
-                     && o.State.GetValueOrDefault("team", 1) != 0 && FalloutGrid.Distance(player.Hex, o.Header.Tile) <= EncounterDistance)
+                     && (o.Header.Flags & HexNavigation.Hidden) == 0 && !IsDefeated(CurrentMap, o.Key) && o.State.GetValueOrDefault("team", 1) != 0)
                      .OrderBy(o => FalloutGrid.Distance(player.Hex, o.Header.Tile)).ThenBy(o => o.Key, StringComparer.Ordinal))
         {
+            Prototype? prototype = Current.Map.Prototypes.FirstOrDefault(p => p.Pid == foe.Header.Pid);
+            if (prototype == null || !CritterSight.Sees(foe, CritterSight.Perception(CritterPrototypeData.Read(prototype)), player.Hex, navigation)) continue;
             var probe = new[]
             {
                 new CombatantState("player", "player", null, 0, true, player.Hex, player.Elevation, DerivedCombatStats.ForCharacter(Special.Neutral), CombatWeapon.Unarmed(), 1),
                 new CombatantState(foe.Key, foe.Key, foe.Header.Pid, 1, false, foe.Header.Tile, player.Elevation, DerivedCombatStats.ForCharacter(Special.Neutral), CombatWeapon.Unarmed(), 1)
             };
-            if (new CombatMovement(navigation, probe).Path(probe[0], h => FalloutGrid.Distance(h, foe.Header.Tile) <= 1) is { } path && path.Length <= EncounterApproach)
-                noticing.Add(foe.Key);
+            if (new CombatMovement(navigation, probe).Path(probe[0], h => FalloutGrid.Distance(h, foe.Header.Tile) <= 1) != null) noticing.Add(foe.Key);
         }
         return noticing.Count == 0 ? null : new CombatEncounter(player, noticing.ToArray(), noticing[0]);
     }

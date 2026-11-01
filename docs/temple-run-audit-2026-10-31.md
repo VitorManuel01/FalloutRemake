@@ -61,7 +61,7 @@ morte. A rota inteira funciona com os encontros ligados.
   - **Os desvios até os pós cobram mais do que devolvem.** Cada pó rola 13 HP em média. Os desvios trazem cerca de 4 lutas a mais, com radscorpions.
   - **A rota direta, sem lança e sem desvios, é viável:** 22 de 25 rodadas chegam com 9 HP em média e 800 XP no total, já contando os 600 de Arroyo. Ficam no nível 1.
 - **Inferência técnica:** o original é mais duro e mais generoso ao mesmo tempo.
-  - **Mais duro:** no CE, uma criatura entra na luta quando vê o jogador (alcance de PE × 5 hexes, com linha de visão). Aqui o raio é de 5 hexes, alcançáveis em até 10 passos. O veneno do radscorpion também não está modelado.
+  - **Mais duro:** no CE, uma criatura entra na luta quando vê o jogador (alcance de PE × 5 hexes, com linha de visão). Nesta medição o raio era de 5 hexes, alcançáveis em até 10 passos; desde 01/11 a regra do CE está modelada ([percepção](critter-sight-2026-11-01.md)). O veneno do radscorpion também não está modelado.
   - **Mais generoso:** um personagem real tem 3 tags (+20% e progressão dobrada) e traits. Também conta com criaturas que fogem com pouco HP e com a saída do combate fora da vista. Críticos não entram: o CE só os ativa a partir do primeiro dia de jogo, que o Templo não alcança ([correção](skill-spending-2026-10-31.md)).
   - Nenhuma dessas partes existe ainda.
 - **Desconhecido:** a taxa de sobrevivência de um personagem real no Templo original. Não há medição do jogo original para comparar.
@@ -73,7 +73,7 @@ Em ordem de impacto medido:
 1. **Escolha de personagem com tags e traits:** um Unarmed de 70% muda a conta contra os radscorpions.
 2. **Fuga das criaturas por AI packet e saída do combate:** é a forma do original de não lutar até a morte.
 3. ~~**Críticos:** a chance já é calculada (LK); falta a tabela de efeitos.~~ No Templo eles não acontecem: o CE exige o dia 1 de jogo.
-4. **Percepção do CE no início dos encontros:** PE × 5 com linha de visão, no lugar do raio fixo.
+4. ~~**Percepção do CE no início dos encontros:** PE × 5 com linha de visão, no lugar do raio fixo.~~ Feito em 01/11 ([percepção](critter-sight-2026-11-01.md)).
 
 O duelo desarmado com Cameron não foi necessário: a variante usa o ramo de
 Speech, e o duelo continua fora do escopo.
@@ -94,4 +94,5 @@ Narg, Mingan e Chitsa, com duas variantes cada: rota direta, e lança mais cura.
 São 20 sementes por variante (`TEMPLE_RUN_SEEDS` encurta uma conferência).
 Quem não marcou Speech joga o duelo e recupera o equipamento no baú. Os números
 estão no documento do duelo. As tabelas acima são da medição anterior, só com o
-perfil neutro.
+perfil neutro. A remedição com a percepção do CE está no
+[documento da percepção](critter-sight-2026-11-01.md).

@@ -150,6 +150,7 @@ internal static class SelfTests
             OcclusionTests.Run(Check);
             TempleArchitectureTests.Run(Check);
             CombatTests.Run(Check);
+            CritterSightTests.Run(Check);
             WorldCombatTests.Run(Check);
         WorldDrugTests.Run(Check);
         PlayerCharacterTests.Run(Check);

@@ -38,7 +38,7 @@ internal static class CharacterProgressionTests
             var world = new WorldSession(_ => map, new[] { 3, 126 });
             Assert(world.Level == 1 && world.MaxHitPoints == 30 && world.HitPoints == 30 && world.UnspentSkillPoints == 0, "Level 1 start.");
             var spear = CombatWeapon.Primary("Lança", WeaponPrototypeData.Read(CombatTests.Spear()));
-            var fight = world.BeginCombat(world.FindEncounter(world.Location)!, spear, new CombatTests.Scripted(1, 4, 1, 11));
+            var fight = world.BeginCombat(WorldCombatTests.NearAnt(world, "map3:veteran-ant"), spear, new CombatTests.Scripted(1, 4, 1, 11));
             ProvisionalMeleeBehavior.TakeTurn(fight);
             fight.Execute(CombatActionProposal.Attack("player", ant.Key));
             Assert(fight.Turn.Over && fight.Get("player").HitPoints == 26, "Bitten for 4, then the ant falls.");

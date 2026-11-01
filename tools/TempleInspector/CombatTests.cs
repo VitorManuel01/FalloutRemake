@@ -36,17 +36,17 @@ internal static class CombatTests
 
     // Giant Ant layout from the shipped PRO: base stats derived from SPECIAL plus the creature's bonus block.
     static CritterPrototypeData Ant(int unarmedPoints = 25) => CritterPrototypeData.Read(AntPrototype(unarmedPoints));
-    internal static Prototype AntPrototype(int unarmedPoints = 25, int experience = 25)
+    internal static Prototype AntPrototype(int unarmedPoints = 25, int experience = 25, int pid = 0x0100017E)
     {
         var bytes = new byte[416];
         void Put(int offset, int value) => BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(offset, 4), value);
-        Put(0, 0x0100017E); Put(28, -1); Put(40, 1);
+        Put(0, pid); Put(28, -1); Put(40, 1);
         int[] special = { 1, 2, 1, 1, 1, 4, 1 };
         for (int i = 0; i < 7; i++) Put(48 + 4 * i, special[i]);
         Put(48 + 4 * 7, 18); Put(48 + 4 * 8, 7); Put(48 + 4 * 9, 4); Put(48 + 4 * 11, 1); Put(48 + 4 * 13, 4); Put(48 + 4 * 15, 1);
         Put(188 + 4 * 7, -12); Put(188 + 4 * 8, -2); Put(188 + 4 * 11, 1); Put(188 + 4 * 13, 5); Put(188 + 4 * 29, 500);
         Put(328 + 4 * 3, unarmedPoints); Put(404, experience); Put(412, 0);
-        return PrototypeCatalog.Read(new GameResource("proto/critters/00000382.pro", "synthetic", bytes), 0x0100017E);
+        return PrototypeCatalog.Read(new GameResource($"proto/critters/{pid & 0xFFFFFF:D8}.pro", "synthetic", bytes), pid);
     }
 
     internal static MapObject Critter(int tile, int pid, int hp, int team, string key) => new(key, tile, 0, 0, 0,
