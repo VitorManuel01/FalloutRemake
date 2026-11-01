@@ -80,7 +80,7 @@ public sealed partial class WorldSession
 
     /// <summary>
     /// FO2's armor slot (CE critterGetArmor): one carried armor unit is worn. CE _adjust_ac adds its AC, DR and DT to the
-    /// wearer's bonus stats; the armor perk (power armor's ST, for instance) is not applied here yet.
+    /// wearer's bonus stats and gives the player the armor's perk (power armor's ST and radiation resistance, see Sheet).
     /// </summary>
     public HeldItem? Worn => _armor;
     private HeldItem? _armor;
@@ -91,7 +91,10 @@ public sealed partial class WorldSession
         if (InCombat && _activeFight?.InventoryOpen != true) return HandStatus.InCombat;
         if (moving) return HandStatus.Busy;
         if (CarriedHeld(new HeldItem(item.Map, item.Source.Key)) is not { } carried) return HandStatus.NoItem;
-        return PrototypeOf(carried) is { Type: 0, Subtype: ArmorPrototypeData.Subtype } ? HandStatus.Ready : HandStatus.NotArmor;
+        if (PrototypeOf(carried) is not { Type: 0, Subtype: ArmorPrototypeData.Subtype } prototype) return HandStatus.NotArmor;
+        // A perk the original armor never names is refused rather than guessed (ArmorPerks).
+        int perk = ArmorPrototypeData.Read(prototype).Perk;
+        return perk == -1 || ArmorPerks.Rows.Any(r => r.Id == perk) ? HandStatus.Ready : HandStatus.Unsupported;
     }
 
     public HandStatus Wear(CarriedItem item, bool moving)
@@ -117,7 +120,10 @@ public sealed partial class WorldSession
     public ArmorPrototypeData? WornArmor() =>
         _armor is { } worn && CarriedHeld(worn) is { } item && PrototypeOf(item) is { } prototype ? ArmorPrototypeData.Read(prototype) : null;
 
-    /// <summary>The player's combat stats: the sheet at its level with the worn armor.</summary>
+    /// <summary>The worn armor's perk (CE perkAddEffect while worn), or none.</summary>
+    public ArmorPerk WornPerk() => WornArmor() is { } armor ? ArmorPerks.Effect(armor.Perk) : ArmorPerk.None;
+
+    /// <summary>The player's combat stats: the sheet at its level (with the armor perk) and the worn armor's AC, DR and DT.</summary>
     public DerivedCombatStats PlayerStats() => DerivedCombatStats.ForPlayer(Sheet, Level, WornArmor());
 
     // Inside a fight's open inventory the player's AC, DR and DT follow the armor at once.
@@ -125,6 +131,10 @@ public sealed partial class WorldSession
     {
         if (_activeFight is not { InventoryOpen: true } fight) return;
         fight.ChangeArmor(PlayerStats(), _armor == null ? null : $"PID {WornArmor()!.Pid}");
+        // The perk's Strength may open or close an unarmed blow (CE picks it from the current ST).
+        if (fight.Combatants.FirstOrDefault(c => c.IsPlayer) is not { } player) return;
+        Hand active = player.RightHandActive ? Hand.Right : Hand.Left;
+        if (HandWeapon(active).Name != player.Weapon.Name || HandWeapon(Other(active)).Name != player.AlternateWeapon?.Name) RearmFight();
     }
 
     private void SetHeld(Hand hand, HeldItem? held) { if (hand == Hand.Left) _leftHand = held; else _rightHand = held; }

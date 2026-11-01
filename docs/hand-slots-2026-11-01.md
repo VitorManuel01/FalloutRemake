@@ -69,7 +69,7 @@ Este trabalho substitui o `UnarmedKick` dos dois commits anteriores, que guardav
   - **Checkpoint:** `SavedHands` ganha o campo opcional `Armor`. Ele fica de fora quando nada está vestido, então saves antigos continuam válidos. Um item que não é armadura carregada é recusado na carga.
   - **Prévia:** na bolsa, os botões "Vestir" e "Tirar" aparecem para armaduras, a linha mostra "vestida" e a linha de status mostra a armadura e a CA. O registro da luta mostra "Você veste a armadura · CA n".
 - **Diferenças conhecidas:**
-  - O perk da armadura não é aplicado.
+  - O perk da armadura agora é aplicado (ver "Perk da armadura").
   - O visual do personagem não muda (FIDs masculino e feminino da armadura ainda não são usados).
   - A dobra de peso da armadura de energia já está em `CarryWeight`, sem relação com estar vestida.
 - **Validação:**
@@ -77,3 +77,39 @@ Este trabalho substitui o `UnarmedKick` dos dois commits anteriores, que guardav
   - **`COMBAT_BAG_OK`:** com a lança selecionada, os botões de armadura ficam escondidos e nada é vestido.
   - **`tools/Validate-Temple.ps1`:** 23 passos aprovados. **`tools/Run-QuietGodot.ps1`:** aprovado, 176 checagens `_OK`.
   - **Não verificado:** vestir uma armadura original pela prévia, porque nenhum mapa suportado tem uma.
+
+## Perk da armadura
+
+- **Fato verificado no CE:**
+  - Em `_adjust_ac`, um membro do grupo recebe o perk da armadura vestida (`armorGetPerk`) por `perkAddEffect`. O perk soma seu modificador de atributo (`stat` / `statModifier`) e, quando não tem graduações (`maxRank` −1), sua linha de SPECIAL, como atributos de bônus. Tirar a armadura desfaz isso (`perkRemoveEffect`).
+  - `critterGetStat` soma o bônus ao SPECIAL antes de limitá-lo a 1–10. Dano corpo a corpo, carga, CA, sequência e perícias saem desse valor (`critterUpdateDerivedStats`, `skillGetValue`).
+  - O HP máximo usa só o SPECIAL base com os traits (`critterGetBaseStatWithTraitModifier`), então a armadura nunca o muda.
+  - A resistência à radiação fica entre 0 e 95. Fast Metabolism zera só o valor base, e o bônus continua valendo.
+- **Fato verificado nos dados:** `--armor-report` lê os 16 PROs de armadura de `proto/items` e as linhas de `gPerkDescriptions` (`fallout2.exe`, 0x519DCC) dos perks que eles usam. Só existem quatro:
+
+  | Perk | Armaduras | Força | Radiação |
+  |---|---|---|---|
+  | 62 Powered Armor | Power Armor, Hardened Power Armor | +3 | +30% |
+  | 63 Combat Armor | Combat Armor, Combat Armor Mark II, Brotherhood Armor, Tesla Armor | 0 | +20% |
+  | 68 Advanced Armor I | Advanced Power Armor | +4 | +60% |
+  | 69 Advanced Armor II | Adv. Power Armor MKII | +4 | +75% |
+
+  As outras 8 armaduras não têm perk (−1). O relatório falha se a tabela do runtime (`ArmorPerks`) diferir do executável ou listar um perk que nenhuma armadura usa.
+- **No projeto:**
+  - `PlayerCharacter.Wearing(perk)` dá uma cópia da ficha com o bônus. `Effective` soma a Força antes do limite, `BaseMaxHitPoints` a ignora e `RadiationResistance` soma o bônus.
+  - O bônus nunca entra no personagem salvo: `Capture` usa o SPECIAL base, e `Creation` continua sendo a ficha sem armadura, porque a distribuição de perícias a confere.
+  - `WorldSession.Sheet` agora inclui o perk da armadura vestida. Por isso combate, perícias, ficha e capacidade de carga (`CarryCapacity`, que antes lia o personagem sem os pontos gastos) o refletem.
+  - Uma armadura cujo perk não é um desses quatro é recusada (`Unsupported`) em vez de ter um efeito adivinhado.
+  - **Na luta:** vestir ou tirar com o inventário aberto troca os atributos. Se a nova Força abrir ou fechar um golpe desarmado, o jogador é rearmado na hora (`WeaponsChanged`).
+  - **Prévia:** a linha de status mostra o perk ("Força +3, radiação +30%") ao lado da CA.
+- **Diferenças conhecidas:**
+  - A resistência à radiação ainda não tem efeito, porque não há radiação no jogo.
+  - O requisito de Força das armas não é modelado.
+  - Os outros perks do jogo não existem aqui.
+- **Validação:**
+  - **Testes:** 418 grupos, 3 novos, com uma armadura de energia sintética (perk 62) e uma com um perk inexistente (70). Eles cobrem:
+    - a Força de 5 para 8: Desarmado e Armas brancas +6, dano corpo a corpo de 1 para 3, carga +75, radiação +30 e HP máximo igual;
+    - a recusa do perk desconhecido, a armadura de couro sem perk e a volta pelo checkpoint;
+    - o limite em 10 (Força 9 + 4), Fast Metabolism e as linhas do executável;
+    - na luta, um personagem com AG 6 e Desarmado 52 que, ao vestir a armadura de energia, passa a ter Desarmado 58 e o Strong Punch, e volta ao soco comum ao tirá-la.
+  - **Não verificado:** uma armadura original vestida na prévia, porque nenhum mapa suportado tem uma.

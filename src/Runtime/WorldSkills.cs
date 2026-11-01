@@ -94,8 +94,11 @@ public sealed partial class WorldSession
     private int _unspentSkillPoints, _skillPointLevel = 1;
     private long _skillRevision;
 
-    /// <summary>The character with the skill points spent on level-ups: what combat, lockpicking and the sheet use.</summary>
-    public PlayerCharacter Sheet => Character.WithSkillRaises(_skillRaises);
+    /// <summary>
+    /// The character with the skill points spent on level-ups and the worn armor's perk: what combat, lockpicking and the
+    /// sheet use.
+    /// </summary>
+    public PlayerCharacter Sheet => Character.WithSkillRaises(_skillRaises).Wearing(WornPerk());
 
     /// <summary>
     /// CE pcAddExperience: each new level adds its skill points to the unspent pool, which never exceeds 99. XP only grows

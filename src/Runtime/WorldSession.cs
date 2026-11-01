@@ -32,7 +32,7 @@ public sealed partial class WorldSession
     public WorldItemUse[] ItemUses => Areas.SelectMany(a => a.Items.CaptureUses().Select(u => new WorldItemUse(a.Map.Prefix.Header.MapIndex, u))).ToArray();
     public WorldItemUse[] DueItemUses => ItemUses.Where(u => u.Allocation.Phase == ItemUsePhase.Placed && u.Allocation.RemainingTicks == 0).ToArray();
     public long CarriedCount => Carried.Sum(i => (long)i.Quantity);
-    public int CarryCapacity => Character.CarryWeight;
+    public int CarryCapacity => Sheet.CarryWeight;
     /// <summary>Who plays: a premade, a created character or the neutral test profile of earlier milestones.</summary>
     public PlayerCharacter Character { get; private set; } = PlayerCharacter.Neutral;
     private readonly Func<string, CharacterFile>? _premade;

@@ -161,7 +161,7 @@ try
     }
     if (args.Length == 3 && args[2] == "--armor-report")
     {
-        Console.WriteLine(JsonSerializer.Serialize(ArmorReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine(JsonSerializer.Serialize(ArmorReport.Create(new GameData(args[1]), args[1]), new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
     if (args.Length == 3 && args[2] == "--drug-report")

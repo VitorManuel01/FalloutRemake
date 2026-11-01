@@ -12,7 +12,7 @@ using FalloutRemake.Runtime.Combat;
 /// </summary>
 internal static class CriticalReport
 {
-    sealed class Executable
+    internal sealed class Executable
     {
         readonly byte[] _bytes; readonly uint _base; readonly (uint Va, uint Size, uint Raw)[] _sections;
         public Executable(byte[] bytes)

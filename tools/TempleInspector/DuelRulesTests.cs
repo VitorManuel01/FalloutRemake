@@ -35,17 +35,21 @@ internal static class DuelRulesTests
         return world;
     }
 
-    // Synthetic armor PRO (no armor lies in maps 3, 4 or 126): AC 15, normal DR 25% and DT 2, no perk, like leather armor.
-    static Prototype Armor() => CombatTests.Item(1, 0, 129, 0, put => { put(57, 15); put(61, 25); put(89, 2); put(117, -1); });
+    // Synthetic armor PROs (no armor lies in maps 3, 4 or 126): leather-like (AC 15, normal DR 25% and DT 2, no perk), a
+    // power armor with the Powered Armor perk (62) and one naming a perk no original armor uses (70).
+    static Prototype Armor(int pid = 1, int armorClass = 15, int resistance = 25, int threshold = 2, int perk = -1) =>
+        CombatTests.Item(pid, 0, 129, 0, put => { put(57, armorClass); put(61, resistance); put(89, threshold); put(117, perk); });
     static MapDocument WorldWithArmorMap()
     {
         MapDocument map = WorldWithSpearMap();
         MapObject pot = map.ObjectLayers[0].Objects.Single(o => o.Key == "map3:pot"), spear = pot.Inventory.First().Object;
-        MapObject armor = spear with { Key = "map3:armor", Subtype = 0, Header = spear.Header with { Pid = 1 } };
-        pot = pot with { InventoryCount = 3, Inventory = pot.Inventory.Append(new InventoryEntry(0, 1, armor)).ToArray() };
+        InventoryEntry Worn(string key, int pid) => new(0, 1, spear with { Key = key, Subtype = 0, Header = spear.Header with { Pid = pid } });
+        pot = pot with { InventoryCount = 5, Inventory = pot.Inventory.Concat(new[] { Worn("map3:armor", 1), Worn("map3:power", 3), Worn("map3:odd", 2) }).ToArray() };
         return map with { ObjectLayers = new[] { map.ObjectLayers[0] with { Objects = map.ObjectLayers[0].Objects.Select(o => o.Key == pot.Key ? pot : o).ToArray() } },
-            Prototypes = map.Prototypes.Append(Armor()).ToArray() };
+            Prototypes = map.Prototypes.Append(Armor()).Append(Armor(3, 25, 40, 12, ArmorPerks.PoweredArmor)).Append(Armor(2, 10, 30, 4, 70)).ToArray() };
     }
+    static void TakeArmor(WorldSession world) => world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:spear", 1), new TakenItem("map3:pot", "map3:armor", 1),
+        new TakenItem("map3:pot", "map3:power", 1), new TakenItem("map3:pot", "map3:odd", 1) });
     static WorldSession WorldWithArmor()
     {
         var world = new WorldSession(_ => WorldWithArmorMap(), new[] { 3, 126 });
@@ -216,6 +220,52 @@ internal static class DuelRulesTests
             world.Wear(world.Carried.Single(c => c.Source.Header.Pid == 7), false);
             world.Reset();
             Assert(world.Worn == null, "A new game starts without armor.");
+        });
+        check("a worn armor's perk adds CE perkAddEffect's bonus while worn: power armor's +3 ST raises skills, melee damage and carry weight but not max HP", () =>
+        {
+            var world = WorldWithArmor(); TakeArmor(world);
+            CarriedItem Item(int pid) => world.Carried.Single(c => c.Source.Header.Pid == pid);
+            PlayerCharacter bare = world.Sheet; int hp = world.MaxHitPoints, capacity = world.CarryCapacity;
+            Assert(world.Wear(Item(2), false) == HandStatus.Unsupported && world.Worn == null, "A perk no original armor names is refused.");
+            Assert(world.Wear(Item(3), false) == HandStatus.Ready && world.WornPerk() == ArmorPerks.Effect(ArmorPerks.PoweredArmor), "Power armor on.");
+            PlayerCharacter sheet = world.Sheet; DerivedCombatStats stats = world.PlayerStats();
+            Assert(sheet.Effective.Strength == bare.Effective.Strength + 3 && sheet.Skill(DerivedCombatStats.Unarmed) == bare.Skill(DerivedCombatStats.Unarmed) + 6
+                && sheet.Skill(DerivedCombatStats.MeleeWeapons) == bare.Skill(DerivedCombatStats.MeleeWeapons) + 6 && sheet.MeleeDamage == 3 && bare.MeleeDamage == 1,
+                "ST 5 to 8: Unarmed and Melee Weapons +6, melee damage 1 to 3.");
+            Assert(world.CarryCapacity == capacity + 75 && sheet.RadiationResistance == bare.RadiationResistance + 30 && world.MaxHitPoints == hp
+                && stats.MaxHitPoints == hp && stats.MeleeDamage == 3 && stats.ArmorClass == bare.ArmorClass + 25, "Carry +75, radiation +30, max HP unchanged.");
+            Assert(world.Character.Armor == ArmorPerk.None && world.Character.Capture().Special.SequenceEqual(bare.Capture().Special), "The character itself never keeps the perk.");
+            Assert(world.Wear(Item(1), false) == HandStatus.Ready && world.Sheet.Effective.Strength == bare.Effective.Strength && world.CarryCapacity == capacity,
+                "Leather armor has no perk: the bonus leaves with the power armor.");
+            world.Wear(Item(3), false);
+            var saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
+            Assert(WorldSession.Restore(_ => WorldWithArmorMap(), new[] { 3, 126 }, saved, "catalog").Sheet.Effective.Strength == 8, "The perk comes back with the worn armor.");
+        });
+        check("the armor perk follows CE critterGetStat: the bonus is clamped with SPECIAL, Fast Metabolism keeps it, max HP ignores it", () =>
+        {
+            var strong = PlayerCharacter.Create("Forte", new Special(9, 5, 5, 5, 5, 5, 6), new[] { CharacterTrait.FastMetabolism }, new[] { 0, 1, 2 }, 25, 0);
+            PlayerCharacter worn = strong.Wearing(ArmorPerks.Effect(ArmorPerks.AdvancedArmorI));
+            Assert(worn.Effective.Strength == 10 && worn.BaseMaxHitPoints == strong.BaseMaxHitPoints && strong.RadiationResistance == 0 && worn.RadiationResistance == 60,
+                "ST 9 + 4 stops at 10; Fast Metabolism zeroes only the base radiation resistance.");
+            Assert(ReferenceEquals(worn.Creation, strong) && worn.Wearing(ArmorPerk.None).Effective == strong.Effective && strong.Wearing(ArmorPerk.None) == strong,
+                "Taking it off restores the sheet.");
+            Assert(ArmorPerks.Effect(ArmorPerks.AdvancedArmorII) is { Strength: 4, RadiationResistance: 75 } && ArmorPerks.Effect(ArmorPerks.CombatArmor) is { Strength: 0, RadiationResistance: 20 },
+                "fallout2.exe rows.");
+            try { ArmorPerks.Effect(70); throw new Exception("Unknown perk accepted."); } catch (InvalidDataException) { }
+        });
+        check("in a fight the perk's Strength can open an unarmed blow: power armor put on in the open inventory turns the punch into a Strong Punch", () =>
+        {
+            var world = WorldWithArmor();
+            world.StartNewGame(PlayerCharacter.Create("Agil", new Special(5, 5, 5, 5, 5, 6, 9), Array.Empty<CharacterTrait>(), new[] { 0, 1, 2 }, 25, 0));
+            TakeArmor(world);
+            Assert(world.PlayerWeapon().Name == "Desarmado" && world.Sheet.Skill(DerivedCombatStats.Unarmed) == 52, "Unarmed 52: below the Strong Punch's 55.");
+            var fight = world.BeginCombat(new CombatEncounter(world.Location, new[] { "map3:far-ant" }, "player"), world.PlayerWeapon(), new CombatTests.Scripted());
+            var player = fight.Get("player");
+            for (int guard = 0; guard < 10 && fight.Active != player; guard++) CombatAi.TakeTurn(fight);
+            fight.Execute(CombatActionProposal.OpenInventory("player"));
+            Assert(world.Wear(world.Carried.Single(c => c.Source.Header.Pid == 3), false) == HandStatus.Ready && player.Weapon.Name == "Strong Punch"
+                && player.Stats.Skill(DerivedCombatStats.Unarmed) == 58 && fight.Log.OfType<WeaponsChanged>().Last().Blow == "Strong Punch", "ST 8: Unarmed 58, Strong Punch.");
+            Assert(world.TakeOff(false) == HandStatus.Ready && player.Weapon.Name == "Desarmado" && player.Stats.MeleeDamage == 1, "Off again: the plain punch.");
         });
     }
 }

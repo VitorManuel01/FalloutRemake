@@ -161,7 +161,8 @@ public partial class PlayerBagWindow : AcceptDialog
     };
     public static string WearHint(HandStatus status) => status switch
     {
-        HandStatus.Ready => "Vestir: a CA, a resistência (RD) e o limiar de dano (LD) da armadura passam a valer.",
+        HandStatus.Ready => "Vestir: a CA, a resistência (RD), o limiar de dano (LD) e o perk da armadura (Força, radiação) passam a valer.",
+        HandStatus.Unsupported => "O perk desta armadura não é um dos que as armaduras originais usam.",
         HandStatus.Busy => "Pare de andar para trocar de armadura.",
         HandStatus.InCombat => "Em combate, abra a bolsa no seu turno (4 AP) para trocar de armadura.",
         HandStatus.NoItem => "Você já não carrega este item.",

@@ -21,7 +21,11 @@ public partial class TemplePreview
 
     private string HandsLine() => _campaign == null ? ""
         : $"Mãos: esquerda {HandBlowName(Hand.Left)}{(_campaign.ActiveHand == Hand.Left ? " (ativa)" : "")} · direita {HandBlowName(Hand.Right)}{(_campaign.ActiveHand == Hand.Right ? " (ativa)" : "")}"
-            + (_campaign.Worn is { } worn ? $" · Armadura: {CarriedName(worn, "?")} (CA {_campaign.PlayerStats().ArmorClass})" : "");
+            + (_campaign.Worn is { } worn ? $" · Armadura: {CarriedName(worn, "?")} (CA {_campaign.PlayerStats().ArmorClass}{PerkText(_campaign.WornPerk())})" : "");
+
+    // The worn armor's perk (CE perkAddEffect): bonus Strength and radiation resistance.
+    private static string PerkText(ArmorPerk perk) => (perk.Strength > 0 ? $", Força +{perk.Strength}" : "")
+        + (perk.RadiationResistance > 0 ? $", radiação +{perk.RadiationResistance}%" : "");
 
     // The status panel's second line: what each hand holds and which one strikes.
     private string HandsSuffix() => _campaign == null ? "" : "\n" + HandsLine();

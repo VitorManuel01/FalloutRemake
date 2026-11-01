@@ -91,7 +91,7 @@ public sealed class PlayerCharacter
     }
     /// <summary>The character as created or loaded from its GCD, without level-up raises.</summary>
     public PlayerCharacter Creation { get => _creation ?? this; private init => _creation = value; }
-    private readonly PlayerCharacter? _creation;
+    private PlayerCharacter? _creation;
 
     public bool Has(CharacterTrait trait) => _traits.Contains(trait);
     public bool IsTagged(int skill) => _tags.Contains(skill);
@@ -177,21 +177,35 @@ public sealed class PlayerCharacter
         }
     }
 
-    // CE traitGetStatModifier for SPECIAL; critterGetStat clamps SPECIAL to 1–10.
-    public Special Effective
+    /// <summary>The worn armor's perk (CE _adjust_ac → perkAddEffect): its Strength joins the bonus stats while worn.</summary>
+    public ArmorPerk Armor { get; private set; } = ArmorPerk.None;
+
+    /// <summary>This sheet wearing armor with that perk; <see cref="ArmorPerk.None"/> takes it off. Never saved with the character.</summary>
+    public PlayerCharacter Wearing(ArmorPerk perk)
     {
-        get
-        {
-            int gifted = Has(CharacterTrait.Gifted) ? 1 : 0;
-            int Clamp(int v) => Math.Clamp(v, 1, 10);
-            return new(Clamp(Base.Strength + gifted + (Has(CharacterTrait.Bruiser) ? 2 : 0)), Clamp(Base.Perception + gifted), Clamp(Base.Endurance + gifted),
-                Clamp(Base.Charisma + gifted), Clamp(Base.Intelligence + gifted), Clamp(Base.Agility + gifted + (Has(CharacterTrait.SmallFrame) ? 1 : 0)),
-                Clamp(Base.Luck + gifted));
-        }
+        ArgumentNullException.ThrowIfNull(perk);
+        if (perk == Armor) return this;
+        var worn = (PlayerCharacter)MemberwiseClone();
+        // The creation sheet stays the unworn character (skill spending checks it).
+        worn._creation = Creation; worn.Armor = perk;
+        return worn;
     }
 
-    // CE critterUpdateDerivedStats from the trait-adjusted SPECIAL, then traitGetStatModifier.
-    public int BaseMaxHitPoints => 15 + Effective.Strength + 2 * Effective.Endurance;
+    // CE traitGetStatModifier for SPECIAL; critterGetStat adds the bonus stats (the armor perk's) and clamps SPECIAL to 1–10.
+    public Special Effective => Adjusted(Armor.Strength);
+
+    private Special Adjusted(int strengthBonus)
+    {
+        int gifted = Has(CharacterTrait.Gifted) ? 1 : 0;
+        int Clamp(int v) => Math.Clamp(v, 1, 10);
+        return new(Clamp(Base.Strength + gifted + (Has(CharacterTrait.Bruiser) ? 2 : 0) + strengthBonus), Clamp(Base.Perception + gifted), Clamp(Base.Endurance + gifted),
+            Clamp(Base.Charisma + gifted), Clamp(Base.Intelligence + gifted), Clamp(Base.Agility + gifted + (Has(CharacterTrait.SmallFrame) ? 1 : 0)),
+            Clamp(Base.Luck + gifted));
+    }
+
+    // CE critterUpdateDerivedStats from the SPECIAL critterGetStat gives, then traitGetStatModifier; max HP alone takes
+    // the base SPECIAL with traits (critterGetBaseStatWithTraitModifier), so armor never changes it.
+    public int BaseMaxHitPoints => 15 + Adjusted(0).Strength + 2 * Adjusted(0).Endurance;
     public int MaxActionPoints => 5 + Effective.Agility / 2 - (Has(CharacterTrait.Bruiser) ? 2 : 0);
     public int ArmorClass => Has(CharacterTrait.Kamikaze) ? 0 : Effective.Agility;
     public int MeleeDamage => Math.Max(Effective.Strength - 5, 1) + (Has(CharacterTrait.HeavyHanded) ? 4 : 0);
@@ -199,7 +213,8 @@ public sealed class PlayerCharacter
     public int Sequence => 2 * Effective.Perception + (Has(CharacterTrait.Kamikaze) ? 5 : 0);
     public int HealingRate => Math.Max(Effective.Endurance / 3, 1) + (Has(CharacterTrait.FastMetabolism) ? 2 : 0);
     public int CriticalChance => Effective.Luck + (Has(CharacterTrait.Finesse) ? 10 : 0);
-    public int RadiationResistance => Has(CharacterTrait.FastMetabolism) ? 0 : 2 * Effective.Endurance;
+    // Fast Metabolism removes the base value only; the armor perk's bonus still counts, clamped to CE's 0–95.
+    public int RadiationResistance => Math.Clamp((Has(CharacterTrait.FastMetabolism) ? 0 : 2 * Effective.Endurance) + Armor.RadiationResistance, 0, 95);
     public int PoisonResistance => Has(CharacterTrait.FastMetabolism) ? 0 : 5 * Effective.Endurance;
 
     /// <summary>CE skillGetValue for the player (normal difficulty, no perks), capped at 300.</summary>
