@@ -149,7 +149,8 @@ public sealed partial class WorldSession
         var scenery = new ScenerySession(); doors.IsSceneryReplaced = scenery.Replaces;
         doors.ProjectObject = source => EffectiveObject(id, source); doors.ProjectDoor = key => TempleGate(id, key);
         doors.AllowTempleExitUse = key => id == 3 && CanUseTempleExit(key);
-        area = new WorldArea(map, doors, new TempleTravel(map, doors), new ItemTransferSession(map), scenery);
+        var items = new ItemTransferSession(map) { CorpseHex = key => _defeated.TryGetValue((id, key), out DefeatedCritter? dead) ? dead.Hex : null };
+        area = new WorldArea(map, doors, new TempleTravel(map, doors), items, scenery);
         _areas.Add(id, area); return area;
     }
     public ExitOption InspectExit(bool moving)
@@ -240,6 +241,7 @@ public sealed partial class WorldSession
         try { candidate.Character = checkpoint.Character == null ? PlayerCharacter.Neutral : PlayerCharacter.Restore(checkpoint.Character, premade); }
         catch (Exception error) when (error is IOException or ArgumentException or KeyNotFoundException)
         { throw new InvalidDataException("Checkpoint premade character source is unavailable.", error); }
+        var bodyLoot = new List<(WorldArea Area, TakenItem[] Rows)>();
         foreach (SavedArea saved in checkpoint.Areas)
         {
             WorldArea area = candidate.EnsureArea(saved.Map);
@@ -251,10 +253,13 @@ public sealed partial class WorldSession
                 || checkpoint.Version < 4 && saved.Replacements != null || checkpoint.Version >= 4 && saved.Replacements == null
                 || checkpoint.Version < 11 && saved.Consumed != null || checkpoint.Version >= 11 && saved.Consumed == null)
                 throw new InvalidDataException("Checkpoint item state does not match its schema version.");
-            area.Items.Restore(saved.Taken ?? Array.Empty<TakenItem>(), saved.Uses ?? Array.Empty<ItemUseAllocation>(),
+            // Items taken from bodies wait for the corpses, which the combat block restores below.
+            TakenItem[] taken = saved.Taken ?? Array.Empty<TakenItem>();
+            bodyLoot.Add((area, taken.Where(t => t?.OwnerKey != null && area.Items.IsBody(t.OwnerKey)).ToArray()));
+            area.Items.Restore(taken.Where(t => t?.OwnerKey == null || !area.Items.IsBody(t.OwnerKey)).ToArray(), saved.Uses ?? Array.Empty<ItemUseAllocation>(),
                 saved.Consumed ?? Array.Empty<ConsumedItem>(), HealingDrugProfile.Supported);
-            area.Doors.Restore(saved.Session, checkpoint.Version >= 5, checkpoint.Version >= 7 && checkpoint.Temple != null,
-                checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed);
+            bool killed = checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed;
+            area.Doors.Restore(saved.Session, checkpoint.Version >= 5, checkpoint.Version >= 7 && (checkpoint.Temple != null || killed), killed);
         }
         var scenes = checkpoint.Areas.Select(a => (Area: candidate._areas[a.Map], Records: a.Replacements ?? Array.Empty<SceneryReplacement>())).ToArray();
         candidate.ValidateScenery(scenes);
@@ -262,6 +267,7 @@ public sealed partial class WorldSession
         candidate.RestoreTempleProgress(checkpoint.Temple);
         candidate.RestoreEntries(checkpoint);
         candidate.RestoreCombat(checkpoint.Combat, checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed);
+        foreach (var (area, rows) in bodyLoot) area.Items.RestoreBodyLoot(rows);
         candidate.RestoreTempleDuel(checkpoint.Duel);
         candidate.RestoreSkills(checkpoint.Skills);
         candidate.ValidateTempleExit();

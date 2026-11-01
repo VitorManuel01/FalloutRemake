@@ -58,6 +58,8 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _npcApproach = new() { Name = "NpcApproachAction", Text = "Chegar ao NPC", Visible = false, Disabled = true };
     public Action? DuelRequested;
     private readonly Button _duel = new() { Name = "TempleDuelAction", Text = "Desafio de Cameron", Visible = false, Disabled = true };
+    public Action? TempleKeyRequested;
+    private readonly Button _templeKey = new() { Name = "TempleKeyAction", Text = "Usar a Temple Key", Visible = false, Disabled = true };
     public Action<bool>? NavigationGridRequested;
     public Action? FrameRouteRequested;
     public Action? LootRequested;
@@ -151,6 +153,7 @@ public partial class PreviewHud : CanvasLayer
         _speech.Pressed += () => { if (!_speech.Disabled) SpeechRequested?.Invoke(); }; selectionActions.AddChild(_speech);
         _npcApproach.Pressed += () => { if (!_npcApproach.Disabled) NpcApproachRequested?.Invoke(); }; selectionActions.AddChild(_npcApproach);
         _duel.Pressed += () => { if (!_duel.Disabled) DuelRequested?.Invoke(); }; selectionActions.AddChild(_duel);
+        _templeKey.Pressed += () => { if (!_templeKey.Disabled) TempleKeyRequested?.Invoke(); }; selectionActions.AddChild(_templeKey);
 
         _navigationPanel = new PanelContainer { AnchorTop = 1, AnchorBottom = 1,
             AnchorRight = 1, OffsetLeft = 16, OffsetRight = -316, OffsetTop = -272, OffsetBottom = -64 };
@@ -211,6 +214,8 @@ public partial class PreviewHud : CanvasLayer
     { _speech.Visible = visible; _speech.Disabled = !enabled; _speech.TooltipText = hint; }
     public void DuelAction(bool visible, bool enabled, string hint)
     { _duel.Visible = visible; _duel.Disabled = !enabled; _duel.TooltipText = hint; }
+    public void TempleKeyAction(bool visible, bool enabled, string hint)
+    { _templeKey.Visible = visible; _templeKey.Disabled = !enabled; _templeKey.TooltipText = hint; }
     public void NpcApproachAction(bool visible, bool enabled, string hint)
     { _npcApproach.Visible = visible; _npcApproach.Disabled = !enabled; _npcApproach.TooltipText = hint; }
     public void NavigationGrid(bool enabled) => _grid.SetPressedNoSignal(enabled);

@@ -20,6 +20,10 @@ public sealed class ItemTransferSession
 {
     public int MapId { get; }
     private readonly Dictionary<string, MapObject> _owners;
+    // Critters that carry items: their inventory can be looted once they lie dead (Cameron carries the Temple Key).
+    private readonly HashSet<string> _bodies;
+    /// <summary>Hex of a critter's corpse, or null while it lives; set by the world, which owns the fight outcomes.</summary>
+    internal Func<string, int?>? CorpseHex { get; set; }
     private readonly Dictionary<int, Prototype> _prototypes;
     private Dictionary<string, TakenItem> _taken = new(StringComparer.Ordinal);
     private readonly Dictionary<Guid, ItemUseAllocation> _uses = new();
@@ -31,13 +35,19 @@ public sealed class ItemTransferSession
     public ItemTransferSession(MapDocument map)
     {
         MapId = map.Prefix.Header.MapIndex;
-        _owners = map.ObjectLayers.SelectMany(l => l.Objects).Where(o => o.Header.Pid >> 24 == 0 && o.Subtype == 1).ToDictionary(o => o.Key);
+        _owners = map.ObjectLayers.SelectMany(l => l.Objects).Where(o => o.Header.Pid >> 24 == 0 && o.Subtype == 1
+            || o.Header.Pid >> 24 == 1 && o.Inventory.Length != 0).ToDictionary(o => o.Key);
+        _bodies = _owners.Values.Where(o => o.Header.Pid >> 24 == 1).Select(o => o.Key).ToHashSet(StringComparer.Ordinal);
         _prototypes = map.Prototypes.ToDictionary(p => p.Pid);
         foreach (MapObject owner in _owners.Values)
             if (owner.Inventory.Any(e => e.Quantity <= 0) || owner.Inventory.Select(e => e.Object.Key).Distinct().Count() != owner.Inventory.Length)
                 throw new InvalidDataException("Invalid direct container inventory.");
     }
-    public IReadOnlyList<MapObject> Containers => _owners.Values.OrderBy(o => o.Offset).ToArray();
+    public IReadOnlyList<MapObject> Containers => _owners.Values.Where(o => !_bodies.Contains(o.Key)).OrderBy(o => o.Offset).ToArray();
+    public bool IsBody(string key) => _bodies.Contains(key);
+    /// <summary>A container, or a critter with items at the hex where it lies dead.</summary>
+    public MapObject? Owner(string key) => !_owners.TryGetValue(key, out MapObject? owner) ? null
+        : _bodies.Contains(key) && CorpseHex?.Invoke(key) is int hex ? owner with { Header = owner.Header with { Tile = hex } } : owner;
     public ContainerItem[] Contents(string ownerKey) => _owners.TryGetValue(ownerKey, out MapObject? owner)
         ? owner.Inventory.Select(e => new ContainerItem(e.Object, e.Quantity - (_taken.GetValueOrDefault(e.Object.Key)?.Quantity ?? 0))).ToArray()
         : Array.Empty<ContainerItem>();
@@ -102,6 +112,8 @@ public sealed class ItemTransferSession
     {
         MapObject? owner = _owners.GetValueOrDefault(ownerKey);
         if (owner == null) return ItemTakeStatus.NoItem;
+        // A body is looted without its script, as the CE loot screen; a living critter keeps its inventory.
+        if (_bodies.Contains(ownerKey)) return CorpseHex?.Invoke(ownerKey) is int hex && HexNavigation.Valid(hex) ? ItemTakeStatus.Ready : ItemTakeStatus.Unavailable;
         if (Scripted(owner)) return ItemTakeStatus.ScriptRequired;
         if (!HexNavigation.Valid(owner.Header.Tile) || owner.ContainerElevation != owner.Header.Elevation
             || (owner.Header.Flags & HexNavigation.Hidden) != 0) return ItemTakeStatus.Unavailable;
@@ -138,7 +150,8 @@ public sealed class ItemTransferSession
             || !navigation.Walkable(actor.Hex)) return ItemTakeStatus.Unavailable;
         if (moving) return ItemTakeStatus.Busy;
         if (navigation.IsExit(actor.Hex)) return ItemTakeStatus.AtExit;
-        return actor.Hex == owner.Header.Tile || Enumerable.Range(0, 6).Any(d => FalloutGrid.Neighbor(actor.Hex, d) == owner.Header.Tile)
+        int tile = Owner(owner.Key)!.Header.Tile;
+        return actor.Hex == tile || Enumerable.Range(0, 6).Any(d => FalloutGrid.Neighbor(actor.Hex, d) == tile)
             ? ItemTakeStatus.Ready : ItemTakeStatus.TooFar;
     }
     public ItemTakeStatus CanReturn(string ownerKey, string itemKey, int quantity, ActorLocation actor, HexNavigation navigation, bool moving)
@@ -241,6 +254,21 @@ public sealed class ItemTransferSession
             _uses[use.Id] = use with { RemainingTicks = ticks >= use.RemainingTicks ? 0 : use.RemainingTicks - ticks }; changed = true;
         }
         if (changed) Revision++;
+    }
+    /// <summary>
+    /// Items taken from bodies, restored once the corpses are known (after the fight outcomes). Nothing else can hold them:
+    /// they are neither placed, used up nor in custody, so the rest of the restored state stays valid.
+    /// </summary>
+    internal void RestoreBodyLoot(TakenItem[] rows)
+    {
+        var candidate = new Dictionary<string, TakenItem>(StringComparer.Ordinal);
+        foreach (TakenItem row in rows ?? throw new InvalidDataException("Missing body loot rows."))
+            if (row?.OwnerKey == null || row.ItemKey == null || !_bodies.Contains(row.OwnerKey) || row.Quantity <= 0 || _taken.ContainsKey(row.ItemKey)
+                || Eligibility(row.OwnerKey, row.ItemKey, out _, out InventoryEntry? entry) != ItemTakeStatus.Ready || row.Quantity > entry!.Quantity
+                || !candidate.TryAdd(row.ItemKey, row))
+                throw new InvalidDataException("Item taken from a body that is not a corpse, or with an invalid quantity.");
+        foreach (var row in candidate) _taken.Add(row.Key, row.Value);
+        if (candidate.Count != 0) Revision++;
     }
     public void Restore(TakenItem[] saved) => Restore(saved, Array.Empty<ItemUseAllocation>());
     public void Restore(TakenItem[] saved, ItemUseAllocation[] uses) => Restore(saved, uses, Array.Empty<ConsumedItem>(), _ => false);

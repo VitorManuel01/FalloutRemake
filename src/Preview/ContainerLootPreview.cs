@@ -13,7 +13,10 @@ public partial class TemplePreview
 {
     private ContainerLootWindow? _loot;
     private string? _lootOwner;
-    private void RefreshLootAction() => _hud.LootAction(_selected?.Source is { Subtype: 1 } source && source.Header.Pid >> 24 == 0);
+    // Containers, and the bodies of critters that carried items (Cameron and his Temple Key).
+    private bool Lootable(MapObject source) => source is { Subtype: 1 } && source.Header.Pid >> 24 == 0
+        || source.Header.Pid >> 24 == 1 && _campaign?.Current.Items.IsBody(source.Key) == true && _campaign.Current.Items.ContainerStatus(source.Key) == ItemTakeStatus.Ready;
+    private void RefreshLootAction() => _hud.LootAction(_selected?.Source is { } source && Lootable(source));
     private void CloseLoot()
     { if (_loot != null) { _loot.Hide(); _loot.QueueFree(); _loot = null; } _lootOwner = null; }
     private int? ContainerApproach(MapObject owner) => _walker?.Moving == false && owner.Header.Elevation == _elevation && _reachable != null
@@ -26,7 +29,7 @@ public partial class TemplePreview
     {
         if (_loot?.Visible != true && CombatRefuses("recolher itens")) return;
         if (_loot?.Visible == true) { CloseLoot(); return; }
-        if (_selected?.Source is not { Subtype: 1 } owner || owner.Header.Pid >> 24 != 0 || _campaign == null) return;
+        if (_selected?.Source is not { } owner || _campaign == null || !Lootable(owner)) return;
         // The challenge chest gives back what Cameron's challenge stored (CE looting, take all).
         if (_campaign.IsTempleChest(owner.Key) && _campaign.TempleChestCustody.Length != 0) { RetrieveFromTempleChest(); return; }
         CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseInventory(); ClearRouteHover(); _lootOwner = owner.Key;
@@ -46,7 +49,7 @@ public partial class TemplePreview
     private void RefreshLootWindow()
     {
         if (_loot == null || _lootOwner == null || _campaign == null) return;
-        MapObject owner = _campaign.Current.Items.Containers.Single(o => o.Key == _lootOwner);
+        MapObject owner = _campaign.Current.Items.Owner(_lootOwner)!;
         _loot.Refresh(OriginalText(owner)?.Name ?? "Recipiente", _campaign.Current.Items.Contents(_lootOwner), OriginalText,
             (key, qty) => _campaign.CanTakeItem(_lootOwner, key, qty, _walker?.Moving == true), _campaign.CarriedCount, ContainerApproach(owner).HasValue,
             _campaign.CarriedWeight, _campaign.CarryCapacity, item => _campaign.UnitWeight(_campaign.CurrentMap, item),
@@ -82,7 +85,7 @@ public partial class TemplePreview
     private void ApproachLootContainer()
     {
         if (_lootOwner == null || _campaign == null) return;
-        MapObject owner = _campaign.Current.Items.Containers.Single(o => o.Key == _lootOwner);
+        MapObject owner = _campaign.Current.Items.Owner(_lootOwner)!;
         int? target = ContainerApproach(owner); if (!target.HasValue) return;
         CloseLoot(); if (!_walkMode) ToggleWalkMode(); RequestWalk(target.Value);
     }

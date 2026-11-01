@@ -86,7 +86,7 @@ public sealed partial class WorldSession
         ? _templeProgress.Profile.Actor(_templeProgress.Departure) : DefeatedObject(map, source);
     private DoorState? TempleGate(int map, string key) => map != 3 ? null
         : _templeProgress?.Profile.GateKey == key ? _templeProgress.Gate()
-        : _duelProfile?.GateKey == key && _duelOutcome != TempleDuelOutcome.None ? _duelProfile.LockedGate() : null;
+        : _duelProfile?.GateKey == key && _duelOutcome != TempleDuelOutcome.None && !_keyUnlocked.Contains(key) ? _duelProfile.LockedGate() : null;
     private string TempleWorldStamp() => Convert.ToHexString(SHA256.HashData(CheckpointFile.Encode(Capture("temple-transaction"))));
     private TempleWorldStatus TempleSpeechPreflight(TempleNpcDepartureProfile? profile, ScriptStateSnapshot? accepted, bool moving, int intelligence, bool tagged)
     {

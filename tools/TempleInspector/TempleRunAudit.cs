@@ -215,7 +215,30 @@ internal static class TempleRunAudit
                 var ready = world.PrepareTempleDuel(profile, false);
                 if (ready != TempleWorldStatus.Ready) throw new Stop("Stalled", $"{place}: {ready}");
                 Resolve(world.BeginTempleDuel(profile, random));
-                if (world.TempleDuel == TempleDuelOutcome.Killed) throw new Stop("Blocked", "Cameron killed in the duel: the exit door reads G369, not modeled");
+                if (world.TempleDuel == TempleDuelOutcome.Killed)
+                {
+                    // G369 = 1 keeps both doors locked: the Temple Key from his body unlocks the exit and the gate to the chest.
+                    place = "Temple Key"; MapObject body = world.Current.Items.Owner(profile.ActorKey)!;
+                    Walk(Approach(body));
+                    if (world.TakeAllItems(profile.ActorKey, false) != ItemTakeStatus.Ready || !world.TempleKeyCarried) throw new Stop("Stalled", $"{place}: body");
+                    foreach (string door in new[] { profile.GateKey, profile.ExitDoor!.Key })
+                    {
+                        Walk(Approach(Root(o => o.Key == door)));
+                        if (world.UseTempleKey(door, false) != TempleWorldStatus.Ready || world.Current.Doors.Toggle(door, world.Location.Hex, 2, false) != DoorUseStatus.Ready)
+                            throw new Stop("Stalled", $"{place}: door {door}");
+                    }
+                    place = "challenge chest"; Walk(Approach(Root(o => o.Offset == WorldSession.TempleChestOffset)));
+                    if (world.RetrieveTempleChest(false) != TempleChestStatus.Ready) throw new Stop("Stalled", $"{place}: retrieve refused");
+                    place = "Arroyo exit";
+                    var nav = world.Current.Doors.Navigation(2); var reach = nav.ReachableFrom(world.Location.Hex);
+                    int exitHex = Enumerable.Range(0, 40000).Where(t => nav.IsExit(t) && reach.Distance(t) >= 0 && world.PreviewExitAt(2, t).Destination?.Map == 4)
+                        .OrderBy(t => reach.Distance(t)).DefaultIfEmpty(-1).First();
+                    if (exitHex < 0) throw new Stop("Stalled", $"{place}: none reachable");
+                    Walk(exitHex);
+                    if (world.UseExit(false).Status != ExitStatus.Ready || world.CurrentMap != 4) throw new Stop("Stalled", $"{place}: travel refused");
+                    foreach (WorldArea area in world.Areas) MapLayoutWriter.Verify(area.Map);
+                    return new RunLog(character.Name, seed, takeSpear, heal, "Arroyo", "Cameron killed", steps, fights.ToArray(), world.HitPoints, world.MaxHitPoints, world.Experience, world.Level, lowest, found, used);
+                }
                 if (world.TempleDuel != TempleDuelOutcome.Yielded) throw new Stop("Stalled", $"{place}: {world.TempleDuel}");
             }
             place = "Cameron departure";

@@ -61,6 +61,19 @@ public sealed class TempleNpcDepartureProfile
             || map.MapProgram?.Sha256 != MapProgramHash) throw new InvalidDataException("Unknown NPC departure programs.");
         // Full program fingerprints bind the audited movement, timer and visibility instructions.
         // The evidence report also checks their exact opcode spans independently.
+        // destroy_p_proc when the player kills Cameron (not a child, metarule 51): karma -10, Arroyo reputation (G47) -5,
+        // then G369 = 1 and, on this map, M20 = 2 and G10 = 1.
+        void Span(int start, params (ushort, int?)[] expected)
+        {
+            if (!program.Instructions.Where(i => i.Offset >= start).Take(expected.Length).Select(i => (i.Opcode, i.OperandBits)).SequenceEqual(expected))
+                throw new InvalidDataException("Cameron's death instructions changed.");
+        }
+        Span(9146, (0xC001, 9844), (0xC001, 51), (0x80BC, null), (0x810B, null), (0xC001, 2), (0x8033, null), (0x802F, null));
+        Span(9952, (0xC001, 0), (0xC001, 0), (0x80C5, null), (0xC001, 10), (0x8046, null), (0x8039, null), (0x80C6, null));
+        Span(10520, (0xC001, 47), (0xC001, 47), (0x80C5, null), (0xC001, 5), (0x8046, null), (0x8039, null), (0x80C6, null));
+        Span(10572, (0xC001, 369), (0xC001, 1), (0x80C6, null));
+        Span(10624, (0xC001, 10670), (0x8101, null), (0xC001, 3), (0x8033, null), (0x802F, null), (0xC001, 20), (0xC001, 2), (0x80C4, null),
+            (0xC001, 10), (0xC001, 1), (0x80C6, null));
         return new(speech, map.ObjectLayers.SelectMany(l => l.Objects).ToArray(), actor, gate, TempleExitDoorProfile.Create(map, read));
     }
     internal int[] Route(NpcDeparturePhase phase) => _routes[phase switch

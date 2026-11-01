@@ -5,9 +5,14 @@ using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
-/// <summary>aitemdor instance 100 only; map_update unlocks it at M20=2 and source-fixed G369=0.</summary>
+/// <summary>
+/// aitemdor instance 100 only; map_update unlocks it at M20=2 and G369=0. Killing Cameron writes G369=1, which keeps it
+/// locked; then use_obj_on_p_proc with the Temple Key (PID 438, carried by Cameron) sets L0=1 and L7=1 and unlocks the door,
+/// and map_update keeps it unlocked. The same script runs the challenge gate, so the key unlocks that one too.
+/// </summary>
 public sealed class TempleExitDoorProfile
 {
+    public const int TempleKeyPid = 438;
     public string Key { get; }
     public GameGlobalEntry InitialGlobal { get; }
     internal TempleExitDoorProfile(string key, GameGlobalEntry initialGlobal) { Key = key; InitialGlobal = initialGlobal; }
@@ -43,6 +48,15 @@ public sealed class TempleExitDoorProfile
             (0x8033,null),(0x802F,null),(0x80BC,null),(0x812E,null),(0xC001,6016),(0x8004,null),(0x80BC,null),(0x812F,null) };
         if (!program.Instructions.Where(i => i.Offset >= 5912).Take(expected.Length).Select(i => (i.Opcode,i.OperandBits)).SequenceEqual(expected))
             throw new InvalidDataException("Temple exit door unlock instructions changed.");
+        // use_obj_on_p_proc: obj_pid(obj_being_used_with) == 438 -> L0 = 1, obj_unlock(self), L7 = 1.
+        (ushort, int?)[] key = { (0xC001,4692),(0xC001,0),(0x8032,null),(0xC001,TempleKeyPid),(0x8033,null),(0x802F,null),(0x80B9,null),(0xC001,13),
+            (0xC001,400),(0x8105,null),(0x80B8,null),(0xC001,0),(0xC001,1),(0x80C2,null),(0x80BC,null),(0x812F,null),(0xC001,7),(0xC001,1),(0x80C2,null) };
+        // map_update_p_proc: at hex 13528 with M20 != 2 and L7 == 0 -> L0 = 0; L7 = 1 keeps a key-unlocked door open to use.
+        (ushort, int?)[] kept = { (0xC001,5906),(0x80BC,null),(0x80D4,null),(0xC001,13528),(0x8033,null),(0xC001,20),(0x80C3,null),(0xC001,2),
+            (0x8034,null),(0x803E,null),(0xC001,7),(0x80C1,null),(0xC001,0),(0x8033,null),(0x803E,null),(0x802F,null),(0xC001,0),(0xC001,0),(0x80C2,null) };
+        if (!program.Instructions.Where(i => i.Offset >= 4618).Take(key.Length).Select(i => (i.Opcode,i.OperandBits)).SequenceEqual(key)
+            || !program.Instructions.Where(i => i.Offset >= 5828).Take(kept.Length).Select(i => (i.Opcode,i.OperandBits)).SequenceEqual(kept))
+            throw new InvalidDataException("Temple Key door instructions changed.");
         return new(door.Key, globals.Entries[369]);
     }
 }

@@ -8,16 +8,8 @@ internal static class WorldEntryTests
     private static (WorldSession World,Func<int,MapDocument> Load,TempleNpcDepartureProfile Profile) Fixture(Func<MapDocument,ArroyoRewardProfile>? reward = null,bool ambiguousReturn = false,Func<MapDocument,MapDocument>? adjustTemple = null)
     {
         var (temple,profile,original) = WorldTempleSpeechTests.Fixture();
-        var exit = WorldTests.Map(3,4).ObjectLayers[0].Objects[0];
-        exit = exit with { Key = temple.Source.Sha256 + ":422028",ContainerElevation = 2,Header = exit.Header with { Tile = 13326,Elevation = 2 },
-            State = new Dictionary<string,int> { ["destinationMap"] = 4,["destinationElevation"] = 0,["destinationTile"] = 20517,["destinationRotation"] = 0 } };
-        temple = temple with { ObjectLayers = temple.ObjectLayers.Select(l => l.Elevation == 2 ? l with { Objects = l.Objects.Append(exit).ToArray() } : l).ToArray() };
-        var village = WorldTests.Map(4,3);
-        village = village with { Source = village.Source with { Path = "maps/arvillag.map",Size = 216200,Sha256 = ArroyoRewardProfile.MapHash },
-            Prefix = village.Prefix with { Header = village.Prefix.Header with { ScriptIndex = 27,EnteringTile = 20517 } },
-            MapProgram = new("scripts/arvillag.int","synthetic verified profile",5188,ArroyoRewardProfile.ProgramHash),
-            ObjectLayers = village.ObjectLayers.Select(l => l with { Objects = l.Objects.Select(o => (o.Header.Pid >> 24) != 5 ? o : o with { Header = o.Header with { Tile = 20517 },
-                State = new Dictionary<string,int> { ["destinationMap"] = 3,["destinationElevation"] = 2,["destinationTile"] = 13326,["destinationRotation"] = 0 } }).ToArray() }).ToArray() };
+        temple = WithArroyoExit(temple);
+        var village = Village();
         if (ambiguousReturn)
         {
             var marker = village.ObjectLayers[0].Objects[0];
@@ -30,6 +22,23 @@ internal static class WorldEntryTests
         world.Current.Travel.Arrive(original.Location); world.CommitTempleSpeech(WorldTempleSpeechTests.Plan(world,profile),false);
         world.Current.Travel.Arrive(new(3,2,13326,0));
         return (world,Load,profile);
+    }
+    // The Temple elevation 2 exit grid at 13326 to Arroyo (4/0/20517), and the verified village profile with its way back.
+    internal static MapDocument WithArroyoExit(MapDocument temple)
+    {
+        var exit = WorldTests.Map(3,4).ObjectLayers[0].Objects[0];
+        exit = exit with { Key = temple.Source.Sha256 + ":422028",ContainerElevation = 2,Header = exit.Header with { Tile = 13326,Elevation = 2 },
+            State = new Dictionary<string,int> { ["destinationMap"] = 4,["destinationElevation"] = 0,["destinationTile"] = 20517,["destinationRotation"] = 0 } };
+        return temple with { ObjectLayers = temple.ObjectLayers.Select(l => l.Elevation == 2 ? l with { Objects = l.Objects.Append(exit).ToArray() } : l).ToArray() };
+    }
+    internal static MapDocument Village()
+    {
+        var village = WorldTests.Map(4,3);
+        return village with { Source = village.Source with { Path = "maps/arvillag.map",Size = 216200,Sha256 = ArroyoRewardProfile.MapHash },
+            Prefix = village.Prefix with { Header = village.Prefix.Header with { ScriptIndex = 27,EnteringTile = 20517 } },
+            MapProgram = new("scripts/arvillag.int","synthetic verified profile",5188,ArroyoRewardProfile.ProgramHash),
+            ObjectLayers = village.ObjectLayers.Select(l => l with { Objects = l.Objects.Select(o => (o.Header.Pid >> 24) != 5 ? o : o with { Header = o.Header with { Tile = 20517 },
+                State = new Dictionary<string,int> { ["destinationMap"] = 3,["destinationElevation"] = 2,["destinationTile"] = 13326,["destinationRotation"] = 0 } }).ToArray() }).ToArray() };
     }
     private static WorldSession Restore(WorldCheckpoint saved,Func<int,MapDocument> load,TempleNpcDepartureProfile profile)
         => WorldSession.Restore(load,new[] {3,4,126},saved,"catalog",templeProfile:_ => profile,arroyoProfile:_ => new ArroyoRewardProfile());

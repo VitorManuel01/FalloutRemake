@@ -107,6 +107,25 @@ try
         foreach (var row in messages.Entries.Values.OrderBy(r => r.Id)) Console.WriteLine($"{row.Id}: {row.Text}");
         return 0;
     }
+    if (args.Length == 5 && args[2] == "--find-pid")
+    {
+        // Every object of the MAP with this PID (hex), or the object at "@offset", on the ground or inside an inventory,
+        // with its owner chain and its own inventory.
+        var pidData = new GameData(args[1]); var pidMap = MapDocument.Read(pidData.Read(args[3]), pidData.Read);
+        bool byOffset = args[4].StartsWith('@'); int wanted = byOffset ? int.Parse(args[4][1..]) : Convert.ToInt32(args[4], 16);
+        void Walk(MapObject o, string path)
+        {
+            if (byOffset ? o.Offset == wanted : o.Header.Pid == wanted)
+            {
+                Console.WriteLine($"{path} -> offset {o.Offset} hex {o.Header.Tile} elev {o.Header.Elevation} pid 0x{o.Header.Pid:X8} sid {o.Header.Sid} flags 0x{o.Header.Flags:X8}");
+                foreach (InventoryEntry entry in o.Inventory)
+                    Console.WriteLine($"    x{entry.Quantity} offset {entry.Object.Offset} pid 0x{entry.Object.Header.Pid:X8} sid {entry.Object.Header.Sid} flags 0x{entry.Object.Header.Flags:X8}");
+            }
+            foreach (InventoryEntry entry in o.Inventory) Walk(entry.Object, $"{path} / offset {o.Offset} pid 0x{o.Header.Pid:X8}");
+        }
+        foreach (MapObject o in pidMap.ObjectLayers.SelectMany(l => l.Objects)) Walk(o, "map");
+        return 0;
+    }
     if (args.Length == 4 && args[2] == "--text")
     {
         Console.Write(System.Text.Encoding.Latin1.GetString(new GameData(args[1]).Read(args[3]).Bytes));

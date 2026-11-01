@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using FalloutRemake.Import;
 using FalloutRemake.Runtime;
 using FalloutRemake.Runtime.Combat;
@@ -80,9 +81,41 @@ public partial class TemplePreview
         return _campaign.TempleDuel switch
         {
             TempleDuelOutcome.Yielded => $"Cameron: \"{CameronLine(161)}\" · seu equipamento está no baú do desafio (J ao lado do baú)",
-            TempleDuelOutcome.Killed => $"Cameron morreu · +{fight.Turn.ExperienceAwarded} XP · no original isso grava G369, que a porta final consulta; essa saída ainda não está modelada",
+            TempleDuelOutcome.Killed => $"Cameron morreu · +{fight.Turn.ExperienceAwarded} XP · o portão e a porta final ficam trancados (G369 = 1); a Temple Key está no corpo dele (J ao lado do corpo)",
             _ => null
         };
+    }
+
+    // The Temple Key on the selected gate or exit door, after Cameron's death (aitemdor use_obj_on_p_proc).
+    private string? SelectedTempleKeyDoor()
+    {
+        TempleNpcDepartureProfile? profile = _campaign?.TempleDuel == TempleDuelOutcome.Killed ? TempleProfile() : null;
+        string? key = _selected?.Source.Key;
+        return profile != null && key != null && (key == profile.GateKey || key == profile.ExitDoor?.Key) ? key : null;
+    }
+    private static string TempleKeyHint(TempleWorldStatus status) => status switch
+    {
+        TempleWorldStatus.Ready => "Usar a Temple Key do corpo de Cameron nesta porta: ela fica destrancada de vez.",
+        TempleWorldStatus.AlreadyAccepted => "A Temple Key já destrancou esta porta.",
+        TempleWorldStatus.DoorRequired => "Falta a Temple Key: ela está no corpo de Cameron (J ao lado do corpo).",
+        TempleWorldStatus.TooFar => "Aproxime o personagem a um hex da porta.",
+        TempleWorldStatus.Busy => "Termine a caminhada ou a luta antes.",
+        _ => "A Temple Key serve no portão do desafio e na porta final."
+    };
+    private void RefreshTempleKeyAction()
+    {
+        string? door = SelectedTempleKeyDoor();
+        TempleWorldStatus status = door == null ? TempleWorldStatus.Unavailable : _campaign!.CanUseTempleKey(door, _walker?.Moving == true);
+        _hud.TempleKeyAction(door != null, status == TempleWorldStatus.Ready && !InspectorOpen, TempleKeyHint(status));
+    }
+    private void UseTempleKeyOnSelection()
+    {
+        string? door = SelectedTempleKeyDoor();
+        if (door == null || _campaign == null || InspectorOpen) return;
+        TempleWorldStatus status = _campaign.UseTempleKey(door, _walker?.Moving == true);
+        NavigationStatus(status == TempleWorldStatus.Ready ? "Temple Key usada · a porta está destrancada (U abre) · K para salvar" : TempleKeyHint(status));
+        if (status == TempleWorldStatus.Ready) { BuildWorld(); SelectObject(_layout!.Objects.Single(o => o.Source.Key == door)); GD.Print($"TEMPLE_KEY_USED: {door}"); }
+        RefreshTempleKeyAction(); RefreshDoorAction();
     }
 
     private void RetrieveFromTempleChest()

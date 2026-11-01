@@ -57,6 +57,12 @@ public sealed class DoorSession
         _roots = roots.ToArray(); _scriptedPrototypes = new(scriptedPrototypes ?? Array.Empty<int>()); Reset();
     }
     public DoorState? Get(string key) => ProjectDoor?.Invoke(key) ?? _doors.GetValueOrDefault(key);
+    /// <summary>A script sets this door's state (the Temple Key unlocking the challenge gate); only geometry and lock bits may differ.</summary>
+    internal void SetScriptedState(string key, DoorState state)
+    {
+        if (!_doors.TryGetValue(key, out DoorState? door) || state.Source.Key != key) throw new InvalidOperationException("Unknown door.");
+        _doors[key] = state; _revision++;
+    }
     public SavedDoorSession Capture() => new(_doors.Keys.Select(key => Get(key)!).OrderBy(d => d.Source.Key, StringComparer.Ordinal)
         .Select(d => new SavedDoor(d.Source.Key, d.Flags, d.OpenFlags)).ToArray(), _temple?.Snapshot.Locals.ToArray(), _temple?.Snapshot.Experience ?? 0);
     /// <param name="allowInitialGateLock">The gate may also be locked: Cameron's challenge left it closed and locked (actemvil Node009).</param>

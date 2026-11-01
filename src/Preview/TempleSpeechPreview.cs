@@ -26,7 +26,7 @@ public partial class TemplePreview
         if (FalloutGrid.Distance(_walker.CurrentHex, _selected.Source.Header.Tile) > 1) return "Aproxime o personagem a um hex do NPC para consultar a conversa.";
         if (_directory == null || _objectText == null) return "Os textos originais da instalação não estão disponíveis.";
         if (!_campaign.Character.QualifiesForTempleSpeech)
-            return $"{_campaign.Character.Name} não tem Speech marcado (ou INT abaixo de 4). No original, o caminho é o duelo desarmado com Cameron, ainda não modelado.";
+            return $"{_campaign.Character.Name} não tem Speech marcado (ou INT abaixo de 4). No original, o caminho é o desafio desarmado de Cameron (botão Desafio de Cameron).";
         return null;
     }
     private int SpeechIntelligence => _campaign?.Character.Effective.Intelligence ?? 5;
@@ -34,11 +34,11 @@ public partial class TemplePreview
     {
         RefreshActiveTempleHud();
         _hud.SpeechRequested = OpenSpeechConsultation;
-        _hud.NpcApproachRequested = ApproachTempleNpc; _hud.DuelRequested = StartTempleDuel;
+        _hud.NpcApproachRequested = ApproachTempleNpc; _hud.DuelRequested = StartTempleDuel; _hud.TempleKeyRequested = UseTempleKeyOnSelection;
         bool actor = _selected?.Source.Offset == 425776 && _map?.Source.Sha256 == TempleBarrierEffectProposal.MapHash;
         string? blocked = SpeechBlockedReason();
         _hud.SpeechAction(actor, blocked == null && !InspectorOpen, blocked ?? "Consultar cinco escolhas originais em um ensaio separado da partida.");
-        RefreshDuelAction(actor);
+        RefreshDuelAction(actor); RefreshTempleKeyAction();
         int? target = TempleNpcApproachTarget();
         _hud.NpcApproachAction(actor, target.HasValue && target != _walker?.CurrentHex,
             target.HasValue ? "Caminhar até um hex ao lado do NPC. A conversa é aberta separadamente."

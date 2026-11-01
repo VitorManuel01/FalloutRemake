@@ -50,6 +50,7 @@ public partial class TemplePreview
             _hud.Status("Ao alcance do personagem · consulta da conversa disponível");
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "npc-approach.png"));
             await CheckTempleDuel();
+            await CheckTempleKey();
             await CheckSpeechConsultation();
             await CheckActiveTempleSpeech();
             CheckpointFile.Write(CheckpointPath, _campaign.Capture(_mapCatalog.Source.Sha256)); LoadCheckpoint();
