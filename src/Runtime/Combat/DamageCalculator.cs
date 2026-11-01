@@ -13,15 +13,17 @@ public static class DamageCalculator
     // CE passes 2 for a normal hit; a critical passes its table row's multiplier instead.
     public const int NormalHitMultiplier = 2;
 
+    // weaponGetDamage: bonus + min .. bonus + Melee Damage + max (the bonus of an advanced unarmed blow).
     public static (int Min, int Max) RollRange(CombatantState attacker, CombatWeapon weapon) =>
-        (weapon.MinDamage, weapon.MaxDamage + (weapon.AddsMeleeDamage ? attacker.Stats.MeleeDamage : 0));
+        (weapon.BonusDamage + weapon.MinDamage, weapon.BonusDamage + weapon.MaxDamage + (weapon.AddsMeleeDamage ? attacker.Stats.MeleeDamage : 0));
 
     static bool Bypasses(CombatWeapon weapon, bool bypass) => bypass && weapon.DamageType != DamageType.Emp;
 
     public static int Threshold(CombatantState target, CombatWeapon weapon, bool bypass = false)
     {
         int threshold = target.Stats.Threshold(weapon.DamageType);
-        return Bypasses(weapon, bypass) ? 20 * threshold / 100 : threshold;
+        // A penetrating blow keeps 20% of DT on any hit; a bypassing critical keeps 20% of both DT and DR.
+        return Bypasses(weapon, bypass) || weapon.Penetrates ? 20 * threshold / 100 : threshold;
     }
 
     /// <param name="finesse">The attacker is the player with Finesse (CE applies it to whatever the attack damages).</param>

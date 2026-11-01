@@ -108,7 +108,7 @@ internal static class CombatReport
                 "CE DR step is damage - damage x DR / 100 (truncating the subtracted part), not floor(damage x (1 - DR/100)).",
                 "Melee Damage raises only the maximum of the damage roll (weaponGetDamage)."
             },
-            ProjectRules = new[] { "Hit chance clamped to 5..95 (roadmap); CE caps at 95 only.", "Unspent AP add to AC until the combatant's next turn.",
+            ProjectRules = new[] { "Hit chance clamped to 5..95 (roadmap); CE caps at 95 only.", "AP held outside the own turn add to AC; every round refills AP (CE critterGetStat, _combat_set_move_all).",
                 "Turns end explicitly; running out of AP does not end them.", "These seeded duels use ProvisionalMeleeBehavior; fights in the world use CombatAi with the ai.txt packets." },
             NotModeled = new[] { "Aimed shots by the player", "Burst fire", "Line of fire and cover", "Lighting penalty", "Perks",
                 "Difficulty other than normal", "Knockback", "Reload and ammo consumption" },

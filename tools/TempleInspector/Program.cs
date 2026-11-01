@@ -173,6 +173,11 @@ try
         Console.WriteLine(JsonSerializer.Serialize(new[] { WalkTiming.ForGender(walkData, 0), WalkTiming.ForGender(walkData, 1) }, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
+    if (args.Length == 3 && args[2] == "--duel-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(DuelReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
     if (args.Length == 3 && args[2] == "--combat-ai-report")
     {
         Console.WriteLine(JsonSerializer.Serialize(CombatAiReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));

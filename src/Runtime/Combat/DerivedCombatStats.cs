@@ -87,6 +87,40 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
     }
 }
 
+/// <summary>One of CE's unarmed hit modes (unarmedInitVanilla): requirements, bonus damage and critical chance, AP.</summary>
+public sealed record UnarmedBlow(string Name, int Level, int Skill, int Strength, int Agility, int BonusDamage, int BonusCriticalChance, int ActionPoints,
+    bool Penetrates, bool Secondary);
+
+/// <summary>
+/// CE unarmedGetPunchHitMode / unarmedGetKickHitMode: the last advanced blow of the range whose level, Unarmed skill and
+/// ST/AG requirements the dude meets, else the plain punch or kick. The left hand punches, the right one kicks.
+/// </summary>
+public static class UnarmedBlows
+{
+    public static readonly UnarmedBlow Punch = new("Desarmado", 0, 0, 0, 0, 0, 0, 3, false, false), Kick = new("Chute", 0, 0, 0, 0, 0, 0, 3, false, false);
+    public static readonly UnarmedBlow[] Punches =
+    {
+        new("Strong Punch", 0, 55, 0, 6, 3, 0, 3, false, false), new("Hammer Punch", 6, 75, 5, 6, 5, 5, 3, false, false),
+        new("Lightning Punch", 9, 100, 5, 7, 7, 15, 3, false, false), new("Chop Punch", 5, 75, 5, 7, 3, 10, 3, false, true),
+        new("Dragon Punch", 12, 115, 5, 7, 7, 20, 6, true, true), new("Force Punch", 16, 130, 5, 7, 10, 40, 8, true, true)
+    };
+    public static readonly UnarmedBlow[] Kicks =
+    {
+        new("Strong Kick", 0, 40, 0, 6, 5, 0, 4, false, false), new("Snap Kick", 6, 60, 0, 6, 7, 0, 4, false, false),
+        new("Roundhouse Kick", 9, 80, 6, 6, 9, 5, 4, false, false), new("Kip Kick", 6, 60, 6, 7, 7, 0, 7, false, true),
+        new("Jump Kick", 12, 100, 6, 7, 9, 10, 7, true, true), new("Death Blossom Kick", 15, 125, 6, 8, 12, 50, 9, true, true)
+    };
+
+    public static UnarmedBlow Best(bool kick, bool secondary, int unarmedSkill, int level, Special special)
+    {
+        UnarmedBlow chosen = kick ? Kick : Punch;
+        foreach (UnarmedBlow blow in kick ? Kicks : Punches)
+            if (blow.Secondary == secondary && unarmedSkill >= blow.Skill && level >= blow.Level && special.Strength >= blow.Strength && special.Agility >= blow.Agility)
+                chosen = blow;
+        return chosen;
+    }
+}
+
 /// <summary>One attack mode a combatant can use. Natural attacks of critters without weapons use the CE punch profile.</summary>
 public sealed record CombatWeapon(string Name, int? Pid, WeaponAttackType AttackType, int MinDamage, int MaxDamage, DamageType DamageType,
     int Range, int ActionPoints, int MinStrength, int SkillIndex, AmmoPrototypeData? Ammo = null)
@@ -94,6 +128,21 @@ public sealed record CombatWeapon(string Name, int? Pid, WeaponAttackType Attack
     // CE: no weapon costs 3 AP; unarmed reach 1 (2 with long limbs); punch damage 1–2, Melee Damage adds to the maximum.
     public static CombatWeapon Unarmed(DamageType natural = DamageType.Normal) =>
         new("Desarmado", null, WeaponAttackType.Unarmed, 1, 2, natural, 1, 3, 0, DerivedCombatStats.Unarmed);
+
+    /// <summary>The player's bare-handed blow: the best punch (or kick) its Unarmed skill, level and SPECIAL allow (CE unarmed hit modes).</summary>
+    public static CombatWeapon UnarmedFor(DerivedCombatStats stats, int level, bool kick = false)
+    {
+        UnarmedBlow blow = UnarmedBlows.Best(kick, secondary: false, stats.Skill(DerivedCombatStats.Unarmed), level, stats.Special);
+        return new(blow.Name, null, WeaponAttackType.Unarmed, 1, 2, DamageType.Normal, 1, blow.ActionPoints, 0, DerivedCombatStats.Unarmed)
+            { BonusDamage = blow.BonusDamage, BonusCriticalChance = blow.BonusCriticalChance, Penetrates = blow.Penetrates };
+    }
+
+    /// <summary>Unarmed hit mode bonus damage, added to both ends of the roll (weaponGetDamage).</summary>
+    public int BonusDamage { get; init; }
+    /// <summary>After a plain hit by the player, d100 at or below it makes the blow critical (attackCompute, any game day).</summary>
+    public int BonusCriticalChance { get; init; }
+    /// <summary>Keeps only 20% of the target's DT, as the Penetrate perk (unarmedIsPenetrating).</summary>
+    public bool Penetrates { get; init; }
 
     public static CombatWeapon Primary(string name, WeaponPrototypeData weapon, AmmoPrototypeData? ammo = null)
     {

@@ -121,7 +121,7 @@ internal static class AiTests
             int[] route = OriginalPathfinder.FindPath(start, Centre, _ => false, inCombat: true, checkDestination: false)!;
             int[] expected = route.Take(2).Aggregate(new List<int>(), (hexes, r) => { hexes.Add(OriginalPathfinder.TileInDirection(hexes.Count == 0 ? start : hexes[^1], r, 1)); return hexes; }).ToArray();
             Assert(fight.Log.OfType<CombatantMoved>().Single().Path.SequenceEqual(expected), "The CE route, minus the occupied last hex.");
-            Assert(fight.Log.OfType<AttackResolved>().Single() is { AttackerId: "ant", Location: HitLocation.Torso, ActionPointsSpent: 3, Chance: 60 }
+            Assert(fight.Log.OfType<AttackResolved>().Single() is { AttackerId: "ant", Location: HitLocation.Torso, ActionPointsSpent: 3, Chance: 53 }
                 && fight.Active!.IsPlayer && fight.Get("ant").WhoHitMe == "player", "One blow with the 3 AP left, then the turn ends.");
             // Out of AP after closing in: no blow, no stall.
             var far = Fight(new[] { Hero(), Ant(Walk(Centre, 1, 4), "ant", Rat()) }, "ant");
@@ -134,9 +134,10 @@ internal static class AiTests
             Func<DerivedCombatStats, DerivedCombatStats> smart = s => s with { Special = s.Special with { Intelligence = 5 } };
             var aimed = Fight(new[] { Hero(), Ant(beside, "ant", Rat(calledFrequency: 1), smart) }, "ant", 1, 0, 1, 1);
             CombatAi.TakeTurn(aimed);
-            Assert(aimed.Log.OfType<AttackResolved>().Single() is { Location: HitLocation.Head, ActionPointsSpent: 4, Chance: 40 }, "Head: +1 AP, -20 to hit for an unarmed blow.");
-            // The check reads the right leg's chance (65 - 5 - 10 = 50) whatever the location: above min_to_hit 50 it stays, at 51 it is the torso.
-            var careful = Fight(new[] { Hero(), Ant(beside, "ant", Rat(minToHit: 51, calledFrequency: 1), smart) }, "ant", 1, 6, 1, 1);
+            Assert(aimed.Log.OfType<AttackResolved>().Single() is { Location: HitLocation.Head, ActionPointsSpent: 4, Chance: 33 },
+                "Head: +1 AP, -20 to hit for an unarmed blow (65 - AC 5 - 7 AP the player holds - 20).");
+            // The check reads the right leg's chance (65 - 12 - 10 = 43) whatever the location: at min_to_hit 44 it falls back to the torso.
+            var careful = Fight(new[] { Hero(), Ant(beside, "ant", Rat(minToHit: 44, calledFrequency: 1), smart) }, "ant", 1, 6, 1, 1);
             CombatAi.TakeTurn(careful);
             Assert(careful.Log.OfType<AttackResolved>().Single() is { Location: HitLocation.Torso, ActionPointsSpent: 3 }, "Below min_to_hit: torso, after both draws.");
             var plain = Fight(new[] { Hero(), Ant(beside, "ant", Rat(calledFrequency: 1)) }, "ant", 1, 1, 1);

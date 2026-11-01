@@ -59,7 +59,7 @@ criaturas, o CE soma base e bônus.
 
 - A chance de acerto fica entre 5 e 95, conforme o critério COM-003. O valor bruto
   do CE continua no detalhamento.
-- AP não gastos viram AC até o próximo turno do combatente (especificação, §3.2).
+- AP não gastos viram AC até o próximo turno do combatente (especificação, §3.2). **Correção (01/11):** no CE, a AC soma os AP que o combatente tem fora do próprio turno, e toda rodada recarrega os AP de todos (`_combat_set_move_all`); quem ainda não agiu na rodada defende com todos eles ([duelo de Cameron](cameron-duel-2026-11-01.md)).
 - O turno termina só com `EndTurn`.
 - XP só por morte causada pelo jogador. O total fica na sessão; somar ao
   `WorldSession` é a Fase 3.

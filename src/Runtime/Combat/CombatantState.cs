@@ -24,8 +24,13 @@ public sealed class CombatantState
     public int Rotation { get; internal set; }
     public int HitPoints { get; internal set; }
     public int ActionPoints { get; internal set; }
-    /// <summary>Unspent AP of the last turn, added to AC until this combatant's next turn starts.</summary>
-    public int BonusArmorClass { get; internal set; }
+    /// <summary>
+    /// CE critterGetStat(STAT_ARMOR_CLASS): whenever it is not this combatant's turn, its current AP count as AC. Every
+    /// round starts by refilling everyone's AP (_combat_set_move_all), so one that has not acted yet defends with all of them.
+    /// </summary>
+    public int BonusArmorClass => Acting ? 0 : ActionPoints;
+    /// <summary>It is this combatant's turn.</summary>
+    public bool Acting { get; internal set; }
     /// <summary>Carried healing doses this combatant can take during the fight.</summary>
     public int HealingDoses { get; internal set; }
     public LifeStatus Status => HitPoints <= 0 ? LifeStatus.Dead : LifeStatus.Active;

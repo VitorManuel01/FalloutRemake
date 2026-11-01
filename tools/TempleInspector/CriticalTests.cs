@@ -63,7 +63,7 @@ internal static class CriticalTests
             early.Execute(CombatActionProposal.Attack("player", "ant"));
             Assert(plain.Left == 0 && !early.Log.OfType<CriticalHit>().Any() && early.Get("ant").HitPoints == 5, "Day 0: hit and damage rolls only.");
 
-            // Hit roll 1 against 46%: margin 45, so a second d100 of 9 or less (45 / 10 + 5) is critical.
+            // Hit roll 1 against 41% (AC 4 plus the 5 AP the ant holds): margin 40, so a second d100 of 9 or less (40 / 10 + 5) is critical.
             var rolls = new CombatTests.Scripted(1, 9, 91, 1);
             var fight = Fight(Hero(), Ant(), Day1, "player", rolls);
             fight.Execute(CombatActionProposal.Attack("player", "ant"));
@@ -72,7 +72,7 @@ internal static class CriticalTests
                 && hit.Flags == (KnockedOut | Bypass), "Giant Ant torso, effect 4.");
             Assert(fight.Log.OfType<AttackResolved>().Single() is { DamageRoll: 1, Damage: 3, TargetHitPoints: 3 } && ant.KnockedOut && ant.Prone && ant.WakeAt == Day1 + 320,
                 "x6 then halved; knocked out for 10 x (35 - 3 x EN) ticks.");
-            Assert(fight.Preview(CombatActionProposal.Attack("player", "ant")).ToHit is { ProneTarget: 40, Chance: 86 }, "+40 against a prone target.");
+            Assert(fight.Preview(CombatActionProposal.Attack("player", "ant")).ToHit is { ProneTarget: 40, Chance: 81 }, "+40 against a prone target (50 - AC 4 - its 5 unspent AP + 40).");
             var missed = Fight(Hero(), Ant(), Day1, "player", new CombatTests.Scripted(1, 10, 1));
             missed.Execute(CombatActionProposal.Attack("player", "ant"));
             Assert(!missed.Log.OfType<CriticalHit>().Any() && missed.Get("ant").HitPoints == 5, "One above the threshold stays a normal hit.");
@@ -128,10 +128,10 @@ internal static class CriticalTests
         });
         check("critical failures: creatures from day 1 and the player from day 6, by the weapon's column; lost turns, knockdown, random cripples and self hits", () =>
         {
-            // The ant misses (99 against 60%): margin -39, so 1..3 fails critically; LK 1 adds 20 to the column roll.
+            // The ant misses (99 against 53%: the player's AC 5 plus its 7 unspent AP): margin -46, so 1..4 fails critically; LK 1 adds 20 to the column roll.
             var lose = Fight(Hero(), Ant(), Day1, "ant", new CombatTests.Scripted(99, 3, 40));
             ProvisionalMeleeBehavior.TakeTurn(lose);
-            Assert(lose.Log.OfType<CriticalFailure>().Single() is { AttackerId: "ant", Roll: 3, Needed: 3, EffectRoll: 60, Effect: 2, Flags: LoseTurn, SelfDamage: 0 }
+            Assert(lose.Log.OfType<CriticalFailure>().Single() is { AttackerId: "ant", Roll: 3, Needed: 4, EffectRoll: 60, Effect: 2, Flags: LoseTurn, SelfDamage: 0 }
                 && lose.Active!.IsPlayer, "Lost the rest of its turn.");
             // Round 2 sorts the player (Sequence 10) before the ant (9): its lost turn follows the player's.
             lose.Execute(CombatActionProposal.EndTurn("player"));
@@ -148,9 +148,9 @@ internal static class CriticalTests
             var limp = Fight(Hero(), Ant(), Day1, "ant", new CombatTests.Scripted(99, 3, 76, 0));
             ProvisionalMeleeBehavior.TakeTurn(limp);
             Assert(limp.Get("ant") is { Conditions: CrippledLeftLeg, ActionPointsPerHex: 4 } && limp.Log.OfType<CriticalFailure>().Single().Flags == CrippledLeftLeg, "Random cripple.");
-            var plain = new CombatTests.Scripted(99, 4);
+            var plain = new CombatTests.Scripted(99, 5);
             ProvisionalMeleeBehavior.TakeTurn(Fight(Hero(), Ant(), Day1, "ant", plain));
-            Assert(plain.Left == 0, "4 is above the failure threshold: a plain miss.");
+            Assert(plain.Left == 0, "5 is above the failure threshold: a plain miss.");
 
             // The player (96 against 46%: margin -50, threshold 5) only suffers from day 6.
             var spared = new CombatTests.Scripted(96, 5);

@@ -249,13 +249,14 @@ public sealed partial class WorldSession
     /// </summary>
     public CombatWeapon PlayerWeapon()
     {
-        CombatWeapon best = CombatWeapon.Unarmed();
+        // Bare hands strike with the best punch the sheet allows (the left hand's hit mode, CE's default).
+        CombatWeapon best = CombatWeapon.UnarmedFor(DerivedCombatStats.ForPlayer(Sheet, Level), Level);
         foreach (CarriedItem item in Carried.OrderBy(i => i.Source.Header.Pid).ThenBy(i => i.Source.Key, StringComparer.Ordinal))
         {
             if (!_areas.TryGetValue(item.Map, out WorldArea? area)
                 || area.Map.Prototypes.FirstOrDefault(p => p.Pid == item.Source.Header.Pid) is not { Type: 0, Subtype: WeaponPrototypeData.Subtype } prototype) continue;
             CombatWeapon weapon = CombatWeapon.Primary($"PID {prototype.Pid}", WeaponPrototypeData.Read(prototype));
-            if (!weapon.IsRanged && weapon.MinDamage + weapon.MaxDamage > best.MinDamage + best.MaxDamage) best = weapon;
+            if (!weapon.IsRanged && weapon.MinDamage + weapon.MaxDamage > best.MinDamage + best.MaxDamage + 2 * best.BonusDamage) best = weapon;
         }
         return best;
     }

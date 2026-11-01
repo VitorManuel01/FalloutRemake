@@ -7,7 +7,8 @@ using FalloutRemake.Geometry;
 namespace FalloutRemake.Runtime.Combat;
 
 /// <summary>
-/// Turn-based fight on one elevation. Each turn restores the actor's AP; unspent AP become AC until its next turn.
+/// Turn-based fight on one elevation. Every round refills everyone's AP (CE _combat_set_move_all); outside its own turn a
+/// combatant adds the AP it holds to its AC, so one that has not acted yet defends with all of them.
 /// Rounds re-sort the living by initiative. Kills by the player award the victim's PRO experience.
 /// The turn is ended explicitly (EndTurn), never by running out of AP, so the presentation decides the pacing.
 /// </summary>
@@ -57,6 +58,7 @@ public sealed class CombatSession : ICombatSession
                 if (foe.Id == initiatorId) player.WhoHitMe = foe.Id; else foe.Engaging = true;
             }
         _order = CombatInitiative.Order(_combatants, initiatorId);
+        RefillActionPoints();
         _log.Add(new CombatStarted((string[])_order.Clone()));
         BeginNextTurn(first: true);
     }
@@ -180,6 +182,10 @@ public sealed class CombatSession : ICombatSession
                     needed = hit ? margin / 10 + actor.Stats.CriticalChance - CriticalRules.Penalty(location) : -margin / 10;
                     (critical, failure) = (hit && criticalRoll <= needed, !hit && criticalRoll <= needed);
                 }
+                // attackCompute: a plain hit by the player's advanced unarmed blow turns critical on d100 <= its bonus, any day.
+                if (hit && !critical && actor.IsPlayer && actor.Weapon.AddsMeleeDamage && actor.Weapon.BonusCriticalChance != 0
+                    && _random.Between(1, 100) is int bonusRoll && bonusRoll <= actor.Weapon.BonusCriticalChance)
+                    (critical, criticalRoll, needed) = (true, bonusRoll, actor.Weapon.BonusCriticalChance);
                 int damageRoll = 0, damage = 0;
                 if (hit)
                 {
@@ -312,7 +318,7 @@ public sealed class CombatSession : ICombatSession
     // _combat_over gets the prone dude up; the project lets every survivor's knockdown, knockout and lost turn end with the fight.
     private void EndConditions()
     {
-        foreach (CombatantState combatant in _combatants) { combatant.SetConditions(combatant.Conditions & DamageFlags.Crippled); combatant.Rejoining = false; }
+        foreach (CombatantState combatant in _combatants) { combatant.SetConditions(combatant.Conditions & DamageFlags.Crippled); combatant.Rejoining = false; combatant.Acting = false; }
     }
 
     private void Sting(CombatantState attacker, CombatantState target)
@@ -350,15 +356,16 @@ public sealed class CombatSession : ICombatSession
 
     private void StartTurn(CombatantState combatant)
     {
-        combatant.ActionPoints = combatant.Stats.MaxActionPoints; combatant.BonusArmorClass = 0;
+        // _combat_set_move_all already refilled them; one rejoining after a knockout gets them now (_combat_add_noncoms).
+        combatant.ActionPoints = combatant.Stats.MaxActionPoints; combatant.Acting = true;
         _log.Add(new TurnStarted(_round, combatant.Id, combatant.ActionPoints));
     }
 
     private void EndTurn(CombatantState combatant)
     {
-        combatant.BonusArmorClass = combatant.ActionPoints;
+        // The unspent AP stay, and so count as AC, until the next round refills them.
+        combatant.Acting = false;
         _log.Add(new TurnEnded(combatant.Id, combatant.ActionPoints, combatant.BonusArmorClass));
-        combatant.ActionPoints = 0;
         BeginNextTurn(first: false);
     }
 
@@ -374,11 +381,10 @@ public sealed class CombatSession : ICombatSession
             first = false;
             CombatantState next = Get(_order[_index]);
             // _combat_turn: knocked out, or its turn lost, it does nothing at all (no script either); the lost turn is used up.
-            // _combat_set_move_all refilled its AP and none get spent, so they all count as AC until its next turn.
+            // None of its AP get spent, so they all keep counting as AC.
             if ((next.Conditions & (DamageFlags.KnockedOut | DamageFlags.LoseTurn)) is var reason and not DamageFlags.None)
             {
                 next.SetConditions(next.Conditions & ~DamageFlags.LoseTurn);
-                next.ActionPoints = 0; next.BonusArmorClass = next.Stats.MaxActionPoints;
                 _log.Add(new TurnLost(next.Id, reason, next.BonusArmorClass));
                 continue;
             }
@@ -413,6 +419,15 @@ public sealed class CombatSession : ICombatSession
         _round++;
         _order = CombatInitiative.Order(_combatants.Where(c => !c.Rejoining)).Concat(CombatInitiative.Order(_combatants.Where(c => c.Rejoining))).ToArray();
         _index = 0;
+        RefillActionPoints();
+    }
+
+    // _combat_set_move_all: every combatant in the fight's list gets its full AP at the round's start. Knocked out creatures
+    // and those waiting to rejoin sit outside the list and keep what they had.
+    private void RefillActionPoints()
+    {
+        foreach (CombatantState c in _combatants.Where(c => c.InFight && !c.Rejoining && !(c.KnockedOut && !c.IsPlayer)))
+            c.ActionPoints = c.Stats.MaxActionPoints;
     }
 
     private void CheckOver()
