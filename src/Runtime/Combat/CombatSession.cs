@@ -163,6 +163,7 @@ public sealed class CombatSession : ICombatSession
                 break;
             case CombatActionKind.SwitchHand:
                 (actor.Weapon, actor.AlternateWeapon) = (actor.AlternateWeapon!, actor.Weapon);
+                actor.RightHandActive = !actor.RightHandActive;
                 _log.Add(new HandSwitched(actor.Id, actor.Weapon.Name));
                 break;
             case CombatActionKind.UseHealing:

@@ -131,7 +131,7 @@ internal static class WorldCombatTests
             try { CheckpointFile.Decode(System.Text.Encoding.UTF8.GetBytes(json[..start].TrimEnd().TrimEnd(',') + "\n}")); throw new Exception("v10 without Combat decoded."); }
             catch (InvalidDataException) { }
         });
-        check("world combat wields the best carried hand weapon, ignores ranged weapons without ammunition and treats radscorpions as encounters", () =>
+        check("world combat strikes with the wielded hand weapon, ignores ranged weapons without ammunition and treats radscorpions as encounters", () =>
         {
             MapObject Item(string key, int pid) => CombatTests.Blocker(-1, 0, pid, key) with { Subtype = 3, Header = CombatTests.Blocker(-1, 0, pid, key).Header with { Tile = -1 } };
             var spear = Item("map3:spear", 7); var pistol = Item("map3:pistol", 8);
@@ -149,7 +149,9 @@ internal static class WorldCombatTests
             world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:pistol", 1) });
             Assert(world.PlayerWeapon().Pid == null, "A pistol without ammunition tracking is not wielded.");
             world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:pistol", 1), new TakenItem("map3:pot", "map3:spear", 1) });
-            Assert(world.PlayerWeapon() is { Pid: 7, Range: 2, ActionPoints: 4, MinDamage: 3, MaxDamage: 10 }, "Carried spear is wielded.");
+            Assert(world.PlayerWeapon().Pid == null, "Carrying is not wielding (FO2's hand slots).");
+            Assert(world.Wield(world.Carried.Single(c => c.Source.Header.Pid == 7), Hand.Left, false) == HandStatus.Ready
+                && world.PlayerWeapon() is { Pid: 7, Range: 2, ActionPoints: 4, MinDamage: 3, MaxDamage: 10 }, "The spear wielded in the left hand.");
             var encounter = world.FindEncounter(world.Location);
             Assert(encounter != null && encounter.FoeKeys.SequenceEqual(new[] { "map3:scorpion" }), "The radscorpion (2 hexes, within PE) notices; the ant stays behind the door.");
             OpenDoor(world);

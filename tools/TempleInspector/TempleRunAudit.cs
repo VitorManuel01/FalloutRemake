@@ -22,14 +22,22 @@ internal static class TempleRunAudit
     static readonly bool Packets = Environment.GetEnvironmentVariable("TEMPLE_RUN_AI") != "provisional";
     // TEMPLE_RUN_ONLY=Narg:9:direct replays one run (a diagnosis aid; the summaries then cover that run alone).
     static readonly string? Only = Environment.GetEnvironmentVariable("TEMPLE_RUN_ONLY");
-    // TEMPLE_RUN_HAND=punch keeps the left hand's punch (FO2's start) instead of the better hand.
+    // TEMPLE_RUN_HAND=punch keeps the left hand (FO2's start: its punch, or the spear once wielded) instead of the better hand.
     static readonly string? Hand = Environment.GetEnvironmentVariable("TEMPLE_RUN_HAND");
-    static double PerTurn(WorldSession world, bool kick)
+    // Average damage of a hand's blow times the blows the AP allow.
+    static double PerTurn(WorldSession world, FalloutRemake.Runtime.Hand hand)
     {
         var stats = DerivedCombatStats.ForPlayer(world.Sheet, world.Level);
-        CombatWeapon blow = CombatWeapon.UnarmedFor(stats, world.Level, kick);
-        double average = blow.BonusDamage + (blow.MinDamage + blow.MaxDamage + stats.MeleeDamage) / 2.0;
+        CombatWeapon blow = world.HandWeapon(hand);
+        double average = blow.BonusDamage + (blow.MinDamage + blow.MaxDamage + (blow.AddsMeleeDamage ? stats.MeleeDamage : 0)) / 2.0;
         return average * (stats.MaxActionPoints / blow.ActionPoints);
+    }
+    // The player strikes with the hand that deals more per turn.
+    static void ChooseHand(WorldSession world)
+    {
+        if (Hand == "punch") return;
+        world.SetActiveHand(PerTurn(world, FalloutRemake.Runtime.Hand.Right) > PerTurn(world, FalloutRemake.Runtime.Hand.Left)
+            ? FalloutRemake.Runtime.Hand.Right : FalloutRemake.Runtime.Hand.Left);
     }
     static readonly int StartDay = int.TryParse(Environment.GetEnvironmentVariable("TEMPLE_RUN_DAY"), out int day) && day is >= 0 and <= 6 ? day : 0;
     public static object Create(GameData data)
@@ -96,7 +104,7 @@ internal static class TempleRunAudit
             premade: path => CharacterFile.Read(data.Read(path)), aiPackets: Packets ? AiPacketCatalog.Read(data.Read("data/ai.txt").Bytes) : null);
         world.StartNewGame(character);
         // Bare hands: the hand whose blow deals more per turn (average damage x blows the AP allow), as a player would pick.
-        if (Hand != "punch") world.SetUnarmedHand(PerTurn(world, true) > PerTurn(world, false));
+        ChooseHand(world);
         var random = new SeededCombatRandom(seed);
         // The creatures' wandering draws from its own stream, so fights keep their rolls apart from it.
         var wander = new SeededCombatRandom(seed + 1_000_000);
@@ -227,6 +235,10 @@ internal static class TempleRunAudit
             {
                 place = "spear"; var pot = Root(o => o.Offset == 179896); var spear = pot.Inventory.Single(e => e.Object.Header.Pid == 7).Object;
                 Walk(Approach(pot)); if (world.TakeItem(pot.Key, spear.Key, 1, false) != ItemTakeStatus.Ready) throw new Stop("Stalled", place);
+                // FO2: a picked-up weapon waits in the bag until it is put in a hand; the spear goes to the left one.
+                if (world.Wield(world.Carried.Single(c => c.Source.Key == spear.Key), FalloutRemake.Runtime.Hand.Left, false) != FalloutRemake.Runtime.HandStatus.Ready)
+                    throw new Stop("Stalled", $"{place}: wield");
+                ChooseHand(world);
             }
             CollectPowders();
             place = "elevation 1"; Exit(1);

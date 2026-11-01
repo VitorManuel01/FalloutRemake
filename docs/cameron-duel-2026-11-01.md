@@ -77,13 +77,7 @@ A auditoria mostrava o Mingan perdendo 16 de 20 duelos com o Cameron. Conferindo
 ## Troca de mão (soco e chute)
 
 - **Como no FO2:** a mão esquerda vazia soca e a direita chuta (`interface.cc`). O jogo começa com a esquerda, e trocar de mão não custa PA.
-- **No projeto:**
-  - `WorldSession.UnarmedKick` guarda a mão escolhida, que vale para o golpe desarmado dentro e fora das lutas.
-  - Na luta, o jogador tem o golpe da outra mão (`CombatantState.AlternateWeapon`) e troca com `CombatActionProposal.SwitchHand`, sem custo de PA (evento `HandSwitched`).
-  - A mão com que ele termina a luta fica escolhida, e um jogo novo volta à esquerda.
-  - O checkpoint guarda a mão, como o save do FO2. O bloco de combate leva `UnarmedKick: true` para a mão direita; a esquerda é o padrão e deixa o campo de fora, então saves antigos carregam na esquerda. Um `false` explícito é recusado.
-  - A verificação `HAND_OK` da prévia confere o X fora da luta e a mão depois de salvar, reiniciar e carregar.
-  - Na prévia, a tecla X troca a mão; o B do FO2 já abre a Bolsa. O HUD indica o golpe da outra mão.
+- **No projeto:** as duas mãos, a mão ativa, a troca com X e o checkpoint estão descritos em [slots de mão](hand-slots-2026-11-01.md). Elas substituíram o `UnarmedKick` dos primeiros commits.
 - **Na auditoria:** o jogador fica com a mão de maior dano esperado por turno (dano médio × golpes que os PA permitem). Por esse critério, a Chitsa (2 chutes de 6–8 contra 2 socos de 1–3) e o Narg chutam; o Mingan soca, porque 3 Strong Punches de 4–6 rendem mais que 2 Strong Kicks de 6–8. `TEMPLE_RUN_HAND=punch` mantém o soco.
 
 - **Auditoria com a mão escolhida** (20 sementes por variante; entre parênteses, socando sempre):

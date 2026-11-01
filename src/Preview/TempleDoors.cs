@@ -41,7 +41,7 @@ public partial class TemplePreview
         PrototypeCharacter character = _skills.Character;
         string hint = lockpick == DoorUseStatus.Ready ? "L tenta destrancar ou retrancar usando a perícia de Arrombamento." : DoorHint(lockpick);
         _hud.LockpickAction(lockpick == DoorUseStatus.Ready, door?.IsLocked != false, hint,
-            $"{CharacterLine()} · Nível {_campaign?.Level ?? 1} · XP {_campaign?.Experience ?? 0} · HP {_campaign?.HitPoints ?? 30}/{_campaign?.MaxHitPoints ?? 30}{(_campaign?.Poison is { Active: true } poison ? $" · envenenado ({poison.Level})" : "")}{(_campaign?.UnspentSkillPoints is > 0 and int points ? $" · {points} pontos de perícia [H]" : "")}{(_campaign?.PerksAvailable is > 0 ? " · perk disponível" : "")} · Personagem na elevação {_travel?.Location.Elevation ?? 0}");
+            $"{CharacterLine()} · Nível {_campaign?.Level ?? 1} · XP {_campaign?.Experience ?? 0} · HP {_campaign?.HitPoints ?? 30}/{_campaign?.MaxHitPoints ?? 30}{(_campaign?.Poison is { Active: true } poison ? $" · envenenado ({poison.Level})" : "")}{(_campaign?.UnspentSkillPoints is > 0 and int points ? $" · {points} pontos de perícia [H]" : "")}{(_campaign?.PerksAvailable is > 0 ? " · perk disponível" : "")} · Personagem na elevação {_travel?.Location.Elevation ?? 0}{HandsSuffix()}");
     }
     private void UseSelectedDoor()
     {

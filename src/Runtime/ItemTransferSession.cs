@@ -31,7 +31,10 @@ public sealed class ItemTransferSession
     // Units held by a script container (the Temple challenge chest) until the actor takes them back.
     private readonly Dictionary<string, ConsumedItem> _custody = new(StringComparer.Ordinal);
     public const int MaxUses = 1024;
-    public long Revision { get; private set; }
+    // Every change of the area's items moves the revision; the world listens to let go of items that left the hands.
+    public long Revision { get => _revision; private set { _revision = value; Changed?.Invoke(); } }
+    private long _revision;
+    public event Action? Changed;
     public ItemTransferSession(MapDocument map)
     {
         MapId = map.Prefix.Header.MapIndex;

@@ -18,16 +18,16 @@ public partial class TemplePreview
         try
         {
             ResetWalker();
-            if (_campaign!.UnarmedKick) throw new InvalidDataException("A new game does not start on the left hand.");
+            if (_campaign!.ActiveHand != Hand.Left) throw new InvalidDataException("A new game does not start on the left hand.");
             using (var x = new InputEventKey { Pressed = true, PhysicalKeycode = Key.X }) _UnhandledInput(x);
-            if (!_campaign.UnarmedKick || !_hud.NavigationStatusText.Contains("chute")) throw new InvalidDataException("X did not pick the kick: " + _hud.NavigationStatusText);
+            if (_campaign.ActiveHand != Hand.Right || !_hud.NavigationStatusText.Contains("Chute")) throw new InvalidDataException("X did not pick the kick: " + _hud.NavigationStatusText);
             string blow = _campaign.PlayerWeapon().Name;
             SaveCheckpoint(); ResetWalker();
-            if (_campaign.UnarmedKick) throw new InvalidDataException("Reset kept the right hand.");
+            if (_campaign.ActiveHand != Hand.Left) throw new InvalidDataException("Reset kept the right hand.");
             LoadCheckpoint();
-            if (!_campaign.UnarmedKick || CheckpointFile.Read(CheckpointPath).Combat?.UnarmedKick != true) throw new InvalidDataException("The checkpoint lost the right hand.");
+            if (_campaign.ActiveHand != Hand.Right || CheckpointFile.Read(CheckpointPath).Combat?.Hands?.RightActive != true) throw new InvalidDataException("The checkpoint lost the right hand.");
             using (var x = new InputEventKey { Pressed = true, PhysicalKeycode = Key.X }) _UnhandledInput(x);
-            if (_campaign.UnarmedKick) throw new InvalidDataException("X did not go back to the punch.");
+            if (_campaign.ActiveHand != Hand.Left) throw new InvalidDataException("X did not go back to the punch.");
             GD.Print($"HAND_OK: X picked the right hand ({blow}) outside a fight, kept through save/reset/load, and went back to the punch.");
         }
         finally

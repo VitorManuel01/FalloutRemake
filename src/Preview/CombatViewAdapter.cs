@@ -246,18 +246,6 @@ public partial class TemplePreview
         ApplyCombatResult(result);
     }
 
-    // Out of a fight: choose the hand bare hands will strike with.
-    private void SwitchUnarmedHand()
-    {
-        if (_campaign == null || InCombat) return;
-        _campaign.SetUnarmedHand(!_campaign.UnarmedKick);
-        CombatWeapon weapon = _campaign.PlayerWeapon();
-        int meleeDamage = DerivedCombatStats.ForPlayer(_campaign.Sheet, _campaign.Level).MeleeDamage;
-        string hand = _campaign.UnarmedKick ? "direita: chute" : "esquerda: soco";
-        NavigationStatus(weapon.IsItem ? $"Mão {hand} escolhida · a arma carregada segue em uso"
-            : $"Mão {hand} · {weapon.Name} ({weapon.ActionPoints} AP, dano {weapon.BonusDamage + weapon.MinDamage}–{weapon.BonusDamage + weapon.MaxDamage + meleeDamage})");
-    }
-
     private void UseCombatHealing()
     {
         if (_combat?.Active is not { IsPlayer: true } player) { NavigationStatus("Aguarde: é o turno da criatura."); return; }
@@ -469,6 +457,14 @@ public partial class TemplePreview
             MapObject powder = pot.Inventory.Select(e => e.Object).Single(i => i.Header.Pid == HealingDrugProfile.Pid && i.Header.Id == 106);
             _campaign.Current.Items.Restore(new[] { new TakenItem(spear.Owner.Key, spear.Item.Key, 1), new TakenItem(pot.Key, powder.Key, 1) });
             if (_campaign.HealingDoses != 1) throw new InvalidDataException("The original Healing Powder is not a supported dose.");
+            // Carrying is not wielding (FO2's hand slots): the bag puts the spear into the left hand.
+            if (_campaign.PlayerWeapon().Pid != null) throw new InvalidDataException("A carried spear was wielded without the bag.");
+            OpenBag();
+            if (_bag?.Select(_campaign.Carried.Single(c => c.Source.Key == spear.Item.Key)) != true) throw new InvalidDataException("The spear is missing from the bag.");
+            ((Button)_bag.FindChild("WieldLeftAction", true, false)).EmitSignal(Button.SignalName.Pressed);
+            CloseBag();
+            if (_campaign.Held(Hand.Left)?.ItemKey != spear.Item.Key || _campaign.PlayerWeapon().Pid != 7 || !HandsLine().Contains("(ativa)"))
+                throw new InvalidDataException("The bag did not put the spear into the left hand.");
             var ants = _layout.Objects.Where(o => o.Source.Header.Pid == 0x0100017E && o.Source.Header.Elevation == 0).ToArray();
             // Walk toward the first reachable ant with encounters on: the actor stops on a whole hex once the ant sees it.
             int target = -1;
@@ -595,7 +591,7 @@ public partial class TemplePreview
                 throw new InvalidDataException("Loading checkpoint v11 lost the corpse, XP, HP or the used powder.");
             ResetWalker();
             MapLayoutWriter.Verify(_map!);
-            GD.Print($"COMBAT_SLICE_OK: PID 0x{ant.Source.Header.Pid:X8} {ant.Source.Key} saw the actor at hex {hexBefore} ({foes.Length} creature(s) joined, driven by their ai.txt packets), carried spear wielded, Healing Powder taken with H for 4 AP and used up on commit, animated creature turn awaited, seeded fight won in {rounds + 1}+ player turns, {reward} XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v11 save/reset/load round trip; source bytes verified.");
+            GD.Print($"COMBAT_SLICE_OK: PID 0x{ant.Source.Header.Pid:X8} {ant.Source.Key} saw the actor at hex {hexBefore} ({foes.Length} creature(s) joined, driven by their ai.txt packets), spear put into the left hand from the bag, Healing Powder taken with H for 4 AP and used up on commit, animated creature turn awaited, seeded fight won in {rounds + 1}+ player turns, {reward} XP once, corpse freed its hex, world actions and mid-fight save refused, checkpoint v11 save/reset/load round trip; source bytes verified.");
         }
         finally { _forceCombatAnimation = false; _combatEncounters = encounters; _combatSeed = null; DiscardCombat(); SetNavigationGrid(grid); _checkingNavigation = false; }
     }

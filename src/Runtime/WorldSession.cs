@@ -152,6 +152,7 @@ public sealed partial class WorldSession
         doors.ProjectObject = source => EffectiveObject(id, source); doors.ProjectDoor = key => TempleGate(id, key);
         doors.AllowTempleExitUse = key => id == 3 && CanUseTempleExit(key);
         var items = new ItemTransferSession(map) { CorpseHex = key => _defeated.TryGetValue((id, key), out DefeatedCritter? dead) ? dead.Hex : null };
+        items.Changed += ReleaseHands;
         area = new WorldArea(map, doors, new TempleTravel(map, doors), items, scenery);
         _areas.Add(id, area); return area;
     }
@@ -271,6 +272,7 @@ public sealed partial class WorldSession
         candidate.RestoreCombat(checkpoint.Combat, checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed);
         foreach (var (area, rows) in bodyLoot) area.Items.RestoreBodyLoot(rows);
         candidate.RestoreTempleDuel(checkpoint.Duel);
+        candidate.RestoreHands(checkpoint.Combat?.Hands);
         candidate.RestoreSkills(checkpoint.Skills);
         candidate.ValidateTempleExit();
         candidate.ValidateUses();

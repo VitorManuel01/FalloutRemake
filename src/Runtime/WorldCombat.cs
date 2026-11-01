@@ -148,14 +148,6 @@ public sealed partial class WorldSession
         return CombatCommitStatus.Ready;
     }
 
-    /// <summary>The hand whose blow bare hands strike with: false the left (punch, FO2's start), true the right (kick).</summary>
-    public bool UnarmedKick { get; private set; }
-    public void SetUnarmedHand(bool kick) => UnarmedKick = kick;
-    // Bare hands can switch to the other hand's blow in a fight; a carried weapon has no second hand here.
-    private CombatWeapon? OtherHand(CombatWeapon weapon, DerivedCombatStats stats) =>
-        weapon.IsItem || weapon.AttackType != WeaponAttackType.Unarmed ? null : CombatWeapon.UnarmedFor(stats, Level, !weapon.Kick);
-    // The hand the player ended a fight with stays chosen.
-    private void KeepHand(CombatantState player) { if (!player.Weapon.IsItem && player.Weapon.AttackType == WeaponAttackType.Unarmed) UnarmedKick = player.Weapon.Kick; }
 
     /// <summary>Carried Healing Powder units in a fixed order (map, owner, source key): the order fights use them up.</summary>
     private CarriedItem[] HealingCarried() => Carried.Where(c => _areas[c.Map].Items.PrototypeOf(c.Source) is var p && HealingDrugProfile.Supported(p))
@@ -165,12 +157,12 @@ public sealed partial class WorldSession
     private void ResetCombat()
     {
         _defeated.Clear(); _survivors.Clear(); _combatExperience = 0; _playerDamage = 0; _poison = PoisonState.None; _activeFight = null; ResetWandering();
-        _gameTime = CriticalRules.GameStartTicks; _playerCrippled = DamageFlags.None; UnarmedKick = false;
+        _gameTime = CriticalRules.GameStartTicks; _playerCrippled = DamageFlags.None; ResetHands();
     }
 
     private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints, _survivors.Count == 0 ? null : Survivors.ToArray(),
         _poison.Active ? new SavedPoison(_poison.Level, _poison.TicksLeft) : null, _gameTime == CriticalRules.GameStartTicks ? null : _gameTime,
-        _playerCrippled == DamageFlags.None ? null : (int)_playerCrippled, UnarmedKick ? true : null);
+        _playerCrippled == DamageFlags.None ? null : (int)_playerCrippled, CaptureHands());
 
     // Atomic with the rest of Restore (runs on the candidate session). Every corpse must be an encounter critter of a
     // restored area lying on geometry it could reach, and the XP must be exactly what those kills award.
@@ -236,9 +228,6 @@ public sealed partial class WorldSession
         if (saved.PlayerCrippled is int crippled && (crippled == 0 || (crippled & ~(int)DamageFlags.Crippled) != 0))
             throw new InvalidDataException("Checkpoint crippled limbs are malformed.");
         _playerCrippled = (DamageFlags)(saved.PlayerCrippled ?? 0);
-        // The left hand is the default and is stored by leaving the field out.
-        if (saved.UnarmedKick == false) throw new InvalidDataException("Checkpoint stores the default hand explicitly.");
-        UnarmedKick = saved.UnarmedKick == true;
     }
 
     // Hostile temple creatures: Giant Ant (PID 382) and Radscorpion (PID 5). Dumar keeps his Speech role.
@@ -254,24 +243,6 @@ public sealed partial class WorldSession
     private AiPacket? Packet(int number) => number >= 0 && _aiPackets?.TryGetValue(number, out AiPacket? packet) == true ? packet
         : _aiPackets == null || number < 0 ? null : throw new InvalidDataException($"ai.txt has no packet {number}.");
 
-    /// <summary>
-    /// Weapon the player fights with: the carried hand weapon (melee or unarmed primary attack) with the highest average
-    /// damage, ties by PID then source key; bare hands when none is carried. Ranged weapons wait for ammunition tracking.
-    /// There is no equip slot yet, so carrying is wielding.
-    /// </summary>
-    public CombatWeapon PlayerWeapon()
-    {
-        // Bare hands strike with the best blow the sheet allows from the chosen hand: left punches (CE's default), right kicks.
-        CombatWeapon best = CombatWeapon.UnarmedFor(DerivedCombatStats.ForPlayer(Sheet, Level), Level, UnarmedKick);
-        foreach (CarriedItem item in Carried.OrderBy(i => i.Source.Header.Pid).ThenBy(i => i.Source.Key, StringComparer.Ordinal))
-        {
-            if (!_areas.TryGetValue(item.Map, out WorldArea? area)
-                || area.Map.Prototypes.FirstOrDefault(p => p.Pid == item.Source.Header.Pid) is not { Type: 0, Subtype: WeaponPrototypeData.Subtype } prototype) continue;
-            CombatWeapon weapon = CombatWeapon.Primary($"PID {prototype.Pid}", WeaponPrototypeData.Read(prototype));
-            if (!weapon.IsRanged && weapon.MinDamage + weapon.MaxDamage > best.MinDamage + best.MaxDamage + 2 * best.BonusDamage) best = weapon;
-        }
-        return best;
-    }
     /// <summary>
     /// Hostile encounter critters that see the player (<see cref="CritterSight.Sees"/>, the obj_can_see_obj test their
     /// critter_p_proc makes before attacking), nearest first. CE starts the fight even when the critter has no way to the
@@ -311,7 +282,7 @@ public sealed partial class WorldSession
         var stats = DerivedCombatStats.ForPlayer(Sheet, Level);
         var combatants = new List<CombatantState> { new("player", Character.Name, null, 0, true, Location.Hex, Location.Elevation, stats,
             playerWeapon, HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled,
-            AlternateWeapon = OtherHand(playerWeapon, stats) } };
+            AlternateWeapon = HandWeapon(Other(ActiveHand)), RightHandActive = ActiveHand == Hand.Right } };
         foreach (string key in encounter.FoeKeys)
         {
             if (!roots.TryGetValue(key, out MapObject? source) || IsDefeated(CurrentMap, key)) throw new InvalidOperationException("Encounter critter is no longer available.");

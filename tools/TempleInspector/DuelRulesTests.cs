@@ -1,5 +1,6 @@
 using FalloutRemake.Geometry;
 using FalloutRemake.Import;
+using FalloutRemake.Runtime;
 using FalloutRemake.Runtime.Combat;
 
 internal static class DuelRulesTests
@@ -15,6 +16,24 @@ internal static class DuelRulesTests
     }
     static CombatSession Fight(CombatantState hero, CombatantState ant, string initiator, params int[] rolls) =>
         new(new[] { hero, ant }, new HexNavigation(Array.Empty<MapObject>(), 0), new CombatTests.Scripted(rolls), initiator);
+
+    // WorldCombatTests' map 3 with a pot holding the spear and an unloaded pistol, both carried.
+    static MapDocument WorldWithSpearMap()
+    {
+        MapObject Item(string key, int pid) => CombatTests.Blocker(-1, 0, pid, key) with { Subtype = 3, Header = CombatTests.Blocker(-1, 0, pid, key).Header with { Tile = -1 } };
+        var pot = CombatTests.Blocker(20000 + 199 - 97, 0, 0x000000FA, "map3:pot") with { Subtype = 1, InventoryCount = 2, State = new Dictionary<string, int> { ["flags"] = 0 },
+            Inventory = new[] { new InventoryEntry(0, 1, Item("map3:spear", 7)), new InventoryEntry(0, 1, Item("map3:pistol", 8)) } };
+        var baseMap = WorldCombatTests.Map();
+        return baseMap with { ObjectLayers = new[] { baseMap.ObjectLayers[0] with { Objects = baseMap.ObjectLayers[0].Objects.Append(pot).ToArray(),
+                DeclaredCount = baseMap.ObjectLayers[0].Objects.Length + 1 } },
+            Prototypes = baseMap.Prototypes.Append(CombatTests.Spear()).Append(CombatTests.Pistol()).Append(CombatTests.Item(0xFA, 1, 65, 0, _ => { })).ToArray() };
+    }
+    static WorldSession WorldWithSpear()
+    {
+        var world = new WorldSession(_ => WorldWithSpearMap(), new[] { 3, 126 });
+        world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:pistol", 1), new TakenItem("map3:pot", "map3:spear", 1) });
+        return world;
+    }
 
     public static void Run(Action<string, Action> check)
     {
@@ -56,39 +75,61 @@ internal static class DuelRulesTests
             new CombatSession(new[] { Hero(hammer, hammerStats), Ant() }, new HexNavigation(Array.Empty<MapObject>(), 0), plain, "player").Execute(CombatActionProposal.Attack("player", "ant"));
             Assert(plain.Left == 0, "6 is above the bonus: hit, bonus roll, damage roll.");
         });
-        check("bare hands switch between the left hand's punch and the right hand's kick for no AP, and the world keeps the hand chosen", () =>
+        check("bare hands switch between the left hand's punch and the right hand's kick for no AP", () =>
         {
             var mingan = DerivedCombatStats.ForCharacter(Special.Neutral with { Strength = 5, Agility = 10 });
             var hero = new CombatantState("player", "p", null, 0, true, Centre, 0, mingan, CombatWeapon.UnarmedFor(mingan, 1), mingan.MaxHitPoints)
                 { AlternateWeapon = CombatWeapon.UnarmedFor(mingan, 1, kick: true) };
             var fight = Fight(hero, Ant(), "player");
             var switched = fight.Execute(CombatActionProposal.SwitchHand("player"));
-            Assert(switched.Status == CombatActionStatus.Ready && switched.Events.Single() is HandSwitched { Blow: "Strong Kick" } && hero.Weapon.Kick
+            Assert(switched.Status == CombatActionStatus.Ready && switched.Events.Single() is HandSwitched { Blow: "Strong Kick" } && hero.Weapon.Kick && hero.RightHandActive
                 && hero.AlternateWeapon!.Name == "Strong Punch" && hero.ActionPoints == 10, "Strong Kick, no AP spent.");
             Assert(fight.Preview(CombatActionProposal.Attack("player", "ant")).ActionPointCost == 4, "The kick costs 4 AP.");
-            var armed = Fight(Hero(WorldCombatTests.Spear()), Ant(), "player");
-            Assert(armed.Preview(CombatActionProposal.SwitchHand("player")).Status == CombatActionStatus.NoItem, "A carried weapon has no other hand here.");
-            var world = new FalloutRemake.Runtime.WorldSession(_ => WorldCombatTests.Map(), new[] { 3, 126 });
-            Assert(!world.UnarmedKick && world.PlayerWeapon() is { Kick: false, Name: "Desarmado" }, "The left hand's punch to start.");
-            world.SetUnarmedHand(true);
+            var single = Fight(Hero(WorldCombatTests.Spear()), Ant(), "player");
+            Assert(single.Preview(CombatActionProposal.SwitchHand("player")).Status == CombatActionStatus.NoItem, "Without another hand's blow there is nothing to switch to.");
+        });
+        check("FO2's hand slots: a carried melee weapon is wielded in a hand, the active hand strikes, an empty hand punches or kicks, and a hand lets go of an item that leaves", () =>
+        {
+            var world = WorldWithSpear();
+            CarriedItem spear = world.Carried.Single(c => c.Source.Header.Pid == 7), pistol = world.Carried.Single(c => c.Source.Header.Pid == 8);
+            Assert(world.ActiveHand == Hand.Left && world.PlayerWeapon() is { Pid: null, Kick: false, Name: "Desarmado" } && world.HandWeapon(Hand.Right).Kick,
+                "Carrying is not wielding: empty hands punch (left) and kick (right).");
+            Assert(world.Wield(pistol, Hand.Left, false) == HandStatus.Unsupported && world.Wield(spear, Hand.Left, true) == HandStatus.Busy, "No firearm without ammunition; not while walking.");
+            Assert(world.Wield(spear, Hand.Left, false) == HandStatus.Ready && world.PlayerWeapon() is { Pid: 7, Range: 2, ActionPoints: 4 } && world.Held(Hand.Left)!.ItemKey == "map3:spear",
+                "The spear in the left hand.");
+            Assert(world.Wield(spear, Hand.Right, false) == HandStatus.Ready && world.Held(Hand.Left) == null && world.HandWeapon(Hand.Left).Name == "Desarmado",
+                "A single spear moves to the right hand.");
+            world.SetActiveHand(Hand.Right);
             var opened = world.BeginCombat(WorldCombatTests.NearAnt(world, "map3:far-ant"), world.PlayerWeapon(), new CombatTests.Scripted());
             var player = opened.Get("player");
-            Assert(player.Weapon.Kick && player.AlternateWeapon is { Kick: false }, "The fight opens with the kick, the punch in the other hand.");
+            Assert(player.Weapon.Pid == 7 && player.RightHandActive && player.AlternateWeapon is { Pid: null, Kick: false }, "The fight opens with the spear, the punch in the other hand.");
             for (int guard = 0; guard < 10 && opened.Active != player; guard++) CombatAi.TakeTurn(opened);
             opened.Execute(CombatActionProposal.SwitchHand("player")); opened.Execute(CombatActionProposal.LeaveCombat("player"));
-            Assert(world.CommitCombat(opened) == FalloutRemake.Runtime.CombatCommitStatus.Ready && !world.UnarmedKick, "The hand it left with stays chosen.");
-            // The checkpoint keeps the right hand; the left one is the default and leaves the field out.
-            FalloutRemake.Runtime.WorldSession Load(FalloutRemake.Runtime.WorldCheckpoint checkpoint) =>
-                FalloutRemake.Runtime.WorldSession.Restore(_ => WorldCombatTests.Map(), new[] { 3, 126 }, checkpoint, "catalog");
-            Assert(world.Capture("catalog").Combat!.UnarmedKick == null, "Left hand: no field.");
-            world.SetUnarmedHand(true);
-            var saved = FalloutRemake.Runtime.CheckpointFile.Decode(FalloutRemake.Runtime.CheckpointFile.Encode(world.Capture("catalog")));
-            Assert(saved.Combat!.UnarmedKick == true && Load(saved) is { UnarmedKick: true } loaded && loaded.PlayerWeapon().Kick, "The kick comes back with the save.");
-            try { Load(saved with { Combat = saved.Combat with { UnarmedKick = false } }); throw new Exception("An explicit left hand was accepted."); }
-            catch (InvalidDataException) { }
-            Assert(!Load(saved with { Combat = saved.Combat with { UnarmedKick = null } }).UnarmedKick, "Older saves load on the left hand.");
+            Assert(world.CommitCombat(opened) == CombatCommitStatus.Ready && world.ActiveHand == Hand.Left && world.Held(Hand.Right) != null, "The hand it left with stays active.");
+            Assert(world.Unwield(Hand.Right, false) == HandStatus.Ready && world.Held(Hand.Right) == null && world.Unwield(Hand.Right, false) == HandStatus.NoItem, "Put away.");
+            world.Wield(spear, Hand.Left, false);
+            world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:pistol", 1) });
+            Assert(world.Held(Hand.Left) == null && world.PlayerWeapon().Pid == null, "The spear left the inventory, and the hand.");
+        });
+        check("the checkpoint keeps the held items and the active hand, leaves them out at the defaults and refuses forged hands", () =>
+        {
+            var world = WorldWithSpear();
+            WorldSession Load(WorldCheckpoint checkpoint) => WorldSession.Restore(_ => WorldWithSpearMap(), new[] { 3, 126 }, checkpoint, "catalog");
+            Assert(world.Capture("catalog").Combat!.Hands == null, "Defaults: no field.");
+            CarriedItem spear = world.Carried.Single(c => c.Source.Header.Pid == 7);
+            world.Wield(spear, Hand.Left, false); world.SetActiveHand(Hand.Right);
+            var saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
+            Assert(saved.Combat!.Hands == new SavedHands(new HeldItem(3, "map3:spear"), null, true), "Spear left, right hand active.");
+            var loaded = Load(saved);
+            Assert(loaded.Held(Hand.Left) == new HeldItem(3, "map3:spear") && loaded.ActiveHand == Hand.Right && loaded.PlayerWeapon().Kick, "Both come back.");
+            SavedHands hands = saved.Combat.Hands!;
+            foreach (SavedHands bad in new[] { hands with { RightActive = false }, new SavedHands(null, null, null), hands with { Left = new HeldItem(3, "map3:pistol") },
+                hands with { Left = new HeldItem(3, "map3:ghost") }, hands with { Right = hands.Left } })
+                try { Load(saved with { Combat = saved.Combat with { Hands = bad } }); throw new Exception($"Forged hands accepted: {bad}."); }
+                catch (InvalidDataException) { }
+            Assert(Load(saved with { Combat = saved.Combat with { Hands = null } }) is { ActiveHand: Hand.Left } older && older.Held(Hand.Left) == null, "Older saves: empty hands, left active.");
             world.Reset();
-            Assert(!world.UnarmedKick, "A new game starts with the left hand.");
+            Assert(world.ActiveHand == Hand.Left && world.Held(Hand.Left) == null, "A new game starts empty-handed on the left.");
         });
     }
 }
