@@ -129,6 +129,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckPoison();
 				if (_test) await CheckWander();
 				if (_test) await CheckCriticals();
+				if (_test) await CheckHand();
 				if (_test) await CheckLockpick();
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();

@@ -16,9 +16,10 @@ public sealed record WorldCheckpoint(int Version, string Profile, string Catalog
 /// <summary>
 /// GameTime (optional, inside v13): the game clock in CE ticks, absent at the start time; criticals wait for day 1.
 /// PlayerCrippled (optional, inside v13): the dude's crippled limbs (CE damage flags), which outlast fights.
+/// UnarmedKick (optional, inside v13): true when bare hands strike with the right hand's kick; absent for the left hand.
 /// </summary>
 public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defeated, [property: JsonRequired] int Experience, int? PlayerHitPoints,
-    SurvivingCritter[]? Survivors = null, SavedPoison? Poison = null, long? GameTime = null, int? PlayerCrippled = null);
+    SurvivingCritter[]? Survivors = null, SavedPoison? Poison = null, long? GameTime = null, int? PlayerCrippled = null, bool? UnarmedKick = null);
 /// <summary>The dude's poison (optional, inside v13): level and game ticks until the next poison event.</summary>
 public sealed record SavedPoison([property: JsonRequired] int Level, [property: JsonRequired] int TicksLeft);
 

@@ -170,7 +170,7 @@ public sealed partial class WorldSession
 
     private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints, _survivors.Count == 0 ? null : Survivors.ToArray(),
         _poison.Active ? new SavedPoison(_poison.Level, _poison.TicksLeft) : null, _gameTime == CriticalRules.GameStartTicks ? null : _gameTime,
-        _playerCrippled == DamageFlags.None ? null : (int)_playerCrippled);
+        _playerCrippled == DamageFlags.None ? null : (int)_playerCrippled, UnarmedKick ? true : null);
 
     // Atomic with the rest of Restore (runs on the candidate session). Every corpse must be an encounter critter of a
     // restored area lying on geometry it could reach, and the XP must be exactly what those kills award.
@@ -236,6 +236,9 @@ public sealed partial class WorldSession
         if (saved.PlayerCrippled is int crippled && (crippled == 0 || (crippled & ~(int)DamageFlags.Crippled) != 0))
             throw new InvalidDataException("Checkpoint crippled limbs are malformed.");
         _playerCrippled = (DamageFlags)(saved.PlayerCrippled ?? 0);
+        // The left hand is the default and is stored by leaving the field out.
+        if (saved.UnarmedKick == false) throw new InvalidDataException("Checkpoint stores the default hand explicitly.");
+        UnarmedKick = saved.UnarmedKick == true;
     }
 
     // Hostile temple creatures: Giant Ant (PID 382) and Radscorpion (PID 5). Dumar keeps his Speech role.

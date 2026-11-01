@@ -77,7 +77,17 @@ internal static class DuelRulesTests
             for (int guard = 0; guard < 10 && opened.Active != player; guard++) CombatAi.TakeTurn(opened);
             opened.Execute(CombatActionProposal.SwitchHand("player")); opened.Execute(CombatActionProposal.LeaveCombat("player"));
             Assert(world.CommitCombat(opened) == FalloutRemake.Runtime.CombatCommitStatus.Ready && !world.UnarmedKick, "The hand it left with stays chosen.");
-            world.SetUnarmedHand(true); world.Reset();
+            // The checkpoint keeps the right hand; the left one is the default and leaves the field out.
+            FalloutRemake.Runtime.WorldSession Load(FalloutRemake.Runtime.WorldCheckpoint checkpoint) =>
+                FalloutRemake.Runtime.WorldSession.Restore(_ => WorldCombatTests.Map(), new[] { 3, 126 }, checkpoint, "catalog");
+            Assert(world.Capture("catalog").Combat!.UnarmedKick == null, "Left hand: no field.");
+            world.SetUnarmedHand(true);
+            var saved = FalloutRemake.Runtime.CheckpointFile.Decode(FalloutRemake.Runtime.CheckpointFile.Encode(world.Capture("catalog")));
+            Assert(saved.Combat!.UnarmedKick == true && Load(saved) is { UnarmedKick: true } loaded && loaded.PlayerWeapon().Kick, "The kick comes back with the save.");
+            try { Load(saved with { Combat = saved.Combat with { UnarmedKick = false } }); throw new Exception("An explicit left hand was accepted."); }
+            catch (InvalidDataException) { }
+            Assert(!Load(saved with { Combat = saved.Combat with { UnarmedKick = null } }).UnarmedKick, "Older saves load on the left hand.");
+            world.Reset();
             Assert(!world.UnarmedKick, "A new game starts with the left hand.");
         });
     }

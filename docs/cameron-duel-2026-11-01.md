@@ -81,6 +81,8 @@ A auditoria mostrava o Mingan perdendo 16 de 20 duelos com o Cameron. Conferindo
   - `WorldSession.UnarmedKick` guarda a mão escolhida, que vale para o golpe desarmado dentro e fora das lutas.
   - Na luta, o jogador tem o golpe da outra mão (`CombatantState.AlternateWeapon`) e troca com `CombatActionProposal.SwitchHand`, sem custo de PA (evento `HandSwitched`).
   - A mão com que ele termina a luta fica escolhida, e um jogo novo volta à esquerda.
+  - O checkpoint guarda a mão, como o save do FO2. O bloco de combate leva `UnarmedKick: true` para a mão direita; a esquerda é o padrão e deixa o campo de fora, então saves antigos carregam na esquerda. Um `false` explícito é recusado.
+  - A verificação `HAND_OK` da prévia confere o X fora da luta e a mão depois de salvar, reiniciar e carregar.
   - Na prévia, a tecla X troca a mão; o B do FO2 já abre a Bolsa. O HUD indica o golpe da outra mão.
 - **Na auditoria:** o jogador fica com a mão de maior dano esperado por turno (dano médio × golpes que os PA permitem). Por esse critério, a Chitsa (2 chutes de 6–8 contra 2 socos de 1–3) e o Narg chutam; o Mingan soca, porque 3 Strong Punches de 4–6 rendem mais que 2 Strong Kicks de 6–8. `TEMPLE_RUN_HAND=punch` mantém o soco.
 
@@ -104,6 +106,5 @@ A auditoria mostrava o Mingan perdendo 16 de 20 duelos com o Cameron. Conferindo
 
 ## Diferenças conhecidas
 
-- **Mão no checkpoint.** A mão escolhida não vai no checkpoint: carregar um jogo volta à mão esquerda. O FO2 guarda a mão no save.
 - **Arma carregada.** Com uma arma carregada não há troca de mão. O projeto ainda não tem slots de mão e trata carregar como empunhar.
 - **Modos secundários.** Os golpes secundários (Chop Punch e outros) exigem nível 5 ou mais e não são usados.

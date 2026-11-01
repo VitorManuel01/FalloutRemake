@@ -199,6 +199,8 @@ public partial class PreviewHud : CanvasLayer
     { _save.Disabled = !saveAvailable; _load.Disabled = !loadAvailable; }
     public void Counts(string text) => _counts.Text = text;
     public void Elevation(int elevation) => _elevation.Select(elevation);
+    // The last status message, whatever route hint covers it.
+    public string NavigationStatusText => _navigationMessage;
     public void Navigation(bool available, bool walkingMode, string status)
     {
         _walkMode.Disabled = !available; _resetWalker.Disabled = false;
