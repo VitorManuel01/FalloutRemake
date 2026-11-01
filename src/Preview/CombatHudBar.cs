@@ -9,7 +9,9 @@ public partial class PreviewHud
     private readonly PanelContainer _combatBar = new() { Name = "CombatBar", Visible = false, MouseFilter = Control.MouseFilterEnum.Stop };
     private readonly Label _combatTitle = new(), _combatStats = new(), _combatPreview = new(), _combatLog = new();
     private readonly Button _combatEnd = new() { Name = "CombatEndTurnAction", Text = "Encerrar turno [Espaço]" };
-    public Action? CombatEndTurnRequested;
+    private readonly Button _combatLeave = new() { Name = "CombatLeaveAction", Text = "Sair do combate [Enter]",
+        TooltipText = "Só quando nenhuma criatura percebe você: mais de PE × 5 hexes à frente dela e mais de PE × 2 em volta." };
+    public Action? CombatEndTurnRequested, CombatLeaveRequested;
     public string CombatPreviewText => _combatPreview.Text;
 
     private void AddCombatBar(Control root)
@@ -19,6 +21,7 @@ public partial class PreviewHud
         var column = new VBoxContainer(); column.AddThemeConstantOverride("separation", 4); _combatBar.AddChild(column);
         var header = new HBoxContainer(); column.AddChild(header);
         _combatTitle.AddThemeColorOverride("font_color", new Color("f2b38a")); _combatTitle.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; header.AddChild(_combatTitle);
+        _combatLeave.Pressed += () => CombatLeaveRequested?.Invoke(); header.AddChild(_combatLeave);
         _combatEnd.Pressed += () => CombatEndTurnRequested?.Invoke(); header.AddChild(_combatEnd);
         foreach (Label label in new[] { _combatStats, _combatPreview, _combatLog })
         {
@@ -29,7 +32,7 @@ public partial class PreviewHud
 
     public void Combat(bool visible, string title, string stats, bool playerTurn)
     {
-        _combatBar.Visible = visible; _combatTitle.Text = title; _combatStats.Text = stats; _combatEnd.Disabled = !playerTurn;
+        _combatBar.Visible = visible; _combatTitle.Text = title; _combatStats.Text = stats; _combatEnd.Disabled = !playerTurn; _combatLeave.Disabled = !playerTurn;
         if (!visible) { _combatPreview.Text = ""; _combatLog.Text = ""; }
         if (!playerTurn) _combatPreview.Text = "A criatura está agindo…";
     }

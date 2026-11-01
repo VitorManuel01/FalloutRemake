@@ -5,11 +5,11 @@ namespace FalloutRemake.Runtime.Combat;
 /// <summary>CE damage-type order, shared by weapon PRO damageType and critter DT/DR stat blocks.</summary>
 public enum DamageType { Normal, Laser, Fire, Plasma, Electrical, Emp, Explosion }
 public enum LifeStatus { Active, Dead }
-public enum CombatActionKind { Move, Attack, EndTurn, UseHealing }
+public enum CombatActionKind { Move, Attack, EndTurn, UseHealing, LeaveCombat }
 public enum CombatActionStatus
 {
     Ready, CombatOver, NotActive, UnknownCombatant, InvalidTarget, AlreadyThere, Unreachable,
-    NotEnoughActionPoints, OutOfRange, OtherElevation, NoItem
+    NotEnoughActionPoints, OutOfRange, OtherElevation, NoItem, EnemiesAware
 }
 
 /// <summary>What a combatant wants to do; previewed and executed through the same rules.</summary>
@@ -20,6 +20,8 @@ public sealed record CombatActionProposal(string ActorId, CombatActionKind Kind,
     public static CombatActionProposal EndTurn(string actor) => new(actor, CombatActionKind.EndTurn);
     /// <summary>Takes one carried healing dose (Healing Powder) through the inventory.</summary>
     public static CombatActionProposal UseHealing(string actor) => new(actor, CombatActionKind.UseHealing);
+    /// <summary>The player's Enter (CE combatAttemptEnd): ends the fight when no enemy still perceives the player.</summary>
+    public static CombatActionProposal LeaveCombat(string actor) => new(actor, CombatActionKind.LeaveCombat);
 }
 
 /// <summary>Every term of the hit chance. Raw is the CE value; Chance is the project's 5–95 clamp (roadmap COM-003).</summary>
@@ -47,6 +49,8 @@ public sealed record HealingUsed(string CombatantId, int Rolled, int Healed, int
 public sealed record CombatantYielded(string CombatantId, int HitPoints) : CombatEvent;
 public sealed record CombatantDied(string CombatantId, string KillerId, int Experience) : CombatEvent;
 public sealed record TurnEnded(string CombatantId, int UnusedActionPoints, int BonusArmorClass) : CombatEvent;
+/// <summary>The player ended the fight with enemies still standing (Enter); the fight then ends without a winner.</summary>
+public sealed record CombatLeft(string CombatantId, string[] Survivors) : CombatEvent;
 public sealed record CombatEnded(int? WinningTeam, int ExperienceAwarded) : CombatEvent;
 
 public sealed record CombatActionResult(CombatActionStatus Status, CombatActionPreview Preview, CombatEvent[] Events);

@@ -48,6 +48,15 @@ public sealed class CombatSession : ICombatSession
     public CombatTurnState Turn => new(_round, Active?.Id, (string[])_order.Clone(), _over, _winner, _experience);
     public CombatantState Get(string id) => _combatants.FirstOrDefault(c => c.Id == id)
         ?? throw new KeyNotFoundException($"Unknown combatant {id}.");
+    /// <summary>The player left the fight with enemies standing (CombatLeft); Turn.WinningTeam is then null.</summary>
+    public bool Left { get; private set; }
+
+    /// <summary>
+    /// Enemies of <paramref name="player"/> that still perceive it (CE _combatai_want_to_stop is false while the danger source
+    /// is within perception): PE x 5 in their front cone, PE x 2 around, with no line of sight involved.
+    /// </summary>
+    public IEnumerable<CombatantState> AwareEnemies(CombatantState player) => _combatants.Where(c => c.InFight && c.Team != player.Team
+        && CritterSight.WithinPerception(c.Hex, c.Rotation, false, c.Stats.Special.Perception, player.Hex, inCombat: true));
 
     public CombatActionPreview Preview(CombatActionProposal proposal)
     {
@@ -68,6 +77,9 @@ public sealed class CombatSession : ICombatSession
                 if (path == null) return CombatActionPreview.Refused(CombatActionStatus.Unreachable, ap);
                 int cost = path.Length * CombatMovement.ActionPointsPerHex;
                 return new(cost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready, cost, ap - cost, path, null, null);
+            case CombatActionKind.LeaveCombat:
+                if (!actor.IsPlayer) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
+                return new(AwareEnemies(actor).Any() ? CombatActionStatus.EnemiesAware : CombatActionStatus.Ready, 0, ap, Array.Empty<int>(), null, null);
             case CombatActionKind.UseHealing:
                 if (actor.HealingDoses <= 0) return CombatActionPreview.Refused(CombatActionStatus.NoItem, ap);
                 return new(InventoryActionPoints > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready,
@@ -96,8 +108,16 @@ public sealed class CombatSession : ICombatSession
         {
             case CombatActionKind.EndTurn:
                 EndTurn(actor); break;
+            case CombatActionKind.LeaveCombat:
+                string[] survivors = _combatants.Where(c => c.InFight && c.Team != actor.Team).Select(c => c.Id).ToArray();
+                _log.Add(new CombatLeft(actor.Id, survivors));
+                _over = true; _winner = null; Left = true;
+                _log.Add(new CombatEnded(null, _experience));
+                break;
             case CombatActionKind.Move:
                 int from = actor.Hex;
+                // The walk animation leaves the mover facing along its last step.
+                actor.Rotation = OriginalStraightPath.RotationTo(preview.Path.Length > 1 ? preview.Path[^2] : from, preview.Path[^1]);
                 actor.Hex = preview.Path[^1]; actor.ActionPoints -= preview.ActionPointCost;
                 _log.Add(new CombatantMoved(actor.Id, from, actor.Hex, (int[])preview.Path.Clone(), preview.ActionPointCost));
                 break;
@@ -110,6 +130,8 @@ public sealed class CombatSession : ICombatSession
                 break;
             case CombatActionKind.Attack:
                 CombatantState target = Get(proposal.TargetId!);
+                // _ai_attack and the dude's attack both turn toward the target first (animationRegisterRotateToTile).
+                actor.Rotation = OriginalStraightPath.RotationTo(actor.Hex, target.Hex);
                 actor.ActionPoints -= preview.ActionPointCost;
                 int roll = _random.Between(1, 100);
                 bool hit = CombatResolver.Hits(preview.ToHit!.Chance, roll);

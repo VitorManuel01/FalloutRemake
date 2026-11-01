@@ -26,6 +26,17 @@ public static class CritterSight
     }
 
     /// <summary>
+    /// isWithinPerception without sneaking: PE x 5 inside the front cone, otherwise PE hexes, or PE x 2 while a fight is
+    /// open. A multihex critter stands one hex closer (objectGetDistanceBetween). No line of sight is involved.
+    /// </summary>
+    public static bool WithinPerception(int from, int rotation, bool multihex, int perception, int target, bool inCombat)
+    {
+        if (!HexNavigation.Valid(from) || !HexNavigation.Valid(target) || from == target) return false;
+        int distance = Math.Max(0, FalloutGrid.Distance(from, target) - (multihex ? 1 : 0));
+        return Facing(rotation, from, target) && distance <= perception * FacingRangePerPerception || distance <= perception * (inCombat ? 2 : 1);
+    }
+
+    /// <summary>
     /// Whether the critter, standing at its header tile with its header rotation, sees the dude at <paramref name="playerHex"/>.
     /// <paramref name="navigation"/> supplies the blockers of the critter's elevation as the session projects them.
     /// </summary>
@@ -33,11 +44,7 @@ public static class CritterSight
     {
         ArgumentNullException.ThrowIfNull(critter); ArgumentNullException.ThrowIfNull(navigation);
         int tile = critter.Header.Tile;
-        if (!HexNavigation.Valid(tile) || !HexNavigation.Valid(playerHex) || tile == playerHex) return false;
-        // objectGetDistanceBetween: a multihex critter stands one hex closer.
-        int distance = Math.Max(0, FalloutGrid.Distance(tile, playerHex) - ((critter.Header.Flags & HexNavigation.Multihex) != 0 ? 1 : 0));
-        bool perceived = Facing(critter.Header.Rotation, tile, playerHex) && distance <= perception * FacingRangePerPerception || distance <= perception;
-        return perceived && OriginalStraightPath.FirstBlocked(tile, playerHex,
-            t => t == playerHex || navigation.BlockersAt(t).Any(b => b.Key != critter.Key)) == playerHex;
+        return WithinPerception(tile, critter.Header.Rotation, (critter.Header.Flags & HexNavigation.Multihex) != 0, perception, playerHex, false)
+            && OriginalStraightPath.FirstBlocked(tile, playerHex, t => t == playerHex || navigation.BlockersAt(t).Any(b => b.Key != critter.Key)) == playerHex;
     }
 }

@@ -12,7 +12,9 @@ public sealed record SavedArea(int Map, string SourceHash, string DependenciesHa
 public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null, SavedWorldEntries? Entries = null,
     SavedCombat? Combat = null, SavedCharacter? Character = null, SavedTempleDuel? Duel = null, SavedSkills? Skills = null);
 /// <summary>v11 adds <see cref="SavedArea.Consumed"/> (drugs taken from collected items). v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>
-public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defeated, [property: JsonRequired] int Experience, int? PlayerHitPoints);
+/// <summary>Survivors (optional, inside v13): critters left standing when the player ended a fight, where they stand.</summary>
+public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defeated, [property: JsonRequired] int Experience, int? PlayerHitPoints,
+    SurvivingCritter[]? Survivors = null);
 
 /// <summary>Small project-local checkpoint, not an original Fallout SAV and never an asset archive.</summary>
 public static class CheckpointFile

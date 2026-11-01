@@ -62,7 +62,7 @@ morte. A rota inteira funciona com os encontros ligados.
   - **A rota direta, sem lança e sem desvios, é viável:** 22 de 25 rodadas chegam com 9 HP em média e 800 XP no total, já contando os 600 de Arroyo. Ficam no nível 1.
 - **Inferência técnica:** o original é mais duro e mais generoso ao mesmo tempo.
   - **Mais duro:** no CE, uma criatura entra na luta quando vê o jogador (alcance de PE × 5 hexes, com linha de visão). Nesta medição o raio era de 5 hexes, alcançáveis em até 10 passos; desde 01/11 a regra do CE está modelada ([percepção](critter-sight-2026-11-01.md)). O veneno do radscorpion também não está modelado.
-  - **Mais generoso:** um personagem real tem 3 tags (+20% e progressão dobrada) e traits. Também conta com criaturas que fogem com pouco HP e com a saída do combate fora da vista. Críticos não entram: o CE só os ativa a partir do primeiro dia de jogo, que o Templo não alcança ([correção](skill-spending-2026-10-31.md)).
+  - **Mais generoso:** um personagem real tem 3 tags (+20% e progressão dobrada) e traits. Também conta com a saída do combate fora da percepção das criaturas, modelada desde 01/11 ([fuga](combat-leave-2026-11-01.md)). **Correção (01/11):** as formigas e os radscorpions do Templo **não fogem** no original: os pacotes Rat e Scorpion do `ai.txt` têm `min_hp=0` e `min_to_hit=0`. Críticos não entram: o CE só os ativa a partir do primeiro dia de jogo, que o Templo não alcança ([correção](skill-spending-2026-10-31.md)).
   - Nenhuma dessas partes existe ainda.
 - **Desconhecido:** a taxa de sobrevivência de um personagem real no Templo original. Não há medição do jogo original para comparar.
 
@@ -71,7 +71,7 @@ morte. A rota inteira funciona com os encontros ligados.
 Em ordem de impacto medido:
 
 1. **Escolha de personagem com tags e traits:** um Unarmed de 70% muda a conta contra os radscorpions.
-2. **Fuga das criaturas por AI packet e saída do combate:** é a forma do original de não lutar até a morte.
+2. ~~**Fuga das criaturas por AI packet e saída do combate:** é a forma do original de não lutar até a morte.~~ Em 01/11: as criaturas do Templo não fogem no original, e a saída do jogador com Enter está modelada ([fuga](combat-leave-2026-11-01.md)).
 3. ~~**Críticos:** a chance já é calculada (LK); falta a tabela de efeitos.~~ No Templo eles não acontecem: o CE exige o dia 1 de jogo.
 4. ~~**Percepção do CE no início dos encontros:** PE × 5 com linha de visão, no lugar do raio fixo.~~ Feito em 01/11 ([percepção](critter-sight-2026-11-01.md)).
 

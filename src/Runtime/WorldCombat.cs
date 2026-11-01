@@ -15,6 +15,9 @@ public sealed record CombatEncounter(ActorLocation Player, string[] FoeKeys, str
 /// <summary>A source critter killed in a won fight: its record stays intact; the world projects the corpse.</summary>
 public sealed record DefeatedCritter([property: JsonRequired] int Map, [property: JsonRequired] string Key, [property: JsonRequired] int Pid,
     [property: JsonRequired] int Elevation, [property: JsonRequired] int Hex);
+/// <summary>A source critter still standing after the player left the fight: the world projects its hex, HP and facing.</summary>
+public sealed record SurvivingCritter([property: JsonRequired] int Map, [property: JsonRequired] string Key, [property: JsonRequired] int Pid,
+    [property: JsonRequired] int Elevation, [property: JsonRequired] int Hex, [property: JsonRequired] int HitPoints, [property: JsonRequired] int Rotation);
 
 /// <summary>
 /// Outcome of won fights in the live world (roadmap COM-004), saved in checkpoint v10 (<see cref="SavedCombat"/>).
@@ -22,7 +25,9 @@ public sealed record DefeatedCritter([property: JsonRequired] int Map, [property
 public sealed partial class WorldSession
 {
     private readonly Dictionary<(int Map, string Key), DefeatedCritter> _defeated = new();
+    private readonly Dictionary<(int Map, string Key), SurvivingCritter> _survivors = new();
     private int _combatExperience;
+    public IReadOnlyList<SurvivingCritter> Survivors => _survivors.Values.OrderBy(s => s.Map).ThenBy(s => s.Key, StringComparer.Ordinal).ToArray();
     public int CombatExperience => _combatExperience;
     // Damage is what persists between fights: a level-up raises max HP and, as CE critterAdjustHitPoints, current HP alike.
     private int _playerDamage;
@@ -32,7 +37,7 @@ public sealed partial class WorldSession
     public int PerksAvailable => CharacterProgression.PerksAvailable(Character, Level);
     /// <summary>Player HP when hurt; null means unhurt. Healing comes from level-ups and drugs (<see cref="UseDrug"/>).</summary>
     public int? PlayerHitPoints => _playerDamage == 0 ? null : HitPoints;
-    public bool HasCombatOutcome => _defeated.Count != 0 || _playerDamage != 0;
+    public bool HasCombatOutcome => _defeated.Count != 0 || _survivors.Count != 0 || _playerDamage != 0;
     public IReadOnlyList<DefeatedCritter> Defeated => _defeated.Values.OrderBy(d => d.Map).ThenBy(d => d.Key, StringComparer.Ordinal).ToArray();
     public bool IsDefeated(int map, string key) => _defeated.ContainsKey((map, key));
 
@@ -49,6 +54,9 @@ public sealed partial class WorldSession
             return source with { Header = source.Header with { Tile = dead.Hex, Flags = source.Header.Flags | HexNavigation.NoBlock } };
         if (_activeFight != null && map == _activeFightMap && _activeFight.Combatants.FirstOrDefault(c => !c.IsPlayer && c.Id == source.Key) is { } live)
             return source with { Header = source.Header with { Tile = live.Hex, Flags = live.Alive ? source.Header.Flags : source.Header.Flags | HexNavigation.NoBlock } };
+        if (_survivors.TryGetValue((map, source.Key), out SurvivingCritter? standing))
+            return source with { Header = source.Header with { Tile = standing.Hex, Rotation = standing.Rotation },
+                State = new Dictionary<string, int>(source.State) { ["hp"] = standing.HitPoints } };
         return source;
     }
 
@@ -63,15 +71,18 @@ public sealed partial class WorldSession
         CombatantState[] players = fight.Combatants.Where(c => c.IsPlayer).ToArray();
         if (players.Length != 1) return CombatCommitStatus.InvalidFight;
         if (!players[0].Alive) return CombatCommitStatus.PlayerDefeated;
-        if (ReferenceEquals(fight, _duelFight)) return CommitTempleDuel(fight, players[0]);
+        // Cameron's challenge is fought out: the gate is locked behind both duelists.
+        if (ReferenceEquals(fight, _duelFight)) return fight.Left ? CombatCommitStatus.InvalidFight : CommitTempleDuel(fight, players[0]);
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
         var dead = new List<DefeatedCritter>();
+        var standing = new List<SurvivingCritter>();
         foreach (CombatantState foe in fight.Combatants.Where(c => !c.IsPlayer))
         {
             if (!roots.TryGetValue(foe.Id, out MapObject? source) || source.Header.Pid != foe.Pid || source.Header.Elevation != foe.Elevation
                 || (source.Header.Pid >> 24) != 1) return CombatCommitStatus.StaleSource;
             if (IsDefeated(CurrentMap, foe.Id)) return CombatCommitStatus.AlreadyDefeated;
             if (!foe.Alive) dead.Add(new DefeatedCritter(CurrentMap, foe.Id, source.Header.Pid, foe.Elevation, foe.Hex));
+            else if (fight.Left) standing.Add(new SurvivingCritter(CurrentMap, foe.Id, source.Header.Pid, foe.Elevation, foe.Hex, foe.HitPoints, foe.Rotation));
         }
         int awarded = fight.Log.OfType<CombatantDied>().Sum(d => d.Experience);
         if (awarded != fight.Turn.ExperienceAwarded || awarded < 0) return CombatCommitStatus.InvalidFight;
@@ -86,7 +97,8 @@ public sealed partial class WorldSession
                 throw new InvalidOperationException("Checked Healing Powder could not be used up.");
             doses -= take;
         }
-        foreach (DefeatedCritter critter in dead) _defeated.Add((critter.Map, critter.Key), critter);
+        foreach (DefeatedCritter critter in dead) { _defeated.Add((critter.Map, critter.Key), critter); _survivors.Remove((critter.Map, critter.Key)); }
+        foreach (SurvivingCritter critter in standing) _survivors[(critter.Map, critter.Key)] = critter;
         _combatExperience += awarded;
         _playerDamage = players[0].Stats.MaxHitPoints - players[0].HitPoints;
         return CombatCommitStatus.Ready;
@@ -97,9 +109,9 @@ public sealed partial class WorldSession
         .OrderBy(c => c.Map).ThenBy(c => c.OwnerKey, StringComparer.Ordinal).ThenBy(c => c.Source.Key, StringComparer.Ordinal).ToArray();
     public int HealingDoses => HealingCarried().Sum(c => c.Quantity);
 
-    private void ResetCombat() { _defeated.Clear(); _combatExperience = 0; _playerDamage = 0; _activeFight = null; }
+    private void ResetCombat() { _defeated.Clear(); _survivors.Clear(); _combatExperience = 0; _playerDamage = 0; _activeFight = null; }
 
-    private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints);
+    private SavedCombat CaptureCombat() => new(Defeated.ToArray(), _combatExperience, PlayerHitPoints, _survivors.Count == 0 ? null : Survivors.ToArray());
 
     // Atomic with the rest of Restore (runs on the candidate session). Every corpse must be an encounter critter of a
     // restored area lying on geometry it could reach, and the XP must be exactly what those kills award.
@@ -129,6 +141,25 @@ public sealed partial class WorldSession
         }
         if (experience != saved.Experience) throw new InvalidDataException("Checkpoint combat experience differs from its defeated critters.");
         _combatExperience = experience;
+        // Survivors: living encounter critters of a restored area, standing where a critter can stand, one per hex.
+        if (saved.Survivors is { Length: > 64 }) throw new InvalidDataException("Checkpoint survivors are malformed.");
+        foreach (SurvivingCritter alive in saved.Survivors ?? Array.Empty<SurvivingCritter>())
+        {
+            if (alive?.Key == null || _survivors.ContainsKey((alive.Map, alive.Key)) || _defeated.ContainsKey((alive.Map, alive.Key))
+                || !_areas.TryGetValue(alive.Map, out WorldArea? area) || alive.Rotation is < 0 or > 5 || !HexNavigation.Valid(alive.Hex)
+                || _survivors.Values.Any(s => s.Map == alive.Map && s.Elevation == alive.Elevation && s.Hex == alive.Hex))
+                throw new InvalidDataException("Checkpoint survivor is duplicated, already dead or outside the restored areas.");
+            MapObject? source = area.Map.ObjectLayers.SelectMany(l => l.Objects).FirstOrDefault(o => o.Key == alive.Key);
+            Prototype? prototype = area.Map.Prototypes.FirstOrDefault(p => p.Pid == alive.Pid);
+            if (source == null || prototype == null || source.Header.Pid != alive.Pid || !EncounterPids.Contains(alive.Pid)
+                || source.Header.Elevation != alive.Elevation || (source.Header.Flags & HexNavigation.Hidden) != 0
+                || alive.HitPoints < 1 || alive.HitPoints > DerivedCombatStats.FromCritter(CritterPrototypeData.Read(prototype)).MaxHitPoints)
+                throw new InvalidDataException("Checkpoint survivor does not match an encounter critter of its MAP.");
+            HexNavigation navigation = area.Doors.Navigation(alive.Elevation);
+            if (navigation.IsExit(alive.Hex) || navigation.BlockersAt(alive.Hex).Any(b => b.FidType != 1 && !b.IsDoor))
+                throw new InvalidDataException("Checkpoint survivor stands on geometry no critter can stand on.");
+            _survivors.Add((alive.Map, alive.Key), alive);
+        }
         // The level, and so the max HP, comes from the whole restored XP; full HP is stored as null.
         if (saved.PlayerHitPoints is int hp && hp >= MaxHitPoints) throw new InvalidDataException("Checkpoint player HP is not below the level's maximum.");
         _playerDamage = saved.PlayerHitPoints is int hurt ? MaxHitPoints - hurt : 0;
@@ -167,7 +198,8 @@ public sealed partial class WorldSession
         if (layer == null) return null;
         HexNavigation navigation = Current.Doors.Navigation(player.Elevation);
         var noticing = new List<string>();
-        foreach (MapObject foe in layer.Objects.Where(o => EncounterPids.Contains(o.Header.Pid) && HexNavigation.Valid(o.Header.Tile)
+        // Survivors of a fight the player left look out from where they stand, facing where they last turned.
+        foreach (MapObject foe in layer.Objects.Select(o => EffectiveObject(CurrentMap, o)).Where(o => EncounterPids.Contains(o.Header.Pid) && HexNavigation.Valid(o.Header.Tile)
                      && (o.Header.Flags & HexNavigation.Hidden) == 0 && !IsDefeated(CurrentMap, o.Key) && o.State.GetValueOrDefault("team", 1) != 0)
                      .OrderBy(o => FalloutGrid.Distance(player.Hex, o.Header.Tile)).ThenBy(o => o.Key, StringComparer.Ordinal))
         {
@@ -197,7 +229,7 @@ public sealed partial class WorldSession
             if (!roots.TryGetValue(key, out MapObject? source) || IsDefeated(CurrentMap, key)) throw new InvalidOperationException("Encounter critter is no longer available.");
             Prototype prototype = Current.Map.Prototypes.FirstOrDefault(p => p.Pid == source.Header.Pid)
                 ?? throw new System.IO.InvalidDataException($"Critter prototype {source.Header.Pid:X8} is not part of the map dependencies.");
-            combatants.Add(CombatantState.FromMapCritter(source, CritterPrototypeData.Read(prototype), $"PID {source.Header.Pid:X8}"));
+            combatants.Add(CombatantState.FromMapCritter(EffectiveObject(CurrentMap, source), CritterPrototypeData.Read(prototype), $"PID {source.Header.Pid:X8}"));
         }
         if (InCombat) throw new InvalidOperationException("A fight is already open.");
         var session = new CombatSession(combatants, Current.Doors.Navigation(Location.Elevation), random, encounter.InitiatorKey);

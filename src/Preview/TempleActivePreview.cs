@@ -11,8 +11,8 @@ public partial class TemplePreview
     private PreviewLayout ProjectTempleLayout(PreviewLayout layout)
     {
         bool temple = _campaign?.TempleProgress != null && _campaign.CurrentMap == 3;
-        // Corpses of won fights are WorldSession projections too: they lie where they fell.
-        if (_campaign == null || !temple && !_campaign.Defeated.Any(d => d.Map == _campaign.CurrentMap)) return layout;
+        // Corpses of won fights and survivors of left fights are WorldSession projections too: they lie or stand where they stopped.
+        if (_campaign == null || !temple && !_campaign.Defeated.Any(d => d.Map == _campaign.CurrentMap) && !_campaign.Survivors.Any(s => s.Map == _campaign.CurrentMap)) return layout;
         var roots = _campaign.Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key);
         return layout with { Objects = layout.Objects.Select(obj =>
         {

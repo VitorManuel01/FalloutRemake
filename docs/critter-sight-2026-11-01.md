@@ -45,7 +45,7 @@ pela mesma conta que o Community Engine faz.
 
 - **Inferência técnica: frequência.** No CE, cada criatura olha uma vez a cada rodízio do `_script_chk_critters`. Aqui, todas olham a cada hex que o personagem pisa. O efeito deve ser perceber um pouco mais cedo, mas isso não foi medido.
 - **Direção estática.** As formigas e os radscorpions do original vagam: `timed_event_p_proc` anda até 3 hexes numa direção aleatória a cada 3–5 s fora de combate, e isso muda a rotação. Esse vaguear não está modelado. A criatura fica no hex e na rotação do MAP, então o cone frontal é sempre o mesmo.
-- **Guarda do projeto.** O CE começa a luta mesmo que a criatura não consiga chegar ao personagem. Aqui ela também precisa ter caminho até um hex vizinho dele. Sem essa guarda, uma luta sem saída nunca terminaria, porque sair do combate fora da vista ainda não está modelado.
+- **Guarda do projeto.** O CE começa a luta mesmo que a criatura não consiga chegar ao personagem. Aqui ela também precisa ter caminho até um hex vizinho dele. Sem essa guarda, uma luta sem saída nunca terminaria, porque sair do combate fora da vista ainda não estava modelado. Desde a [saída com Enter](combat-leave-2026-11-01.md), a guarda continua só por causa da auditoria e da IA provisória.
 - **Fora do escopo:**
   - esgueirar-se (Sneak);
   - cegueira (`DAM_BLIND`);
@@ -93,7 +93,7 @@ pela mesma conta que o Community Engine faz.
 - **Leitura:**
   - **Fato medido:** os perfis frágeis em combate (neutro, Chitsa) perdem mais na rota direta. As mortes acontecem a caminho de Cameron, da barreira e do explosivo. As lutas com duas formigas só aparecem nas rotas com kit.
   - **Fato medido:** as derrotas de Narg e de Mingan continuam vindo quase todas do duelo com Cameron. Os dois chegam ao duelo com pouco dano das formigas: em média 0,8 HP (Narg) e 1,3 HP (Mingan) por luta na rota direta.
-  - **Inferência técnica:** a medição continua mais dura que o original em dois pontos. As criaturas não vagam (no original, o cone gira), e o personagem não tem as ferramentas de fuga do original: sair do combate fora da vista e criaturas que fogem. A comparação com o jogo original continua desconhecida.
+  - **Inferência técnica:** a medição continua mais dura que o original em dois pontos. As criaturas não vagam (no original, o cone gira), e a política simples da auditoria nunca usa a saída do combate com Enter, [modelada depois](combat-leave-2026-11-01.md). As criaturas do Templo não fogem nem no original. A comparação com o jogo original continua desconhecida.
 
 ## Como rodar
 

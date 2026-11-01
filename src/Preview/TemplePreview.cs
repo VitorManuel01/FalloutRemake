@@ -86,6 +86,7 @@ public partial class TemplePreview : Node3D
 			_hud.UseClockRequested = OpenUseClock;
 			_hud.ContainerLocateRequested = LocateContainer;
 			_hud.CombatEndTurnRequested = EndCombatTurn;
+			_hud.CombatLeaveRequested = LeaveCombat;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -124,6 +125,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckNavigation();
 				if (_test) await CheckDoors();
 				if (_test) await CheckCombat();
+				if (_test) await CheckCombatLeave();
 				if (_test) await CheckLockpick();
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();

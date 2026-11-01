@@ -20,6 +20,8 @@ public sealed class CombatantState
     public CombatWeapon Weapon { get; }
     public int Experience { get; }
     public int Hex { get; internal set; }
+    /// <summary>Facing (0 NE … 5 NW): the MAP rotation, then the last step walked or the last target struck, as CE animations leave it.</summary>
+    public int Rotation { get; internal set; }
     public int HitPoints { get; internal set; }
     public int ActionPoints { get; internal set; }
     /// <summary>Unspent AP of the last turn, added to AC until this combatant's next turn starts.</summary>
@@ -58,6 +60,6 @@ public sealed class CombatantState
         if (team == 0) throw new InvalidDataException("Team 0 is reserved for the player's side.");
         return new(source.Key, name, prototype.Pid, team, false, source.Header.Tile, source.Header.Elevation, stats,
             weapon ?? CombatWeapon.Unarmed(prototype.DamageType is int natural and >= 0 and <= 6 ? (DamageType)natural : DamageType.Normal),
-            hp, prototype.Experience);
+            hp, prototype.Experience) { Rotation = source.Header.Rotation };
     }
 }

@@ -118,7 +118,8 @@ public partial class TemplePreview
         CombatActionStatus.NotEnoughActionPoints => "AP insuficientes", CombatActionStatus.OutOfRange => "fora de alcance",
         CombatActionStatus.Unreachable => "sem caminho livre", CombatActionStatus.NotActive => "não é o seu turno",
         CombatActionStatus.AlreadyThere => "você já está aqui", CombatActionStatus.CombatOver => "o combate terminou",
-        CombatActionStatus.OtherElevation => "outra elevação", CombatActionStatus.NoItem => "sem Healing Powder na bolsa", _ => "alvo inválido"
+        CombatActionStatus.OtherElevation => "outra elevação", CombatActionStatus.NoItem => "sem Healing Powder na bolsa",
+        CombatActionStatus.EnemiesAware => "inimigos ainda percebem você", _ => "alvo inválido"
     };
 
     // Screen proximity rather than a physics ray: tall kit walls must not swallow a click on a creature behind them.
@@ -164,9 +165,10 @@ public partial class TemplePreview
         {
             if (key.PhysicalKeycode == Key.Space) { EndCombatTurn(); return true; }
             if (key.PhysicalKeycode == Key.H) { UseCombatHealing(); return true; }
+            if (key.PhysicalKeycode is Key.Enter or Key.KpEnter) { LeaveCombat(); return true; }
             // Camera, view and inspection keys stay available; anything that would act in the world waits.
             if (key.PhysicalKeycode is Key.Q or Key.E or Key.C or Key.Home or Key.V or Key.G or Key.O or Key.F or Key.R) return false;
-            if (key.PhysicalKeycode is Key.M or Key.U or Key.L or Key.Enter or Key.KpEnter or Key.K or Key.J or Key.P or Key.Escape or Key.T or Key.N)
+            if (key.PhysicalKeycode is Key.M or Key.U or Key.L or Key.K or Key.J or Key.P or Key.Escape or Key.T or Key.N)
             { CombatRefuses("essa ação"); return true; }
             return false;
         }
@@ -189,6 +191,20 @@ public partial class TemplePreview
     {
         if (_combat?.Active is not { IsPlayer: true } player) return;
         ApplyCombatResult(_combat.Execute(CombatActionProposal.EndTurn(player.Id)));
+    }
+
+    // CE combatAttemptEnd: refused (combat.msg 103) while any enemy still perceives the player; Cameron's challenge is fought out.
+    private void LeaveCombat()
+    {
+        if (_combat?.Active is not { IsPlayer: true } player) { NavigationStatus("Aguarde: é o turno da criatura."); return; }
+        if (_campaign!.TempleDuel == TempleDuelOutcome.InProgress) { NavigationStatus("Ação recusada · o desafio de Cameron vai até o fim"); return; }
+        CombatActionResult result = _combat.Execute(CombatActionProposal.LeaveCombat(player.Id));
+        if (result.Status == CombatActionStatus.EnemiesAware)
+        {
+            string aware = string.Join(", ", _combat.AwareEnemies(player).Select(c => $"{CombatName(c.Id)} a {FalloutGrid.Distance(c.Hex, player.Hex)} hex(es)"));
+            NavigationStatus($"Ação recusada · inimigos ainda percebem você ({aware})"); return;
+        }
+        ApplyCombatResult(result);
     }
 
     private void UseCombatHealing()
@@ -232,6 +248,8 @@ public partial class TemplePreview
                     lines.Add($"{CombatName(yielded.CombatantId)} se rende com {yielded.HitPoints} HP"); break;
                 case CombatantDied died:
                     lines.Add($"{CombatName(died.CombatantId)} morreu" + (died.Experience > 0 ? $" · +{died.Experience} XP" : "")); break;
+                case CombatLeft left:
+                    lines.Add($"Você saiu do combate · {left.Survivors.Length} criatura(s) de pé"); break;
                 case TurnStarted started when started.CombatantId != "player":
                     _combatAiTimer = 0; break;
                 case CombatEnded:
@@ -287,7 +305,7 @@ public partial class TemplePreview
         bool mine = _combat.Active?.IsPlayer == true;
         _hud.Combat(true, $"COMBATE · Rodada {turn.Round} · {(mine ? "seu turno" : $"turno de {CombatName(turn.ActiveId!)}")}",
             $"Você: {player.HitPoints}/{player.Stats.MaxHitPoints} HP · {player.ActionPoints}/{player.Stats.MaxActionPoints} AP · AC {player.EffectiveArmorClass} · {_combatWeapon.Name}{(player.HealingDoses > 0 ? $" · Healing Powder ×{player.HealingDoses}" : "")}\n{foes}", mine);
-        if (mine && _combatHoverKey.Length == 0) _hud.CombatPreview("Clique no chão para mover (1 AP por hex) ou na criatura para atacar. Espaço encerra o turno."
+        if (mine && _combatHoverKey.Length == 0) _hud.CombatPreview("Clique no chão para mover (1 AP por hex) ou na criatura para atacar. Espaço encerra o turno; Enter sai do combate longe da percepção das criaturas."
             + (player.HealingDoses > 0 ? $" H usa Healing Powder ({CombatSession.InventoryActionPoints} AP)." : ""));
     }
 
@@ -309,6 +327,13 @@ public partial class TemplePreview
         // The corpse and the freed hex come from WorldSession projections; rebuilding keeps every other system unchanged.
         BuildWorld();
         CombatantState player = fight.Get("player");
+        if (fight.Left)
+        {
+            NavigationStatus($"Você saiu do combate · {fight.Combatants.Count(c => !c.IsPlayer && c.Alive)} criatura(s) de pé onde estão"
+                + (fight.Turn.ExperienceAwarded > 0 ? $" · +{fight.Turn.ExperienceAwarded} XP" : "") + $" · {_campaign.HitPoints}/{_campaign.MaxHitPoints} HP{LevelUpText(levelBefore)}");
+            GD.Print($"COMBAT_LEFT: {fight.Turn.ExperienceAwarded} XP, player {player.HitPoints} HP, round {fight.Turn.Round}");
+            return;
+        }
         string? duel = DuelOutcomeText(fight);
         NavigationStatus(duel != null ? $"{duel} · {_campaign.HitPoints}/{_campaign.MaxHitPoints} HP{LevelUpText(levelBefore)}"
             : $"Vitória · +{fight.Turn.ExperienceAwarded} XP · {_campaign.HitPoints}/{_campaign.MaxHitPoints} HP{LevelUpText(levelBefore)} · salve com K para guardar o resultado");
@@ -427,6 +452,9 @@ public partial class TemplePreview
                 CombatantState player = _combat.Get("player"), foe = _combat.Combatants.First(c => !c.IsPlayer && c.Alive);
                 if (!healed)
                 {
+                    // Enter is refused while the creatures beside the player still perceive it (combatAttemptEnd).
+                    using (var enter = new InputEventKey { Pressed = true, PhysicalKeycode = Key.Enter }) _UnhandledInput(enter);
+                    if (!InCombat || _combat.Left || !_combat.AwareEnemies(player).Any()) throw new InvalidDataException("Enter left a fight the creatures still perceive.");
                     // H takes the dose for 4 AP; a second dose this turn is refused for lack of AP and of powder.
                     int apBefore = player.ActionPoints; healed = true;
                     using var heal = new InputEventKey { Pressed = true, PhysicalKeycode = Key.H }; _UnhandledInput(heal);
