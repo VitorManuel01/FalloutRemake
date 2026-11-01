@@ -27,7 +27,10 @@ public partial class TemplePreview
     private void WieldFromBag(CarriedItem item, Hand hand)
     {
         if (_campaign == null) return;
+        int logged = _combat?.Log.Count ?? 0;
         HandStatus status = _campaign.Wield(item, hand, _walker?.Moving == true);
+        // In a fight the change shows in the combat log (WeaponsChanged) and the HUD names the new blow.
+        if (status == HandStatus.Ready && _combat != null) { _combatWeapon = NamedWeapon(_combat.Get("player").Weapon); ApplyCombatEvents(_combat.Log.Skip(logged).ToArray()); }
         NavigationStatus(status == HandStatus.Ready ? $"{HandBlowName(hand)} na mão {(hand == Hand.Left ? "esquerda" : "direita")} · {HandsLine()}" : PlayerBagWindow.HandHint(status));
         RefreshBag(); RefreshDoorAction();
     }
@@ -35,7 +38,10 @@ public partial class TemplePreview
     private void PutAwayFromBag(Hand hand)
     {
         if (_campaign == null) return;
+        int logged = _combat?.Log.Count ?? 0;
         HandStatus status = _campaign.Unwield(hand, _walker?.Moving == true);
+        // In a fight the change shows in the combat log (WeaponsChanged) and the HUD names the new blow.
+        if (status == HandStatus.Ready && _combat != null) { _combatWeapon = NamedWeapon(_combat.Get("player").Weapon); ApplyCombatEvents(_combat.Log.Skip(logged).ToArray()); }
         NavigationStatus(status == HandStatus.Ready ? $"Item guardado na bolsa · {HandsLine()}" : PlayerBagWindow.HandHint(status));
         RefreshBag(); RefreshDoorAction();
     }

@@ -111,6 +111,32 @@ internal static class DuelRulesTests
             world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:pistol", 1) });
             Assert(world.Held(Hand.Left) == null && world.PlayerWeapon().Pid == null, "The spear left the inventory, and the hand.");
         });
+        check("in a fight the player opens the inventory for 4 AP (CE inventoryOpen) and changes what the hands hold inside it, for nothing more", () =>
+        {
+            var world = WorldWithSpear();
+            CarriedItem spear = world.Carried.Single(c => c.Source.Header.Pid == 7);
+            var fight = world.BeginCombat(new CombatEncounter(world.Location, new[] { "map3:far-ant" }, "player"), world.PlayerWeapon(), new CombatTests.Scripted());
+            var player = fight.Get("player");
+            Assert(world.Wield(spear, Hand.Left, false) == HandStatus.InCombat && player.Weapon.Pid == null, "Closed inventory: no change.");
+            var opened = fight.Execute(CombatActionProposal.OpenInventory("player"));
+            Assert(opened.Status == CombatActionStatus.Ready && opened.Events.Single() is InventoryOpened { ActionPointsSpent: 4 } && player.ActionPoints == 3 && fight.InventoryOpen,
+                "4 of 7 AP.");
+            Assert(fight.Preview(CombatActionProposal.OpenInventory("player")).ActionPointCost == 0 && fight.Preview(CombatActionProposal.UseHealing("player")).Status == CombatActionStatus.NoItem,
+                "Already open: nothing more to pay.");
+            Assert(world.Wield(spear, Hand.Left, false) == HandStatus.Ready && player.Weapon.Pid == 7 && player.AlternateWeapon!.Kick && player.ActionPoints == 3
+                && fight.Log.OfType<WeaponsChanged>().Single().OtherHand == "Chute", "The spear in the left hand, the kick in the right, no AP.");
+            fight.Execute(CombatActionProposal.EndTurn("player"));
+            Assert(!fight.InventoryOpen && fight.Log.OfType<InventoryClosed>().Count() == 1, "Acting otherwise closes it.");
+            for (int guard = 0; guard < 10 && fight.Active != player; guard++) CombatAi.TakeTurn(fight);
+            Assert(world.Unwield(Hand.Left, false) == HandStatus.InCombat, "Closed again.");
+            player.ActionPoints = 3;
+            Assert(fight.Preview(CombatActionProposal.OpenInventory("player")).Status == CombatActionStatus.NotEnoughActionPoints, "Below 4 AP the inventory stays shut.");
+            player.ActionPoints = 7;
+            fight.Execute(CombatActionProposal.OpenInventory("player"));
+            Assert(world.Unwield(Hand.Left, false) == HandStatus.Ready && player.Weapon is { Pid: null, Name: "Desarmado" }
+                && fight.Execute(CombatActionProposal.CloseInventory("player")).Status == CombatActionStatus.Ready && !fight.InventoryOpen, "Put away, closed.");
+            Assert(fight.Preview(CombatActionProposal.OpenInventory("ghost")).Status == CombatActionStatus.UnknownCombatant, "Only the player.");
+        });
         check("the checkpoint keeps the held items and the active hand, leaves them out at the defaults and refuses forged hands", () =>
         {
             var world = WorldWithSpear();

@@ -37,7 +37,7 @@ public sealed partial class WorldSession
     public HandStatus CanWield(CarriedItem item, Hand hand, bool moving)
     {
         ArgumentNullException.ThrowIfNull(item);
-        if (InCombat) return HandStatus.InCombat;
+        if (InCombat && _activeFight?.InventoryOpen != true) return HandStatus.InCombat;
         if (moving) return HandStatus.Busy;
         var held = new HeldItem(item.Map, item.Source.Key);
         if (CarriedHeld(held) is not { } carried) return HandStatus.NoItem;
@@ -56,16 +56,26 @@ public sealed partial class WorldSession
         Hand other = Other(hand);
         if (Held(other) == held && CarriedHeld(held)!.Quantity < 2) SetHeld(other, null);
         SetHeld(hand, held);
+        RearmFight();
         return HandStatus.Ready;
     }
 
     public HandStatus Unwield(Hand hand, bool moving)
     {
-        if (InCombat) return HandStatus.InCombat;
+        if (InCombat && _activeFight?.InventoryOpen != true) return HandStatus.InCombat;
         if (moving) return HandStatus.Busy;
         if (Held(hand) == null) return HandStatus.NoItem;
         SetHeld(hand, null);
+        RearmFight();
         return HandStatus.Ready;
+    }
+
+    // Inside a fight's open inventory the player's blows follow the hands at once; the fight's own active hand decides.
+    private void RearmFight()
+    {
+        if (_activeFight is not { InventoryOpen: true } fight || fight.Combatants.FirstOrDefault(c => c.IsPlayer) is not { } player) return;
+        Hand active = player.RightHandActive ? Hand.Right : Hand.Left;
+        fight.ChangeWeapons(HandWeapon(active), HandWeapon(Other(active)));
     }
 
     private void SetHeld(Hand hand, HeldItem? held) { if (hand == Hand.Left) _leftHand = held; else _rightHand = held; }

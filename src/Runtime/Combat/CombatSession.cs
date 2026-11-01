@@ -26,6 +26,19 @@ public sealed class CombatSession : ICombatSession
     internal CombatMovement Movement { get; }
     // CE draws the AI's choices (called shots) from the same generator as the attacks.
     internal ICombatRandom Random => _random;
+    /// <summary>
+    /// What the player's hands hold changed inside the open inventory: the active hand's blow and the other hand's.
+    /// Only on the player's turn with the inventory open; it costs nothing more.
+    /// </summary>
+    public bool ChangeWeapons(CombatWeapon active, CombatWeapon other)
+    {
+        ArgumentNullException.ThrowIfNull(active); ArgumentNullException.ThrowIfNull(other);
+        if (!InventoryOpen || Active is not { IsPlayer: true } player) return false;
+        player.Weapon = active; player.AlternateWeapon = other;
+        _log.Add(new WeaponsChanged(player.Id, active.Name, other.Name));
+        return true;
+    }
+
     // The AI's own decisions (fleeing) enter the log between the actions they cause.
     internal void Report(CombatEvent e) => _log.Add(e);
 
@@ -71,6 +84,8 @@ public sealed class CombatSession : ICombatSession
         ?? throw new KeyNotFoundException($"Unknown combatant {id}.");
     /// <summary>The player left the fight with enemies standing (CombatLeft); Turn.WinningTeam is then null.</summary>
     public bool Left { get; private set; }
+    /// <summary>The player's inventory is open (CE inventoryOpen): paid once, until it closes or the player acts otherwise.</summary>
+    public bool InventoryOpen { get; private set; }
     /// <summary>Game clock in ticks: the opening time plus 5 s for every round that ended (CE _combat_sequence).</summary>
     public long GameTime { get; private set; }
 
@@ -114,8 +129,17 @@ public sealed class CombatSession : ICombatSession
                     : CombatActionPreview.Refused(CombatActionStatus.NoItem, ap);
             case CombatActionKind.UseHealing:
                 if (actor.HealingDoses <= 0) return CombatActionPreview.Refused(CombatActionStatus.NoItem, ap);
+                // Taken through the inventory: opening it is the cost, already paid while it stays open.
+                int healCost = InventoryOpen ? 0 : InventoryActionPoints;
+                return new(healCost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready,
+                    healCost, ap - healCost, Array.Empty<int>(), null, null);
+            case CombatActionKind.OpenInventory:
+                if (!actor.IsPlayer) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
+                if (InventoryOpen) return new(CombatActionStatus.Ready, 0, ap, Array.Empty<int>(), null, null);
                 return new(InventoryActionPoints > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready,
                     InventoryActionPoints, ap - InventoryActionPoints, Array.Empty<int>(), null, null);
+            case CombatActionKind.CloseInventory:
+                return InventoryOpen ? new(CombatActionStatus.Ready, 0, ap, Array.Empty<int>(), null, null) : CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
             case CombatActionKind.Attack:
                 CombatantState? target = _combatants.FirstOrDefault(c => c.Id == proposal.TargetId);
                 if (target == null || target == actor || !target.InFight) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
@@ -143,8 +167,17 @@ public sealed class CombatSession : ICombatSession
         if (preview.Status != CombatActionStatus.Ready) return new(preview.Status, preview, Array.Empty<CombatEvent>());
         int start = _log.Count;
         CombatantState actor = Active!;
+        // Any other action shuts the open inventory first (CE's inventory is modal).
+        if (InventoryOpen && proposal.Kind is not (CombatActionKind.OpenInventory or CombatActionKind.CloseInventory or CombatActionKind.UseHealing))
+        { InventoryOpen = false; _log.Add(new InventoryClosed(actor.Id)); }
         switch (proposal.Kind)
         {
+            case CombatActionKind.OpenInventory:
+                if (!InventoryOpen) { actor.ActionPoints -= preview.ActionPointCost; InventoryOpen = true; _log.Add(new InventoryOpened(actor.Id, preview.ActionPointCost)); }
+                break;
+            case CombatActionKind.CloseInventory:
+                InventoryOpen = false; _log.Add(new InventoryClosed(actor.Id));
+                break;
             case CombatActionKind.EndTurn:
                 EndTurn(actor); break;
             case CombatActionKind.LeaveCombat:

@@ -280,6 +280,10 @@ public partial class TemplePreview
                     Lunge(_combat.Get(attack.AttackerId), _combat.Get(attack.TargetId));
                     lines.Add($"{CombatName(attack.AttackerId)} ataca {CombatName(attack.TargetId)}{Aimed(attack.Location)}: {attack.Roll} em {attack.Chance}% · "
                         + (attack.Hit ? $"acerto, {attack.Damage} de dano ({attack.TargetHitPoints} HP)" : "erro")); break;
+                case InventoryOpened opened:
+                    lines.Add($"Você abre a bolsa · {opened.ActionPointsSpent} AP"); break;
+                case WeaponsChanged changed:
+                    lines.Add($"Nas mãos: {changed.Blow} (ativa) · {changed.OtherHand}"); break;
                 case HandSwitched hand:
                     lines.Add($"Você troca para {hand.Blow} (0 AP)"); break;
                 case CombatantFleeing fleeing:
@@ -373,7 +377,8 @@ public partial class TemplePreview
             $"Você: {player.HitPoints}/{player.Stats.MaxHitPoints} HP · {player.ActionPoints}/{player.Stats.MaxActionPoints} AP · AC {player.EffectiveArmorClass} · {_combatWeapon.Name}{(player.HealingDoses > 0 ? $" · Healing Powder ×{player.HealingDoses}" : "")}{(player.Poison.Active ? $" · envenenado ({player.Poison.Level})" : "")}{State(player)}\n{foes}", mine);
         if (mine && _combatHoverKey.Length == 0) _hud.CombatPreview($"Clique no chão para mover ({player.ActionPointsPerHex} AP por hex) ou na criatura para atacar. Espaço encerra o turno; Enter sai do combate longe da percepção das criaturas."
             + (player.HealingDoses > 0 ? $" H usa Healing Powder ({CombatSession.InventoryActionPoints} AP)." : "")
-            + (player.AlternateWeapon != null ? $" X troca para {player.AlternateWeapon.Name}." : ""));
+            + (player.AlternateWeapon != null ? $" X troca para {player.AlternateWeapon.Name}." : "")
+            + (_combat.InventoryOpen ? " Bolsa aberta: trocar o que está nas mãos não custa mais AP." : $" B abre a bolsa ({CombatSession.InventoryActionPoints} AP)."));
     }
 
     private void FinishCombat()

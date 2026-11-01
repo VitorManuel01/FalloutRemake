@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FalloutRemake.Import;
 using FalloutRemake.Runtime;
+using FalloutRemake.Runtime.Combat;
 using Godot;
 
 namespace FalloutRemake.Preview;
@@ -11,7 +12,12 @@ namespace FalloutRemake.Preview;
 public partial class TemplePreview
 {
     private PlayerBagWindow? _bag;
-    private void CloseBag() { if (_bag != null) { _bag.Hide(); _bag.QueueFree(); _bag = null; } }
+    private void CloseBag()
+    {
+        if (_bag != null) { _bag.Hide(); _bag.QueueFree(); _bag = null; }
+        // Closing the bag in a fight closes the inventory the turn paid for.
+        if (_combat is { InventoryOpen: true } && _combat.Active is { IsPlayer: true } player) ApplyCombatResult(_combat.Execute(CombatActionProposal.CloseInventory(player.Id)));
+    }
     private PrototypeText? CarriedText(CarriedItem item)
     {
         if (_objectText == null || _campaign == null) return null;
@@ -27,6 +33,14 @@ public partial class TemplePreview
     {
         if (_bag?.Visible == true) { CloseBag(); return; }
         if (_campaign == null) return;
+        // In a fight the bag is CE's inventory: only on the player's turn, for 4 AP (inventoryOpen).
+        if (_combat != null)
+        {
+            if (_combat.Active is not { IsPlayer: true } fighter) { NavigationStatus("Aguarde: é o turno da criatura."); return; }
+            CombatActionResult opened = _combat.Execute(CombatActionProposal.OpenInventory(fighter.Id));
+            if (opened.Status != CombatActionStatus.Ready) { NavigationStatus($"Bolsa fechada · abrir em combate custa {CombatSession.InventoryActionPoints} AP"); return; }
+            ApplyCombatResult(opened);
+        }
         CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseInventory(); CloseLoot(); ClearRouteHover();
         GetTree().Root.GuiEmbedSubwindows = true;
         var dialog = new PlayerBagWindow { Size = new Vector2I(960, 680), Theme = _hud.GetChild<Control>(0).Theme };
@@ -51,7 +65,8 @@ public partial class TemplePreview
     private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName, _campaign.CarriedWeight, _campaign.CarryCapacity,
         item => _campaign.UnitWeight(item.Map, item.Source),
         (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true),
-        item => ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true), item => InventoryTexture(item.Map, item.Source),
+        // No walking back to a container in the middle of a fight.
+        item => InCombat ? null : ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true), item => InventoryTexture(item.Map, item.Source),
         item => ProposeExplosivePreparation(item, ExplosiveTimer.DefaultSeconds).Status, PreparationHint, item => BarrierPlacementApproach(item).HasValue,
         item => _campaign.CanReturnAllItems(item.Map, item.OwnerKey, _walker?.Moving == true), item => _campaign.CanUseDrug(item, _walker?.Moving == true),
         (_campaign.Character.Kind == CharacterKind.TestNeutral ? $"Força {CarryWeight.TestStrength} (perfil de teste)" : $"Força {_campaign.Character.Effective.Strength} · {_campaign.Character.Name}")
