@@ -11,7 +11,8 @@ public sealed record LevelGain(int Level, int HitPoints, int SkillPoints, bool P
 /// Fallout 2 level progression for the neutral character, as CE: thresholds of pcGetExperienceForLevel
 /// (1000 x triangular numbers), +EN/2+2 max HP per level with current HP rising by the same amount,
 /// 5 + 2 x IN skill points per level (unspent total capped at 99) and a perk every third level.
-/// Spending skill points and choosing perks are not modeled yet, so both are derived totals.
+/// These are totals before spending: the unspent pool of a running game lives in WorldSession (skill spending);
+/// choosing perks is not modeled yet.
 /// </summary>
 public static class CharacterProgression
 {

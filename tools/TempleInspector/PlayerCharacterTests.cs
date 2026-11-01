@@ -124,13 +124,13 @@ internal static class PlayerCharacterTests
                 WorldSession.Restore(_ => map, new[] { 3, 126 }, saved, "catalog", premade: premade ?? Premade);
             var world = new WorldSession(_ => map, new[] { 3, 126 }, premade: Premade); world.StartNewGame(Narg());
             WorldCheckpoint saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
-            Assert(saved.Version == 12 && saved.Profile == "neutral-v12" && saved.Character is { Kind: CharacterKind.Premade, Name: "Narg", Premade: "premade/combat.gcd" }, "Captured.");
+            Assert(saved.Version == 13 && saved.Profile == "neutral-v13" && saved.Character is { Kind: CharacterKind.Premade, Name: "Narg", Premade: "premade/combat.gcd" }, "Captured.");
             var restored = Load(saved);
             Assert(restored.Character.Name == "Narg" && restored.MaxHitPoints == 44 && restored.Character.Traits.SequenceEqual(new[] { CharacterTrait.HeavyHanded, CharacterTrait.Gifted }), "Premade restored.");
             var made = new WorldSession(_ => map, new[] { 3, 126 }); made.StartNewGame(With(CharacterTrait.SmallFrame));
             var madeSaved = made.Capture("catalog");
             Assert(Load(madeSaved).Character is { Kind: CharacterKind.Created, Name: "Teste", CarryWeight: 100 }, "Created restored.");
-            var legacy = Load(saved with { Version = 11, Profile = "neutral-v11", Character = null, Duel = null });
+            var legacy = Load(saved with { Version = 11, Profile = "neutral-v11", Character = null, Duel = null, Skills = null });
             Assert(legacy.Character == PlayerCharacter.Neutral && legacy.Capture("catalog").Character!.Kind == CharacterKind.TestNeutral, "v11 migrates as neutral.");
             var forged = new[]
             {
@@ -141,7 +141,7 @@ internal static class PlayerCharacterTests
                 madeSaved with { Character = madeSaved.Character! with { Special = new[] { 5, 5, 5, 5, 5, 5, 5 } } },
                 madeSaved with { Character = madeSaved.Character! with { SkillPoints = Enumerable.Repeat(1, 18).ToArray() } },
                 madeSaved with { Character = PlayerCharacter.Neutral.Capture() with { Name = "Outro" } },
-                saved with { Character = null, Duel = null },
+                saved with { Character = null, Duel = null, Skills = null },
                 saved with { Version = 11, Profile = "neutral-v11" }
             };
             for (int i = 0; i < forged.Length; i++) Reject(() => Load(forged[i]), $"Forged character {i} accepted.");

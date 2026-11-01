@@ -65,7 +65,7 @@ public sealed partial class WorldSession
             deposit.AddRange(area.Items.DepositAll().Select(c => new CustodyItem(area.Map.Prefix.Header.MapIndex, c.OwnerKey, c.ItemKey, c.Quantity)));
         _duelDeposit = deposit.ToArray(); _duelProfile = profile; _duelOutcome = TempleDuelOutcome.InProgress;
         // Bare hands and no healing dose: the inventory now lies in the chest.
-        var player = new CombatantState("player", Character.Name, null, 0, true, Location.Hex, 2, DerivedCombatStats.ForPlayer(Character, Level),
+        var player = new CombatantState("player", Character.Name, null, 0, true, Location.Hex, 2, DerivedCombatStats.ForPlayer(Sheet, Level),
             CombatWeapon.Unarmed(), HitPoints, healingDoses: HealingDoses);
         CombatantState cameron = CombatantState.FromMapCritter(source, CritterPrototypeData.Read(prototype), "Cameron");
         cameron = new CombatantState(cameron.Id, cameron.Name, cameron.Pid, cameron.Team, false, cameron.Hex, cameron.Elevation, cameron.Stats,

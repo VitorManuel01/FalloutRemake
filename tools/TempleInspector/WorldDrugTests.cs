@@ -91,11 +91,11 @@ internal static class WorldDrugTests
             world.CommitCombat(fight); world.UseDrug(world.Carried.Single(), new CombatTests.Scripted(8), false);
             WorldCheckpoint saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
             ConsumedItem eaten = saved.Areas.Single(a => a.Map == 3).Consumed!.Single();
-            Assert(saved.Version == 12 && saved.Profile == "neutral-v12" && eaten == new ConsumedItem("owner", "powder", 1) && saved.Combat!.PlayerHitPoints == null, "Captured.");
+            Assert(saved.Version == 13 && saved.Profile == "neutral-v13" && eaten == new ConsumedItem("owner", "powder", 1) && saved.Combat!.PlayerHitPoints == null, "Captured.");
             var restored = Load(saved);
             Assert(restored.CarriedCount == 1 && restored.HitPoints == 30 && restored.Current.Items.Balance("owner", "powder") is { Consumed: 1, Remaining: 1 }, "Restored.");
-            var legacy = Load(saved with { Version = 10, Profile = "neutral-v10", Character = null, Duel = null, Areas = saved.Areas.Select(a => a with { Consumed = null }).ToArray() });
-            Assert(legacy.CarriedCount == 2 && legacy.Capture("catalog").Version == 12, "v10 migrates without consumption.");
+            var legacy = Load(saved with { Version = 10, Profile = "neutral-v10", Character = null, Duel = null, Skills = null, Areas = saved.Areas.Select(a => a with { Consumed = null }).ToArray() });
+            Assert(legacy.CarriedCount == 2 && legacy.Capture("catalog").Version == 13, "v10 migrates without consumption.");
             WorldCheckpoint With(params ConsumedItem[] rows) => saved with { Areas = saved.Areas.Select(a => a.Map == 3 ? a with { Consumed = rows } : a).ToArray() };
             var forged = new[]
             {

@@ -467,7 +467,7 @@ public partial class TemplePreview
             int corpseHex = corpse.Header.Tile; int? hitPoints = _campaign.PlayerHitPoints;
             SaveCheckpoint();
             WorldCheckpoint saved = CheckpointFile.Read(CheckpointPath);
-            if (saved.Version != 12 || saved.Combat is not { } combat || combat.Experience != reward || combat.PlayerHitPoints != hitPoints
+            if (saved.Version != 13 || saved.Combat is not { } combat || combat.Experience != reward || combat.PlayerHitPoints != hitPoints
                 || combat.Defeated.Single() is not { } dead || dead.Key != ant.Source.Key || dead.Hex != corpseHex
                 || saved.Areas.Single(a => a.Map == _campaign.CurrentMap).Consumed?.SingleOrDefault() != new ConsumedItem(pot.Key, powder.Key, 1))
                 throw new InvalidDataException("Checkpoint v11 did not record the won fight or the used powder.");

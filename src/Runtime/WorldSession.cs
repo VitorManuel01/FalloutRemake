@@ -196,7 +196,7 @@ public sealed partial class WorldSession
     public void Reset()
     {
         _templeProgress = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
-        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat(); ResetTempleDuel();
+        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat(); ResetTempleDuel(); ResetSkills();
         foreach (WorldArea area in _areas.Values) { area.Scenery.Reset(); area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
     }
@@ -205,10 +205,10 @@ public sealed partial class WorldSession
     public WorldCheckpoint Capture(string catalogHash)
     {
         ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses(); ValidateTempleExit();
-        return new(12, "neutral-v12", catalogHash, InitialMap, CurrentMap,
+        return new(13, "neutral-v13", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
                 DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture(), a.Items.CaptureConsumed())).ToArray(), _templeProgress?.Capture(),CaptureEntries(),
-            CaptureCombat(), Character.Capture(), CaptureTempleDuel());
+            CaptureCombat(), Character.Capture(), CaptureTempleDuel(), CaptureSkills());
     }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
         Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
@@ -219,7 +219,8 @@ public sealed partial class WorldSession
             || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5" || checkpoint.Version == 6 && checkpoint.Profile == "neutral-v6"
             || checkpoint.Version == 7 && checkpoint.Profile == "neutral-v7" || checkpoint.Version == 8 && checkpoint.Profile == "neutral-v8"
             || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9" || checkpoint.Version == 10 && checkpoint.Profile == "neutral-v10" || checkpoint.Version == 11 && checkpoint.Profile == "neutral-v11"
-            || checkpoint.Version == 12 && checkpoint.Profile == "neutral-v12")
+            || checkpoint.Version == 12 && checkpoint.Profile == "neutral-v12" || checkpoint.Version == 13 && checkpoint.Profile == "neutral-v13")
+            || checkpoint.Version < 13 && checkpoint.Skills != null || checkpoint.Version >= 13 && checkpoint.Skills == null
             || checkpoint.Version < 12 && checkpoint.Character != null || checkpoint.Version >= 12 && checkpoint.Character == null
             || checkpoint.Version < 12 && checkpoint.Duel != null || checkpoint.Version >= 12 && checkpoint.Duel == null
             || checkpoint.CatalogHash != catalogHash
@@ -262,6 +263,7 @@ public sealed partial class WorldSession
         candidate.RestoreEntries(checkpoint);
         candidate.RestoreCombat(checkpoint.Combat, checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed);
         candidate.RestoreTempleDuel(checkpoint.Duel);
+        candidate.RestoreSkills(checkpoint.Skills);
         candidate.ValidateTempleExit();
         candidate.ValidateUses();
         foreach (SavedArea saved in checkpoint.Areas) candidate._areas[saved.Map].Travel.Arrive(saved.Location);

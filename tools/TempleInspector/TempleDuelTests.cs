@@ -120,7 +120,7 @@ internal static class TempleDuelTests
                 saved with { Duel = saved.Duel! with { Custody = new[] { new CustodyItem(3, "owner", "item", 3) } } },
                 saved with { Duel = saved.Duel! with { Custody = new[] { new CustodyItem(126, "owner", "item", 1) } } },
                 saved with { Temple = null },
-                saved with { Duel = null }
+                saved with { Duel = null, Skills = null }
             };
             for (int i = 0; i < forged.Length; i++) Reject(() => Load(forged[i]), $"Forged challenge {i} accepted.");
             var node = JsonNode.Parse(CheckpointFile.Encode(saved))!; node.AsObject().Remove("Duel");

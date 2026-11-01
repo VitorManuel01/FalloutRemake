@@ -155,6 +155,7 @@ internal static class SelfTests
         PlayerCharacterTests.Run(Check);
         TempleDuelTests.Run(Check);
             CharacterProgressionTests.Run(Check);
+            SkillSpendingTests.Run(Check);
             MessageTextTests.Run(Check);
             InventoryViewTests.Run(Check);
             FloorArtTests.Run(Check);

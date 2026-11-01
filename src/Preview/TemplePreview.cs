@@ -73,7 +73,7 @@ public partial class TemplePreview : Node3D
 			_hud.LockpickRequested = UseSelectedLockpick;
 			_hud.ExitRequested = UseExit;
 			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
-			_hud.CharacterFocusRequested = FocusCharacter; _hud.CharacterSheetRequested = OpenCharacterWindow;
+			_hud.CharacterFocusRequested = FocusCharacter; _hud.CharacterSheetRequested = OpenCharacterWindow; _hud.SkillSheetRequested = OpenSkillSheet;
 			_hud.OriginalFloorRequested = ChangeOriginalFloor;
 			_hud.NatureModelsRequested = ChangeNatureModels;
 			_hud.StopRequested = StopWalking;
@@ -357,6 +357,7 @@ public partial class TemplePreview : Node3D
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.J }) CloseLoot();
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.B }) CloseBag();
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.N }) CloseCharacterWindow();
+			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.H }) CloseSkillSheet();
 			return;
 		}
 		if (HandleCombatInput(input)) return;
@@ -374,6 +375,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.R) LoadCheckpoint();
 			if (key.PhysicalKeycode == Key.C) FocusCharacter();
 			if (key.PhysicalKeycode == Key.N) OpenCharacterWindow();
+			if (key.PhysicalKeycode == Key.H) OpenSkillSheet();
 			if (key.PhysicalKeycode == Key.O) ChangeOriginalFloor(!_useOriginalFloor);
 			if (key.PhysicalKeycode == Key.Escape) StopWalking();
 			if (key.PhysicalKeycode == Key.V) ChangeRevealActor(!_revealActor);

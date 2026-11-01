@@ -29,7 +29,6 @@ public sealed partial class WorldSession
     public int Level => CharacterProgression.Level(Experience);
     public int MaxHitPoints => CharacterProgression.MaxHitPoints(Character, Level);
     public int HitPoints => MaxHitPoints - _playerDamage;
-    public int UnspentSkillPoints => CharacterProgression.UnspentSkillPoints(Character, Level);
     public int PerksAvailable => CharacterProgression.PerksAvailable(Character, Level);
     /// <summary>Player HP when hurt; null means unhurt. Healing comes from level-ups and drugs (<see cref="UseDrug"/>).</summary>
     public int? PlayerHitPoints => _playerDamage == 0 ? null : HitPoints;
@@ -190,7 +189,7 @@ public sealed partial class WorldSession
         ArgumentNullException.ThrowIfNull(encounter); ArgumentNullException.ThrowIfNull(playerWeapon);
         if (encounter.Player != Location) throw new InvalidOperationException("The encounter belongs to another actor location.");
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
-        var stats = DerivedCombatStats.ForPlayer(Character, Level);
+        var stats = DerivedCombatStats.ForPlayer(Sheet, Level);
         var combatants = new List<CombatantState> { new("player", Character.Name, null, 0, true, Location.Hex, Location.Elevation, stats,
             playerWeapon, HitPoints, healingDoses: HealingDoses) };
         foreach (string key in encounter.FoeKeys)

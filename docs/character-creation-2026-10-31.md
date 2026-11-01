@@ -128,10 +128,10 @@ O v12 também traz o bloco `Duel` (ver o [duelo](temple-duel-2026-10-31.md)).
 
 ## Fora do escopo
 
-- Gastar pontos de perícia e escolher perks ao subir de nível.
+- Escolher perks ao subir de nível. Gastar os pontos de perícia já existe ([gasto de pontos](skill-spending-2026-10-31.md), checkpoint v13).
 - Traits com efeitos fora da ficha: One Hander, Fast Shot, Bloody Mess, Jinxed, Chem Reliant, Chem Resistant e Sex Appeal (reação). Hoje eles aparecem na ficha sem efeito.
 - Partes de traits que agem dentro do combate, ainda não aplicadas:
   - Finesse: +30% de resistência do alvo, mas o crítico +10 já entra;
-  - Heavy Handed: crítico pior, mas o Melee Damage +4 já entra; o projeto ainda não tem críticos.
+  - Heavy Handed: crítico pior, mas o Melee Damage +4 já entra. Críticos só existem a partir do dia 1 de jogo, que o Templo não alcança.
 - Tag! e Educated (perks), além de dificuldade diferente de Normal.
 - Idade e sexo não mudam regras; só aparecem na ficha.

@@ -107,6 +107,11 @@ try
         foreach (var row in messages.Entries.Values.OrderBy(r => r.Id)) Console.WriteLine($"{row.Id}: {row.Text}");
         return 0;
     }
+    if (args.Length == 4 && args[2] == "--text")
+    {
+        Console.Write(System.Text.Encoding.Latin1.GetString(new GameData(args[1]).Read(args[3]).Bytes));
+        return 0;
+    }
     if (args.Length == 3 && args[2] == "--premade-report")
     {
         var game = new GameData(args[1]);

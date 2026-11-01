@@ -69,7 +69,7 @@ L13=2, M20=2). As perguntas opcionais do Node002 (L7–L9) não entram no desafi
 
 Nenhuma rodada matou Cameron e nenhuma travou.
 
-- **Mingan:** soca de 1 a 3 (52% contra AC 8). Cameron dá três golpes de 1 a 5 por turno (62%). E Mingan chega ferido: no original daria para descansar antes, mas o projeto ainda não tem relógio de jogo.
+- **Mingan:** soca de 1 a 3 (52% contra AC 8). Cameron dá três golpes de 1 a 5 por turno (62%). E Mingan chega ferido. No original ele também não pode descansar antes: `arcaves` tem `pipboy_active=No` e `can_rest_here=No,No,No` ([descanso e críticos](skill-spending-2026-10-31.md)). Sobram os Healing Powders antes de aceitar o desafio.
 - **Perfil neutro:** não vence nenhuma das 200 sementes testadas.
 
 ## Validação

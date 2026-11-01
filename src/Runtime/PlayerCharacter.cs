@@ -46,8 +46,10 @@ public sealed record SavedCharacter([property: JsonRequired] CharacterKind Kind,
 /// </summary>
 public sealed class PlayerCharacter
 {
-    public const int SpecialTotal = 40, MaxTraits = 2, Tags = 3, MinAge = 16, MaxAge = 35, MaxNameLength = 31;
+    public const int SpecialTotal = 40, MaxTraits = 2, Tags = 3, MinAge = 16, MaxAge = 35, MaxNameLength = 31, MaxSkill = 300;
     private readonly int[] _skillPoints;
+    // Points bought with level-up skill points (CE skillAdd raises the same base value as the creation points).
+    private readonly int[] _raises = new int[CharacterSkill.Count];
     private readonly CharacterTrait[] _traits;
     private readonly int[] _tags;
     public CharacterKind Kind { get; }
@@ -56,6 +58,8 @@ public sealed class PlayerCharacter
     public IReadOnlyList<CharacterTrait> Traits => _traits;
     public IReadOnlyList<int> TaggedSkills => _tags;
     public IReadOnlyList<int> SkillPoints => _skillPoints;
+    /// <summary>Base points added by spending level-up skill points; the creation sheet (<see cref="Capture"/>) leaves them out.</summary>
+    public IReadOnlyList<int> SkillRaises => _raises;
     public int Age { get; }
     /// <summary>0 male, 1 female (CE STAT_GENDER).</summary>
     public int Gender { get; }
@@ -72,6 +76,22 @@ public sealed class PlayerCharacter
     /// <summary>The profile every earlier milestone used: SPECIAL 5, no traits, tags or points (not creatable: 5 points unspent).</summary>
     public static PlayerCharacter Neutral { get; } = new(CharacterKind.TestNeutral, "Escolhido", Special.Neutral, Array.Empty<CharacterTrait>(),
         Array.Empty<int>(), new int[CharacterSkill.Count], 25, 0, null);
+
+    /// <summary>The same character with these level-up raises; all zero gives the creation sheet itself.</summary>
+    public PlayerCharacter WithSkillRaises(IReadOnlyList<int> raises)
+    {
+        ArgumentNullException.ThrowIfNull(raises);
+        if (raises.Count != CharacterSkill.Count || raises.Any(r => r is < 0 or > MaxSkill)) throw new ArgumentOutOfRangeException(nameof(raises));
+        if (raises.SequenceEqual(_raises)) return this;
+        PlayerCharacter sheet = Creation;
+        if (raises.All(r => r == 0)) return sheet;
+        var raised = new PlayerCharacter(Kind, Name, Base, _traits, _tags, _skillPoints, Age, Gender, Premade) { Creation = sheet };
+        for (int i = 0; i < raises.Count; i++) raised._raises[i] = raises[i];
+        return raised;
+    }
+    /// <summary>The character as created or loaded from its GCD, without level-up raises.</summary>
+    public PlayerCharacter Creation { get => _creation ?? this; private init => _creation = value; }
+    private readonly PlayerCharacter? _creation;
 
     public bool Has(CharacterTrait trait) => _traits.Contains(trait);
     public bool IsTagged(int skill) => _tags.Contains(skill);
@@ -186,7 +206,7 @@ public sealed class PlayerCharacter
     public int Skill(int index)
     {
         if (index is < 0 or >= CharacterSkill.Count) throw new ArgumentOutOfRangeException(nameof(index));
-        var rule = CharacterSkill.Rules[index]; int[] stats = Effective.ToArray(); int points = _skillPoints[index];
+        var rule = CharacterSkill.Rules[index]; int[] stats = Effective.ToArray(); int points = _skillPoints[index] + _raises[index];
         int value = rule.Default + rule.Multiplier * (stats[rule.Stat1] + (rule.Stat2 < 0 ? 0 : stats[rule.Stat2])) + points;
         if (IsTagged(index)) value += points + 20;
         if (Has(CharacterTrait.Gifted)) value -= 10;

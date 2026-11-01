@@ -54,9 +54,9 @@ public partial class TemplePreview
                 throw new InvalidDataException("Starting did not reset the world with the created character.");
             // The checkpoint keeps who plays.
             SaveCheckpoint(); var saved = WorldCheckpoint(); ResetWalker(); LoadCheckpoint();
-            if (saved.Version != 12 || saved.Character is not { Kind: CharacterKind.Created, Name: "Teste" } || _campaign.Character.Name != "Teste"
+            if (saved.Version != 13 || saved.Character is not { Kind: CharacterKind.Created, Name: "Teste" } || _campaign.Character.Name != "Teste"
                 || _skills.Character.Lockpick != created.Skill(CharacterSkill.Lockpick))
-                throw new InvalidDataException("Checkpoint v12 lost the created character.");
+                throw new InvalidDataException("Checkpoint v13 lost the created character.");
             // Narg: original sheet in the world; without a Speech tag the Temple dialogue explains the duel it would take.
             OpenCharacterWindow(); _characterWindow!.Select(0); _characterWindow.EmitSignal(AcceptDialog.SignalName.Confirmed);
             if (_campaign.Character.Name != "Narg" || _campaign.MaxHitPoints != 44 || _campaign.CarryCapacity != 250 || _campaign.Character.QualifiesForTempleSpeech)
@@ -68,7 +68,7 @@ public partial class TemplePreview
             if (_campaign.Character != PlayerCharacter.Neutral || _skills.Character.Lockpick != 20) throw new InvalidDataException("The neutral profile did not return.");
             foreach (WorldArea area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
             ResetWalker();
-            GD.Print("CHARACTER_CREATION_OK: premade Narg/Mingan/Chitsa from original GCD and biographies, editor limits (40 points, 2 traits, 3 tags), new game reset, created character saved in checkpoint v12, Narg's sheet in the world and Speech gate, neutral profile restored; source bytes verified.");
+            GD.Print("CHARACTER_CREATION_OK: premade Narg/Mingan/Chitsa from original GCD and biographies, editor limits (40 points, 2 traits, 3 tags), new game reset, created character saved in checkpoint v13, Narg's sheet in the world and Speech gate, neutral profile restored; source bytes verified.");
         }
         finally { CloseCharacterWindow(); _checkingNavigation = false; }
     }

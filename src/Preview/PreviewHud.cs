@@ -16,7 +16,8 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _inventory = new() { Name = "InventoryAction", Text = "Inventário [I]", Disabled = true,
         TooltipText = "Consultar o inventário original do objeto selecionado, sem transferir itens" };
     private readonly Button _focusCharacter = new() { Name = "CharacterFocusAction", Text = "Personagem [C]" };
-    private readonly Button _characterSheet = new() { Name = "CharacterSheetAction", Text = "Ficha [N]", TooltipText = "Escolher Narg, Mingan, Chitsa ou criar um personagem · começa um novo jogo" };
+    private readonly Button _characterSheet = new() { Name = "CharacterSheetAction", Text = "Novo jogo [N]", TooltipText = "Escolher Narg, Mingan, Chitsa ou criar um personagem · começa um novo jogo" };
+    private readonly Button _skillSheet = new() { Name = "SkillSheetAction", Text = "Ficha [H]", TooltipText = "Ficha do personagem em jogo · gastar os pontos de perícia dos níveis" };
     private readonly Button _originalFloor = new() { Name = "OriginalFloorAction", Text = "Piso original [O]", ToggleMode = true,
         TooltipText = "Comparar com o piso da instalação local" };
     private readonly Button _revealActor = new() { Name = "WallOcclusionAction", Text = "Auto [V]", ToggleMode = true, ButtonPressed = true,
@@ -46,7 +47,7 @@ public partial class PreviewHud : CanvasLayer
     public Action? LockpickRequested;
     public Action? ExitRequested;
     public Action? SaveRequested, LoadRequested;
-    public Action? CharacterFocusRequested, CharacterSheetRequested;
+    public Action? CharacterFocusRequested, CharacterSheetRequested, SkillSheetRequested;
     public Action<bool>? OriginalFloorRequested;
     public Action? StopRequested;
     public Action<bool>? RevealActorRequested;
@@ -102,6 +103,7 @@ public partial class PreviewHud : CanvasLayer
         Button(row, "Ver tudo  [Home]", () => FrameRequested?.Invoke());
         _focusCharacter.Pressed += () => CharacterFocusRequested?.Invoke(); row.AddChild(_focusCharacter);
         _characterSheet.Pressed += () => CharacterSheetRequested?.Invoke(); row.AddChild(_characterSheet);
+        _skillSheet.Pressed += () => SkillSheetRequested?.Invoke(); row.AddChild(_skillSheet);
         _bag.Pressed += () => BagRequested?.Invoke(); row.AddChild(_bag);
         _save.Pressed += () => SaveRequested?.Invoke(); row.AddChild(_save);
         _load.Pressed += () => LoadRequested?.Invoke(); row.AddChild(_load);
@@ -226,6 +228,7 @@ public partial class PreviewHud : CanvasLayer
         _doorUse.Disabled = !enabled; _doorUse.Text = open ? "Fechar porta [U]" : "Abrir porta [U]";
         _doorUse.TooltipText = hint;
     }
+    public string CharacterText => _character.Text;
     public void LockpickAction(bool enabled, bool locked, string hint, string character)
     {
         _lockpick.Disabled = !enabled; _lockpick.Text = locked ? "Arrombar [L]" : "Retrancar [L]";
