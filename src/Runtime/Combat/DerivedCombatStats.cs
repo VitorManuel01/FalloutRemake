@@ -34,6 +34,8 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
     public int BetterCriticals { get; init; }
     /// <summary>The player's Finesse trait: CE adds 30 to the target's DR on every hit that does not bypass armor.</summary>
     public bool Finesse { get; init; }
+    /// <summary>The player's One Hander trait: CE attackDetermineToHit gives -40 with a two-handed weapon and +20 with any other.</summary>
+    public bool OneHander { get; init; }
 
     public int Threshold(DamageType type) => DamageThreshold[(int)type];
     public int Resistance(DamageType type) => DamageResistance[(int)type];
@@ -72,7 +74,8 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
         {
             // CE traitGetStatModifier: Heavy Handed -30 Better Criticals; attackComputeDamage: Finesse +30 target DR.
             BetterCriticals = character.Has(FalloutRemake.Runtime.CharacterTrait.HeavyHanded) ? -30 : 0,
-            Finesse = character.Has(FalloutRemake.Runtime.CharacterTrait.Finesse)
+            Finesse = character.Has(FalloutRemake.Runtime.CharacterTrait.Finesse),
+            OneHander = character.Has(FalloutRemake.Runtime.CharacterTrait.OneHander)
         };
     }
 

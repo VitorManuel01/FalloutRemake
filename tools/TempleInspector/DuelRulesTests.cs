@@ -16,6 +16,8 @@ internal static class DuelRulesTests
     }
     static CombatSession Fight(CombatantState hero, CombatantState ant, string initiator, params int[] rolls) =>
         new(new[] { hero, ant }, new HexNavigation(Array.Empty<MapObject>(), 0), new CombatTests.Scripted(rolls), initiator);
+    // Every roll lands mid-range: enough for an attack whose outcome the test does not inspect.
+    sealed class Middle : ICombatRandom { public int Between(int min, int max) => (min + max) / 2; }
 
     // WorldCombatTests' map 3 with a pot holding the spear and an unloaded pistol, both carried.
     static MapDocument WorldWithSpearMap()
@@ -252,6 +254,47 @@ internal static class DuelRulesTests
             Assert(ArmorPerks.Effect(ArmorPerks.AdvancedArmorII) is { Strength: 4, RadiationResistance: 75 } && ArmorPerks.Effect(ArmorPerks.CombatArmor) is { Strength: 0, RadiationResistance: 20 },
                 "fallout2.exe rows.");
             try { ArmorPerks.Effect(70); throw new Exception("Unknown perk accepted."); } catch (InvalidDataException) { }
+        });
+        check("a weapon's minimum Strength costs 20 to hit per missing point, the player is warned on each such attack (combat.msg 107) and a worn armor's ST closes the gap", () =>
+        {
+            var world = WorldWithArmor();
+            world.StartNewGame(PlayerCharacter.Create("Fraco", new Special(2, 5, 5, 5, 5, 8, 10), Array.Empty<CharacterTrait>(), new[] { 0, 1, 2 }, 25, 0));
+            TakeArmor(world);
+            Assert(world.Wield(world.Carried.Single(c => c.Source.Header.Pid == 7), Hand.Left, false) == HandStatus.Ready, "Spear (ST 4) in the left hand.");
+            var fight = world.BeginCombat(new CombatEncounter(world.Location, new[] { "map3:far-ant" }, "player"), world.PlayerWeapon(), new CombatTests.Scripted());
+            var player = fight.Get("player"); var ant = fight.Combatants.Single(c => !c.IsPlayer);
+            Assert(CombatResolver.StrengthShortfall(player) == 2 && CombatResolver.ToHit(player, ant).StrengthPenalty == 40, "ST 2 for a spear that needs 4: -40.");
+            for (int guard = 0; guard < 10 && fight.Active != player; guard++) CombatAi.TakeTurn(fight);
+            fight.Execute(CombatActionProposal.OpenInventory("player"));
+            Assert(world.Wear(world.Carried.Single(c => c.Source.Header.Pid == 3), false) == HandStatus.Ready && player.Stats.Special.Strength == 5
+                && CombatResolver.ToHit(player, ant).StrengthPenalty == 0, "Power armor: ST 5, no penalty.");
+            world.TakeOff(false);
+            Assert(CombatResolver.ToHit(player, ant).StrengthPenalty == 40, "Off again: -40.");
+
+            // The warning rides on the attack event: the player's weapon only, never bare hands or a critter.
+            var weak = new CombatantState("player", "p", null, 0, true, Centre, 0, DerivedCombatStats.ForCharacter(new Special(2, 5, 5, 5, 5, 5, 5)),
+                CombatWeapon.Primary("Spear", WeaponPrototypeData.Read(CombatTests.Spear())), 20);
+            var duel = new CombatSession(new[] { weak, Ant() }, new HexNavigation(Array.Empty<MapObject>(), 0), new Middle(), "player");
+            duel.Execute(CombatActionProposal.Attack("player", "ant"));
+            Assert(duel.Log.OfType<AttackResolved>().Single() is { UnderStrength: true, AttackerId: "player" }, "Spear with ST 2: warned.");
+            var fist = Hero(CombatWeapon.UnarmedFor(DerivedCombatStats.ForCharacter(new Special(1, 5, 5, 5, 5, 5, 5)), 1), DerivedCombatStats.ForCharacter(new Special(1, 5, 5, 5, 5, 5, 5)));
+            var bare = new CombatSession(new[] { fist, Ant() }, new HexNavigation(Array.Empty<MapObject>(), 0), new Middle(), "player");
+            bare.Execute(CombatActionProposal.Attack("player", "ant"));
+            Assert(bare.Log.OfType<AttackResolved>().Single() is { UnderStrength: false } && CombatResolver.StrengthShortfall(fist) == 0, "Bare hands need no Strength.");
+        });
+        check("One Hander (CE attackDetermineToHit): the player takes -40 with a two-handed weapon and +20 with any other, never bare-handed nor for critters", () =>
+        {
+            DerivedCombatStats one = DerivedCombatStats.ForCharacter(Special.Neutral) with { OneHander = true };
+            var spear = CombatWeapon.Primary("Spear", WeaponPrototypeData.Read(CombatTests.Spear()));
+            CombatWeapon pole = spear with { TwoHanded = true };
+            int plain = CombatResolver.ToHit(Hero(spear), Ant()).Raw;
+            Assert(!spear.TwoHanded && CombatResolver.ToHit(Hero(spear, one), Ant()) is { OneHanderModifier: 20 } light && light.Raw == plain + 20, "One-handed spear: +20.");
+            Assert(CombatResolver.ToHit(Hero(pole, one), Ant()) is { OneHanderModifier: -40 } heavy && heavy.Raw == plain - 40, "Two-handed: -40.");
+            Assert(CombatResolver.ToHit(Hero(CombatWeapon.UnarmedFor(one, 1), one), Ant()).OneHanderModifier == 0, "Bare hands: nothing.");
+            var critter = new CombatantState("npc", "npc", null, 1, false, Centre, 0, one, spear, 30);
+            Assert(CombatResolver.ToHit(critter, Hero(spear)).OneHanderModifier == 0, "Only the player has traits.");
+            var chitsa = PlayerCharacter.Create("Uma", Special.Neutral with { Agility = 10 }, new[] { CharacterTrait.OneHander }, new[] { 0, 1, 2 }, 25, 1);
+            Assert(DerivedCombatStats.ForPlayer(chitsa).OneHander && !DerivedCombatStats.ForPlayer(PlayerCharacter.Neutral).OneHander, "The sheet carries the trait.");
         });
         check("in a fight the perk's Strength can open an unarmed blow: power armor put on in the open inventory turns the punch into a Strong Punch", () =>
         {

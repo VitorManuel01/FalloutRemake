@@ -43,7 +43,7 @@ public sealed record CombatActionProposal(string ActorId, CombatActionKind Kind,
 /// ProneTarget is the +40 against a knocked down or out target.
 /// </summary>
 public sealed record ToHitBreakdown(int Skill, int SkillIndex, int DistanceModifier, int StrengthPenalty, int TargetArmorClass, int Raw, int Chance,
-    int ProneTarget = 0, int LocationPenalty = 0, int BlindPenalty = 0);
+    int ProneTarget = 0, int LocationPenalty = 0, int BlindPenalty = 0, int OneHanderModifier = 0);
 
 /// <summary>Damage range of one hit after the target's threshold and resistance, using the exact resolution arithmetic.</summary>
 public sealed record DamageEstimate(DamageType Type, int MinRoll, int MaxRoll, int Threshold, int Resistance, int MinDamage, int MaxDamage);
@@ -59,8 +59,9 @@ public abstract record CombatEvent;
 public sealed record CombatStarted(string[] Order) : CombatEvent;
 public sealed record TurnStarted(int Round, string CombatantId, int ActionPoints) : CombatEvent;
 public sealed record CombatantMoved(string CombatantId, int From, int To, int[] Path, int ActionPointsSpent) : CombatEvent;
+/// <param name="UnderStrength">The player struck with a weapon whose minimum Strength exceeds its own (CE _combat_display, combat.msg 107).</param>
 public sealed record AttackResolved(string AttackerId, string TargetId, int Chance, int Roll, bool Hit, int DamageRoll, int Damage,
-    int TargetHitPoints, int ActionPointsSpent, HitLocation Location = HitLocation.Uncalled) : CombatEvent;
+    int TargetHitPoints, int ActionPointsSpent, HitLocation Location = HitLocation.Uncalled, bool UnderStrength = false) : CombatEvent;
 /// <summary>The player opened the inventory in a fight (4 AP) or closed it.</summary>
 public sealed record InventoryOpened(string CombatantId, int ActionPointsSpent) : CombatEvent;
 public sealed record InventoryClosed(string CombatantId) : CombatEvent;

@@ -158,6 +158,8 @@ public partial class TemplePreview
 
     private string AttackSummary(CombatActionPreview preview, CombatantState target) =>
         $"{_combatWeapon.Name} → {CombatName(target.Id)}: {preview.ToHit!.Chance}% de acerto · dano {preview.Damage!.MinDamage}–{preview.Damage.MaxDamage} · {preview.ActionPointCost} AP"
+        + (preview.ToHit.StrengthPenalty > 0 ? $" · Força insuficiente −{preview.ToHit.StrengthPenalty}%" : "")
+        + (preview.ToHit.OneHanderModifier != 0 ? $" · One Hander {preview.ToHit.OneHanderModifier:+0;−0}%" : "")
         + (preview.Status == CombatActionStatus.Ready ? "" : $" · {Refusal(preview.Status)}");
 
     private void CombatHoverAtScreen(Vector2 screen)
@@ -278,6 +280,7 @@ public partial class TemplePreview
                     lines.Add($"{CombatName(moved.CombatantId)} andou {moved.Path.Length} hex(es) · {moved.ActionPointsSpent} AP"); break;
                 case AttackResolved attack:
                     Lunge(_combat.Get(attack.AttackerId), _combat.Get(attack.TargetId));
+                    if (attack.UnderStrength) lines.Add("Você não tem força suficiente para usar esta arma direito.");
                     lines.Add($"{CombatName(attack.AttackerId)} ataca {CombatName(attack.TargetId)}{Aimed(attack.Location)}: {attack.Roll} em {attack.Chance}% · "
                         + (attack.Hit ? $"acerto, {attack.Damage} de dano ({attack.TargetHitPoints} HP)" : "erro")); break;
                 case InventoryOpened opened:

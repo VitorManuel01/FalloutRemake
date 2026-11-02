@@ -37,8 +37,16 @@ public partial class TemplePreview
         HandStatus status = _campaign.Wield(item, hand, _walker?.Moving == true);
         // In a fight the change shows in the combat log (WeaponsChanged) and the HUD names the new blow.
         if (status == HandStatus.Ready && _combat != null) { _combatWeapon = NamedWeapon(_combat.Get("player").Weapon); ApplyCombatEvents(_combat.Log.Skip(logged).ToArray()); }
-        NavigationStatus(status == HandStatus.Ready ? $"{HandBlowName(hand)} na mão {(hand == Hand.Left ? "esquerda" : "direita")} · {HandsLine()}" : PlayerBagWindow.HandHint(status));
+        NavigationStatus(status == HandStatus.Ready ? $"{HandBlowName(hand)} na mão {(hand == Hand.Left ? "esquerda" : "direita")}{StrengthWarning(hand)} · {HandsLine()}"
+            : PlayerBagWindow.HandHint(status));
         RefreshBag(); RefreshDoorAction();
+    }
+
+    // CE attackDetermineToHit: 20 to hit per Strength point the weapon wants beyond the player's (worn armor included).
+    private string StrengthWarning(Hand hand)
+    {
+        int strength = _campaign!.PlayerStats().Special.Strength, needed = _campaign.HandWeapon(hand).MinStrength;
+        return needed > strength ? $" · pede Força {needed}, você tem {strength}: −{20 * (needed - strength)}% de acerto" : "";
     }
 
     private void PutAwayFromBag(Hand hand)

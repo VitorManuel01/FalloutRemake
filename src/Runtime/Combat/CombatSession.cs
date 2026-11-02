@@ -243,6 +243,8 @@ public sealed class CombatSession : ICombatSession
                     && _random.Between(1, 100) is int bonusRoll && bonusRoll <= actor.Weapon.BonusCriticalChance)
                     (critical, criticalRoll, needed) = (true, bonusRoll, actor.Weapon.BonusCriticalChance);
                 int damageRoll = 0, damage = 0;
+                // CE _combat_display warns the player first (combat.msg 107) when its weapon wants more Strength.
+                bool weak = actor.IsPlayer && actor.Weapon.IsItem && CombatResolver.StrengthShortfall(actor) > 0;
                 if (hit)
                 {
                     var (multiplier, flags) = critical ? CriticalStrike(actor, target, criticalRoll, needed, location) : (DamageCalculator.NormalHitMultiplier, DamageFlags.None);
@@ -254,10 +256,10 @@ public sealed class CombatSession : ICombatSession
                     target.HitPoints = Math.Max(0, target.HitPoints - damage);
                     // DAM_DEAD from the table kills whatever HP are left (_damage_object then critterKill).
                     if ((flags & DamageFlags.Dead) != 0) target.HitPoints = 0;
-                    _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, damageRoll, damage, target.HitPoints, preview.ActionPointCost, location));
+                    _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, damageRoll, damage, target.HitPoints, preview.ActionPointCost, location, weak));
                     if (target.Alive && flags != DamageFlags.None) ApplyResults(target, flags);
                 }
-                else _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, 0, 0, target.HitPoints, preview.ActionPointCost, location));
+                else _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, 0, 0, target.HitPoints, preview.ActionPointCost, location, weak));
                 AfterAttack(actor, target, damage);
                 // CE runs the attacker's combat_p_proc (fixed_param 2) after every hit on a critter that stood before it.
                 if (hit && actor.PoisonsOnHit && target.IsPlayer) Sting(actor, target);
