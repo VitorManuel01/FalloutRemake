@@ -7,8 +7,9 @@ using System.Text.Json.Serialization;
 
 namespace FalloutRemake.Runtime;
 
+/// <summary>Ground (optional, inside v13): thrown units of the area's collected items lying on a hex; absent when there are none.</summary>
 public sealed record SavedArea(int Map, string SourceHash, string DependenciesHash, ActorLocation Location, SavedDoorSession Session, TakenItem[]? Taken = null, ItemUseAllocation[]? Uses = null, SceneryReplacement[]? Replacements = null,
-    ConsumedItem[]? Consumed = null);
+    ConsumedItem[]? Consumed = null, GroundItem[]? Ground = null);
 public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null, SavedWorldEntries? Entries = null,
     SavedCombat? Combat = null, SavedCharacter? Character = null, SavedTempleDuel? Duel = null, SavedSkills? Skills = null);
 /// <summary>v11 adds <see cref="SavedArea.Consumed"/> (drugs taken from collected items). v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>

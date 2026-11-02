@@ -58,6 +58,47 @@ public static class OriginalStraightPath
         return tileColumn is >= 0 and < 200 && tileRow is >= 0 and < 200 ? 200 * tileRow + tileColumn : -1;
     }
 
+    /// <summary>A hex on the grid's outer ring (tileIsEdge).</summary>
+    public static bool IsEdge(int tile) => tile is >= 0 and < 40000 && (tile < 200 || tile >= 40000 - 200 || tile % 200 == 0 || tile % 200 == 199);
+
+    /// <summary>
+    /// _tile_num_beyond: the hex <paramref name="distance"/> hexes along the screen line from <paramref name="from"/> through
+    /// <paramref name="to"/>, or the first grid edge on the way (where a missed shot or throw lands).
+    /// </summary>
+    public static int TileBeyond(int from, int to, int distance)
+    {
+        if (distance <= 0 || from == to) return from;
+        (int fromX, int fromY) = Screen(from); (int toX, int toY) = Screen(to);
+        fromX += 16; fromY += 8; toX += 16; toY += 8;
+        int ddx = 2 * Math.Abs(toX - fromX), ddy = 2 * Math.Abs(toY - fromY);
+        int stepX = Math.Sign(toX - fromX), stepY = Math.Sign(toY - fromY);
+        int x = fromX, y = fromY, previous = from, counted = 0;
+        bool xMajor = ddx > ddy;
+        int middle = xMajor ? ddy - ddx / 2 : ddx - ddy / 2;
+        // The line runs on past the target; a tile off the grid (-1) never ends it, as in CE, so stop at a safe bound.
+        for (int guard = 0; guard < 1_000_000; guard++)
+        {
+            int tile = TileAt(x, y);
+            if (tile != previous)
+            {
+                counted++;
+                if (counted == distance || IsEdge(tile)) return tile;
+                previous = tile;
+            }
+            if (xMajor)
+            {
+                if (middle >= 0) { middle -= ddx; y += stepY; }
+                middle += ddy; x += stepX;
+            }
+            else
+            {
+                if (middle >= 0) { middle -= ddy; x += stepX; }
+                middle += ddx; y += stepY;
+            }
+        }
+        throw new InvalidOperationException("The line beyond the target left the grid.");
+    }
+
     /// <summary>Facing from one hex toward another (tileGetRotationTo): 0 NE, 1 E, 2 SE, 3 SW, 4 W, 5 NW.</summary>
     public static int RotationTo(int from, int to)
     {
@@ -75,9 +116,10 @@ public static class OriginalStraightPath
     /// The first hex along the straight path from <paramref name="from"/> toward <paramref name="to"/> for which
     /// <paramref name="blocks"/> holds, as _make_straight_path_func with a node step of 16: the start hex is tested first, then
     /// each hex the line enters; the walk stops on reaching the target's screen row or column without testing that last
-    /// point. Null when nothing blocks, or when the line outgrows CE's 200 path nodes.
+    /// point. Null when nothing blocks, or when the line outgrows CE's 200 path nodes (a node every <paramref name="nodeStep"/>
+    /// screen steps: 16 for sight, 32 for a shot).
     /// </summary>
-    public static int? FirstBlocked(int from, int to, Func<int, bool> blocks)
+    public static int? FirstBlocked(int from, int to, Func<int, bool> blocks, int nodeStep = 16)
     {
         ArgumentNullException.ThrowIfNull(blocks);
         if (blocks(from)) return from;
@@ -91,7 +133,7 @@ public static class OriginalStraightPath
         while (true)
         {
             int tile = TileAt(x, y);
-            if (++sinceNode == 16) { if (nodes >= 200) return null; sinceNode = 0; nodes++; }
+            if (++sinceNode == nodeStep) { if (nodes >= 200) return null; sinceNode = 0; nodes++; }
             if (yMajor ? y == toY : x == toX) return null;
             if (yMajor)
             {

@@ -295,7 +295,7 @@ public sealed partial class WorldSession
         }
         if (InCombat) throw new InvalidOperationException("A fight is already open.");
         var session = new CombatSession(combatants, Current.Doors.Navigation(Location.Elevation), random, encounter.InitiatorKey, _gameTime);
-        _activeFight = session; _activeFightMap = CurrentMap;
+        _activeFight = session; _activeFightMap = CurrentMap; session.Thrown = OnThrown;
         return session;
     }
 }

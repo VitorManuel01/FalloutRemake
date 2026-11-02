@@ -20,9 +20,11 @@ internal static class DuelRulesTests
     sealed class Middle : ICombatRandom { public int Between(int min, int max) => (min + max) / 2; }
 
     // WorldCombatTests' map 3 with a pot holding the spear and an unloaded pistol, both carried.
-    static MapDocument WorldWithSpearMap()
+    internal static MapDocument WorldWithSpearMap()
     {
-        MapObject Item(string key, int pid) => CombatTests.Blocker(-1, 0, pid, key) with { Subtype = 3, Header = CombatTests.Blocker(-1, 0, pid, key).Header with { Tile = -1 } };
+        // Unloaded, as the original weapons are (CarryWeight reads a weapon's ammoQuantity).
+        MapObject Item(string key, int pid) => CombatTests.Blocker(-1, 0, pid, key) with { Subtype = 3, Header = CombatTests.Blocker(-1, 0, pid, key).Header with { Tile = -1 },
+            State = new Dictionary<string, int> { ["ammoQuantity"] = 0 } };
         var pot = CombatTests.Blocker(20000 + 199 - 97, 0, 0x000000FA, "map3:pot") with { Subtype = 1, InventoryCount = 2, State = new Dictionary<string, int> { ["flags"] = 0 },
             Inventory = new[] { new InventoryEntry(0, 1, Item("map3:spear", 7)), new InventoryEntry(0, 1, Item("map3:pistol", 8)) } };
         var baseMap = WorldCombatTests.Map();
@@ -30,7 +32,7 @@ internal static class DuelRulesTests
                 DeclaredCount = baseMap.ObjectLayers[0].Objects.Length + 1 } },
             Prototypes = baseMap.Prototypes.Append(CombatTests.Spear()).Append(CombatTests.Pistol()).Append(CombatTests.Item(0xFA, 1, 65, 0, _ => { })).ToArray() };
     }
-    static WorldSession WorldWithSpear()
+    internal static WorldSession WorldWithSpear()
     {
         var world = new WorldSession(_ => WorldWithSpearMap(), new[] { 3, 126 });
         world.Current.Items.Restore(new[] { new TakenItem("map3:pot", "map3:pistol", 1), new TakenItem("map3:pot", "map3:spear", 1) });

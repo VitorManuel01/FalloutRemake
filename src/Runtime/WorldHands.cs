@@ -17,7 +17,7 @@ public sealed record HeldItem([property: JsonRequired] int Map, [property: JsonR
 /// The player's hands. Each holds a carried weapon or nothing; an empty left hand punches and an empty right hand kicks
 /// (CE interface.cc), each with the best blow the sheet allows. The active hand is the one that strikes; a new game starts
 /// on the left (gInterfaceCurrentHand). An item that leaves the inventory (returned, consumed, kept in the challenge chest)
-/// leaves the hand at once. Melee weapons only until ammunition is tracked; wielding happens outside fights here (CE charges
+/// leaves the hand at once. Melee and thrown weapons only until ammunition is tracked; wielding happens outside fights here (CE charges
 /// the inventory's 4 AP in one).
 /// </summary>
 public sealed partial class WorldSession
@@ -43,7 +43,8 @@ public sealed partial class WorldSession
         if (CarriedHeld(held) is not { } carried) return HandStatus.NoItem;
         if (PrototypeOf(carried) is not { Type: 0, Subtype: WeaponPrototypeData.Subtype } prototype) return HandStatus.NotWeapon;
         CombatWeapon weapon = CombatWeapon.Primary("", WeaponPrototypeData.Read(prototype));
-        if (weapon.IsRanged) return HandStatus.Unsupported;
+        // Firearms wait for ammunition; thrown weapons (the plant spike) leave the hand when used.
+        if (weapon.IsRanged && !weapon.Throws) return HandStatus.Unsupported;
         // One unit per hand: a single item moves from the other hand, a stack of two can fill both.
         return HandStatus.Ready;
     }
@@ -137,14 +138,17 @@ public sealed partial class WorldSession
         if (HandWeapon(active).Name != player.Weapon.Name || HandWeapon(Other(active)).Name != player.AlternateWeapon?.Name) RearmFight();
     }
 
-    private void SetHeld(Hand hand, HeldItem? held) { if (hand == Hand.Left) _leftHand = held; else _rightHand = held; }
+    private void SetHeld(Hand hand, HeldItem? held) { ResetModeIfChanged(hand, held); if (hand == Hand.Left) _leftHand = held; else _rightHand = held; }
 
     /// <summary>The blow of a hand: its weapon's primary attack, or the hand's best unarmed blow.</summary>
     public CombatWeapon HandWeapon(Hand hand)
     {
         var stats = PlayerStats();
         if (Held(hand) is { } held && CarriedHeld(held) is { } item && PrototypeOf(item) is { } prototype)
-            return CombatWeapon.Primary($"PID {prototype.Pid}", WeaponPrototypeData.Read(prototype));
+        {
+            var weapon = WeaponPrototypeData.Read(prototype);
+            return (_secondMode.Contains(hand) ? CombatWeapon.Secondary($"PID {prototype.Pid}", weapon) : null) ?? CombatWeapon.Primary($"PID {prototype.Pid}", weapon);
+        }
         return CombatWeapon.UnarmedFor(stats, Level, kick: hand == Hand.Right);
     }
 
@@ -159,7 +163,7 @@ public sealed partial class WorldSession
         if (_armor is { } worn && CarriedHeld(worn) == null) _armor = null;
     }
 
-    private void ResetHands() { _leftHand = null; _rightHand = null; _armor = null; ActiveHand = Hand.Left; }
+    private void ResetHands() { _leftHand = null; _rightHand = null; _armor = null; _secondMode.Clear(); ActiveHand = Hand.Left; }
 
     // The hand active when a fight ends stays active (the player may have swapped in it).
     private void KeepHand(CombatantState player) => ActiveHand = player.RightHandActive ? Hand.Right : Hand.Left;

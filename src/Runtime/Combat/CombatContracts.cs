@@ -15,7 +15,9 @@ public enum CombatActionStatus
     /// <summary>Both arms crippled, or one with a two-handed weapon (CE COMBAT_BAD_SHOT_*_CRIPPLED).</summary>
     ArmCrippled,
     /// <summary>The player cannot aim this blow (CE critterCanAim: Fast Shot, or explosive, fire or EMP damage).</summary>
-    CannotAim
+    CannotAim,
+    /// <summary>A wall or scenery stands in the line of fire (CE COMBAT_BAD_SHOT_AIM_BLOCKED, combat.msg 104).</summary>
+    AimBlocked
 }
 
 /// <summary>What a combatant wants to do; previewed and executed through the same rules.</summary>
@@ -69,6 +71,12 @@ public sealed record InventoryOpened(string CombatantId, int ActionPointsSpent) 
 public sealed record InventoryClosed(string CombatantId) : CombatEvent;
 /// <summary>Inside the open inventory the player changed what its hands hold: the blows of the active and the other hand.</summary>
 public sealed record WeaponsChanged(string CombatantId, string Blow, string OtherHand) : CombatEvent;
+/// <summary>A thrown weapon left the attacker's hand and lies on <paramref name="LandingHex"/> (CE _action_ranged).</summary>
+public sealed record WeaponThrown(string AttackerId, string Weapon, int LandingHex) : CombatEvent;
+/// <summary>A missed shot or throw flew on and struck someone else (attackCompute's accidental target).</summary>
+public sealed record StrayHit(string AttackerId, string TargetId, int DamageRoll, int Damage, int TargetHitPoints) : CombatEvent;
+/// <summary>The player changed the active hand's attack mode (FO2's item button): the blow now used.</summary>
+public sealed record AttackModeChanged(string CombatantId, string Blow) : CombatEvent;
 /// <summary>Inside the open inventory the player put on armor (its name) or took it off (null): the armor class it now has.</summary>
 public sealed record ArmorChanged(string CombatantId, string? Armor, int ArmorClass) : CombatEvent;
 /// <summary>The player switched hands: the blow now used.</summary>

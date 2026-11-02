@@ -211,7 +211,8 @@ public sealed partial class WorldSession
         ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses(); ValidateTempleExit();
         return new(13, "neutral-v13", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
-                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture(), a.Items.CaptureConsumed())).ToArray(), _templeProgress?.Capture(),CaptureEntries(),
+                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture(), a.Items.CaptureConsumed(),
+                a.Items.CaptureGround() is { Length: > 0 } ground ? ground : null)).ToArray(), _templeProgress?.Capture(),CaptureEntries(),
             CaptureCombat(), Character.Capture(), CaptureTempleDuel(), CaptureSkills());
     }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
@@ -254,7 +255,8 @@ public sealed partial class WorldSession
             if (checkpoint.Version == 1 && saved.Taken != null || checkpoint.Version >= 2 && saved.Taken == null
                 || checkpoint.Version < 3 && saved.Uses != null || checkpoint.Version >= 3 && saved.Uses == null
                 || checkpoint.Version < 4 && saved.Replacements != null || checkpoint.Version >= 4 && saved.Replacements == null
-                || checkpoint.Version < 11 && saved.Consumed != null || checkpoint.Version >= 11 && saved.Consumed == null)
+                || checkpoint.Version < 11 && saved.Consumed != null || checkpoint.Version >= 11 && saved.Consumed == null
+                || saved.Ground is { Length: 0 } || checkpoint.Version < 13 && saved.Ground != null)
                 throw new InvalidDataException("Checkpoint item state does not match its schema version.");
             // Items taken from bodies wait for the corpses, which the combat block restores below.
             TakenItem[] taken = saved.Taken ?? Array.Empty<TakenItem>();
@@ -271,6 +273,9 @@ public sealed partial class WorldSession
         candidate.RestoreEntries(checkpoint);
         candidate.RestoreCombat(checkpoint.Combat, checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed);
         foreach (var (area, rows) in bodyLoot) area.Items.RestoreBodyLoot(rows);
+        // Thrown units may come from body loot, so they follow it; the challenge chest's custody comes next.
+        foreach (SavedArea saved in checkpoint.Areas)
+            if (saved.Ground != null) candidate._areas[saved.Map].Items.RestoreGround(saved.Ground, allowed.Contains);
         candidate.RestoreTempleDuel(checkpoint.Duel);
         candidate.RestoreHands(checkpoint.Combat?.Hands);
         candidate.RestoreSkills(checkpoint.Skills);

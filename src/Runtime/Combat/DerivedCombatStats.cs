@@ -159,6 +159,23 @@ public sealed record CombatWeapon(string Name, int? Pid, WeaponAttackType Attack
         WeaponAttackType type = WeaponPrototypeData.TypeOf(weapon.PrimaryMode);
         if (type == WeaponAttackType.None) throw new InvalidDataException($"Weapon PRO {weapon.Pid:X8} has no primary attack.");
         if (ammo != null && ammo.Caliber != weapon.Caliber) throw new InvalidDataException("Ammunition caliber does not match the weapon.");
+        return Mode(name, weapon, type, weapon.PrimaryRange, weapon.PrimaryActionPoints, ammo);
+    }
+
+    /// <summary>
+    /// The weapon's second attack (CE secondary hit mode: maxRange2, actionPointCost2), such as the spear's throw; null when
+    /// the PRO names none. Only thrown and melee second modes are supported until ammunition is tracked.
+    /// </summary>
+    public static CombatWeapon? Secondary(string name, WeaponPrototypeData weapon)
+    {
+        ArgumentNullException.ThrowIfNull(weapon);
+        WeaponAttackType type = WeaponPrototypeData.TypeOf(weapon.SecondaryMode);
+        return type is WeaponAttackType.Throw or WeaponAttackType.Melee
+            ? Mode(name, weapon, type, weapon.SecondaryRange, weapon.SecondaryActionPoints, null) with { IsSecondary = true } : null;
+    }
+
+    private static CombatWeapon Mode(string name, WeaponPrototypeData weapon, WeaponAttackType type, int range, int actionPoints, AmmoPrototypeData? ammo)
+    {
         // Project mapping until CE weaponGetSkillValue is ported: energy damage uses Energy Weapons, other guns Small Guns.
         int skill = type switch
         {
@@ -167,9 +184,14 @@ public sealed record CombatWeapon(string Name, int? Pid, WeaponAttackType Attack
             _ => weapon.DamageType is 1 or 3 or 4 ? DerivedCombatStats.EnergyWeapons : DerivedCombatStats.SmallGuns
         };
         return new(name, weapon.Pid, type, weapon.MinDamage, weapon.MaxDamage, (DamageType)weapon.DamageType,
-            Math.Max(1, weapon.PrimaryRange), Math.Max(1, weapon.PrimaryActionPoints), weapon.MinStrength, skill, ammo)
+            Math.Max(1, range), Math.Max(1, actionPoints), weapon.MinStrength, skill, ammo)
         { CriticalFailureType = weapon.CriticalFailureType, TwoHanded = weapon.TwoHanded };
     }
+
+    /// <summary>The weapon's second attack mode rather than its first.</summary>
+    public bool IsSecondary { get; init; }
+    /// <summary>A thrown attack: the weapon itself leaves the hand and lands where the throw ends.</summary>
+    public bool Throws => AttackType == WeaponAttackType.Throw;
 
     /// <summary>PRO critical failure table row; -1 for natural attacks and bare hands (CE weaponGetCriticalFailureType of no weapon).</summary>
     public int CriticalFailureType { get; init; } = -1;

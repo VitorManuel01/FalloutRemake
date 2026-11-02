@@ -43,7 +43,8 @@ public partial class TemplePreview
     {
         if (weapon.Pid is not int pid) return weapon;
         CarriedItem? item = _campaign?.Carried.FirstOrDefault(i => i.Source.Header.Pid == pid);
-        return item != null && OriginalText(item.Source)?.Name is { } name ? weapon with { Name = ShortName(name) } : weapon;
+        string mode = weapon.Throws ? " (arremesso)" : "";
+        return item != null && OriginalText(item.Source)?.Name is { } name ? weapon with { Name = ShortName(name) + mode } : weapon with { Name = weapon.Name + mode };
     }
 
     private bool CombatRefuses(string action)
@@ -123,7 +124,8 @@ public partial class TemplePreview
         CombatActionStatus.OtherElevation => "outra elevação", CombatActionStatus.NoItem => "sem Healing Powder na bolsa",
         CombatActionStatus.EnemiesAware => "inimigos ainda percebem você",
         CombatActionStatus.ArmCrippled => "braço aleijado não segura a arma",
-        CombatActionStatus.CannotAim => "este golpe não pode ser mirado", _ => "alvo inválido"
+        CombatActionStatus.CannotAim => "este golpe não pode ser mirado",
+        CombatActionStatus.AimBlocked => "a linha de tiro está bloqueada", _ => "alvo inválido"
     };
 
     // CE combat results in the HUD's words; the critical tables only ever produce these on the torso.
@@ -200,6 +202,9 @@ public partial class TemplePreview
             if (key.PhysicalKeycode == Key.Space) { EndCombatTurn(); return true; }
             if (key.PhysicalKeycode == Key.H) { UseCombatHealing(); return true; }
             if (key.PhysicalKeycode == Key.X) { SwitchCombatHand(); return true; }
+            if (key.PhysicalKeycode == Key.Z) { ToggleAttackMode(); return true; }
+            // J beside a thrown item picks it up on the player's turn; otherwise looting waits for the fight's end.
+            if (key.PhysicalKeycode == Key.J && PickUpGroundItem()) return true;
             if (key.PhysicalKeycode is Key.Enter or Key.KpEnter) { LeaveCombat(); return true; }
             // Camera, view and inspection keys stay available; anything that would act in the world waits.
             if (key.PhysicalKeycode is Key.Q or Key.E or Key.C or Key.Home or Key.V or Key.G or Key.O or Key.F or Key.R) return false;
@@ -331,6 +336,14 @@ public partial class TemplePreview
                     lines.Add($"Você abre a bolsa · {opened.ActionPointsSpent} AP"); break;
                 case WeaponsChanged changed:
                     lines.Add($"Nas mãos: {changed.Blow} (ativa) · {changed.OtherHand}"); break;
+                case WeaponThrown thrown:
+                    if (thrown.AttackerId == "player") { _combatWeapon = NamedWeapon(_combat.Get("player").Weapon); RefreshGroundItems(); RefreshDoorAction(); }
+                    lines.Add($"{CombatName(thrown.AttackerId)} arremessou {(thrown.AttackerId == "player" ? "a arma" : "")}: caiu no hex {thrown.LandingHex}"
+                        + (thrown.AttackerId == "player" ? " · J ao lado para recolher" : "")); break;
+                case StrayHit stray:
+                    lines.Add($"O arremesso perdido atinge {CombatName(stray.TargetId)}: {stray.Damage} de dano ({stray.TargetHitPoints} HP)"); break;
+                case AttackModeChanged mode:
+                    lines.Add($"Modo de ataque: {NamedWeapon(_combat.Get(mode.CombatantId).Weapon).Name}"); break;
                 case ArmorChanged armor:
                     lines.Add(armor.Armor == null ? $"Você tira a armadura · CA {armor.ArmorClass}" : $"Você veste a armadura · CA {armor.ArmorClass}"); break;
                 case HandSwitched hand:

@@ -18,8 +18,9 @@ public static class CombatResolver
 
     /// <param name="fromHex">_determine_to_hit_from_tile: as if the attacker stood there.</param>
     /// <param name="useDistance">False for _determine_to_hit_no_range: no range term, but CE still adds a positive perception bonus.</param>
+    /// <param name="crittersOnLine">Standing critters between attacker and target (_combat_is_shot_blocked): -10 each for a ranged or thrown attack.</param>
     public static ToHitBreakdown ToHit(CombatantState attacker, CombatantState target, HitLocation location = HitLocation.Uncalled,
-        int? fromHex = null, bool useDistance = true)
+        int? fromHex = null, bool useDistance = true, int crittersOnLine = 0)
     {
         CombatWeapon weapon = attacker.Weapon;
         int skill = attacker.Stats.Skill(weapon.SkillIndex), distance = 0;
@@ -32,6 +33,7 @@ public static class CombatResolver
             modifier = Math.Max(modifier, -2 * perception);
             distance = modifier * (modifier >= 0 && (attacker.Conditions & DamageFlags.Blind) != 0 ? -12 : -4);
             if (!useDistance && distance <= 0) distance = 0;
+            if (useDistance) distance -= 10 * crittersOnLine;
         }
         int strength = StrengthShortfall(attacker) * 20;
         int oneHander = attacker.IsPlayer && attacker.Stats.OneHander && weapon.IsItem ? (weapon.TwoHanded ? -40 : 20) : 0;

@@ -132,6 +132,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckHand();
 				if (_test) await CheckCombatBag();
 				if (_test) await CheckCalledShot();
+				if (_test) await CheckThrow();
 				if (_test) await CheckLockpick();
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();
@@ -211,7 +212,7 @@ public partial class TemplePreview : Node3D
 		_worldLabels.Clear();
 		ResetNpcRouteView();
 		using var resources = new ResourceScope();
-		_placedUseLayer = null; _placedUseNodes.Clear();
+		_placedUseLayer = null; _placedUseNodes.Clear(); _groundLayer = null; _groundNodes.Clear();
 		_replacementNodes.Clear();
 		_containerVisuals.Clear(); _containerVisualRevision = -1;
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
@@ -269,6 +270,7 @@ public partial class TemplePreview : Node3D
 		BuildNavigation();
 		SetOriginalFloor(_useOriginalFloor);
 		RefreshPlacedUses();
+		RefreshGroundItems();
 		RefreshContainerVisuals(true);
 		BuildAppliedSceneryVisuals();
 	}
@@ -393,7 +395,8 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.I) OpenInventory();
 			if (key.PhysicalKeycode == Key.G) ChangeNavigationGrid(!_showNavigationGrid);
 			if (key.PhysicalKeycode == Key.T) FrameRoute();
-			if (key.PhysicalKeycode == Key.J) OpenLoot();
+			if (key.PhysicalKeycode == Key.J && !PickUpGroundItem()) OpenLoot();
+			if (key.PhysicalKeycode == Key.Z) ToggleAttackMode();
 			if (key.PhysicalKeycode == Key.B) OpenBag();
 			if (key.PhysicalKeycode == Key.P) SetArchitecture(!_architectureEnabled);
 			if (key.PhysicalKeycode == Key.X) SwitchUnarmedHand();
@@ -642,6 +645,7 @@ public partial class TemplePreview : Node3D
 		_floorArtworkMaterials.Clear(); _floorArtworkMesh = null;
 		_entityMeshes.Clear(); _entityMaterials.Clear(); _entityShapes.Clear(); _containerVisuals.Clear(); _worldLabels.Clear();
 		_placedUseNodes.Clear(); _placedUseLayer = null; _placedUseMesh = null; _placedUseMaterial = null;
+		_groundNodes.Clear(); _groundLayer = null; _groundMesh = null; _groundMaterial = null;
 		_replacementNodes.Clear(); _replacementMesh = null; _replacementMaterial = null;
 		GC.Collect(); GC.WaitForPendingFinalizers();
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);

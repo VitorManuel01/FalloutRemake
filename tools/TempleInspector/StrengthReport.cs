@@ -34,7 +34,10 @@ internal static class StrengthReport
         return new
         {
             Status = "STRENGTH_SCANNED",
-            Weapons = weapons.OrderBy(w => w.Key).Select(w => new { Pid = w.Key, w.Value.Name, w.Value.Weapon.MinStrength, w.Value.Weapon.TwoHanded, Maps = w.Value.Maps }),
+            Weapons = weapons.OrderBy(w => w.Key).Select(w => new { Pid = w.Key, w.Value.Name, w.Value.Weapon.MinStrength, w.Value.Weapon.TwoHanded, Maps = w.Value.Maps,
+                Primary = $"{w.Value.Weapon.PrimaryMode} {w.Value.Weapon.PrimaryRange} hex {w.Value.Weapon.PrimaryActionPoints} AP",
+                Secondary = $"{w.Value.Weapon.SecondaryMode} {w.Value.Weapon.SecondaryRange} hex {w.Value.Weapon.SecondaryActionPoints} AP",
+                Damage = $"{w.Value.Weapon.MinDamage}-{w.Value.Weapon.MaxDamage}" }),
             Characters = characters.Select(c => new
             {
                 c.Name, Strength = c.Effective.Strength, OneHander = c.Has(CharacterTrait.OneHander),

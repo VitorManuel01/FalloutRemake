@@ -14,6 +14,12 @@ public sealed record CarriedItem(int Map, string OwnerKey, MapObject Source, int
 /// <summary>Units of a collected source item used up by the actor (a drug taken); they leave the carried quantity for good.</summary>
 public sealed record ConsumedItem([property: System.Text.Json.Serialization.JsonRequired] string OwnerKey, [property: System.Text.Json.Serialization.JsonRequired] string ItemKey,
     [property: System.Text.Json.Serialization.JsonRequired] int Quantity);
+/// <summary>
+/// Units of a collected source item lying on the ground where a throw left them (CE _action_ranged moves the thrown weapon
+/// to the landing tile), on any area; picking them up makes them carried again.
+/// </summary>
+public sealed record GroundItem([property: System.Text.Json.Serialization.JsonRequired] string OwnerKey, [property: System.Text.Json.Serialization.JsonRequired] string ItemKey,
+    [property: System.Text.Json.Serialization.JsonRequired] int Quantity, [property: System.Text.Json.Serialization.JsonRequired] ActorLocation Place);
 
 /// <summary>Conservative direct-container transfers. Original MAP records remain immutable; no stacking across source keys.</summary>
 public sealed class ItemTransferSession
@@ -30,6 +36,8 @@ public sealed class ItemTransferSession
     private readonly Dictionary<string, ConsumedItem> _consumed = new(StringComparer.Ordinal);
     // Units held by a script container (the Temple challenge chest) until the actor takes them back.
     private readonly Dictionary<string, ConsumedItem> _custody = new(StringComparer.Ordinal);
+    // Thrown units on the ground, one row per item and place.
+    private readonly List<GroundItem> _ground = new();
     public const int MaxUses = 1024;
     // Every change of the area's items moves the revision; the world listens to let go of items that left the hands.
     public long Revision { get => _revision; private set { _revision = value; Changed?.Invoke(); } }
@@ -58,8 +66,47 @@ public sealed class ItemTransferSession
     public ItemUseAllocation[] CaptureUses() => _uses.Values.OrderBy(u => u.Id).ToArray();
     public ConsumedItem[] CaptureConsumed() => _consumed.Values.OrderBy(c => c.ItemKey, StringComparer.Ordinal).ToArray();
     public ConsumedItem[] CaptureCustody() => _custody.Values.OrderBy(c => c.ItemKey, StringComparer.Ordinal).ToArray();
+    public GroundItem[] CaptureGround() => _ground.OrderBy(g => g.ItemKey, StringComparer.Ordinal).ThenBy(g => g.Place.Map).ThenBy(g => g.Place.Elevation)
+        .ThenBy(g => g.Place.Hex).ToArray();
+    private int GroundQuantity(string itemKey) => _ground.Where(g => g.ItemKey == itemKey).Sum(g => g.Quantity);
     private int UsedQuantity(string itemKey) => _uses.Values.Where(u => u.ItemKey == itemKey).Sum(u => u.Quantity) + (_consumed.GetValueOrDefault(itemKey)?.Quantity ?? 0)
-        + (_custody.GetValueOrDefault(itemKey)?.Quantity ?? 0);
+        + (_custody.GetValueOrDefault(itemKey)?.Quantity ?? 0) + GroundQuantity(itemKey);
+    /// <summary>One carried unit leaves for the ground at <paramref name="place"/> (a throw); rows at the same place merge.</summary>
+    internal ItemUseStatus Drop(string ownerKey, string itemKey, ActorLocation place)
+    {
+        ArgumentNullException.ThrowIfNull(place);
+        if (!HexNavigation.Valid(place.Hex) || place.Elevation is < 0 or > 2) return ItemUseStatus.InvalidState;
+        if (Eligibility(ownerKey, itemKey, out _, out _) != ItemTakeStatus.Ready || _taken.GetValueOrDefault(itemKey)?.OwnerKey != ownerKey) return ItemUseStatus.NoItem;
+        if (CarriedQuantity(itemKey) < 1) return ItemUseStatus.Empty;
+        var spot = place with { Rotation = 0 };
+        int index = _ground.FindIndex(g => g.ItemKey == itemKey && g.Place == spot);
+        if (index >= 0) _ground[index] = _ground[index] with { Quantity = _ground[index].Quantity + 1 };
+        else _ground.Add(new GroundItem(ownerKey, itemKey, 1, spot));
+        Revision++; return ItemUseStatus.Ready;
+    }
+    /// <summary>Every unit of a ground row becomes carried again.</summary>
+    internal ItemTakeStatus PickUp(GroundItem row)
+    {
+        int index = _ground.IndexOf(row);
+        if (index < 0) return ItemTakeStatus.NoItem;
+        _ground.RemoveAt(index); Revision++; return ItemTakeStatus.Ready;
+    }
+    internal void RestoreGround(GroundItem[] rows, Func<int, bool> knownMap)
+    {
+        var candidate = new List<GroundItem>();
+        foreach (GroundItem row in rows ?? throw new InvalidDataException("Missing ground rows."))
+        {
+            if (row?.OwnerKey == null || row.ItemKey == null || row.Place == null || row.Quantity <= 0 || row.Place.Rotation != 0 || !HexNavigation.Valid(row.Place.Hex)
+                || row.Place.Elevation is < 0 or > 2 || !knownMap(row.Place.Map) || _taken.GetValueOrDefault(row.ItemKey)?.OwnerKey != row.OwnerKey
+                || candidate.Any(g => g.ItemKey == row.ItemKey && g.Place == row.Place))
+                throw new InvalidDataException("Ground item source, place or quantity is invalid.");
+            candidate.Add(row);
+        }
+        foreach (string key in candidate.Select(g => g.ItemKey).Distinct())
+            if (CarriedQuantity(key) < candidate.Where(g => g.ItemKey == key).Sum(g => g.Quantity))
+                throw new InvalidDataException("Ground items exceed the collected source quantity.");
+        _ground.Clear(); _ground.AddRange(candidate); Revision++;
+    }
     /// <summary>Moves every carried unit into custody (CE itemMoveAll from the actor), returning what moved.</summary>
     internal ConsumedItem[] DepositAll()
     {
@@ -97,9 +144,9 @@ public sealed class ItemTransferSession
         return new(entry.Quantity, entry.Quantity - (_taken.GetValueOrDefault(itemKey)?.Quantity ?? 0), CarriedQuantity(itemKey),
             _uses.Values.Where(u => u.ItemKey == itemKey && u.Phase == ItemUsePhase.Placed).Sum(u => u.Quantity),
             _uses.Values.Where(u => u.ItemKey == itemKey && u.Phase == ItemUsePhase.Consumed).Sum(u => u.Quantity) + (_consumed.GetValueOrDefault(itemKey)?.Quantity ?? 0),
-            _custody.GetValueOrDefault(itemKey)?.Quantity ?? 0);
+            _custody.GetValueOrDefault(itemKey)?.Quantity ?? 0, GroundQuantity(itemKey));
     }
-    public void Reset() { _taken.Clear(); _uses.Clear(); _consumed.Clear(); _custody.Clear(); Revision++; }
+    public void Reset() { _taken.Clear(); _uses.Clear(); _consumed.Clear(); _custody.Clear(); _ground.Clear(); Revision++; }
     internal Prototype? PrototypeOf(MapObject item) => _prototypes.GetValueOrDefault(item.Header.Pid);
     /// <summary>Uses up carried units of one collected source item; the caller has already checked what the item does.</summary>
     internal ItemUseStatus ConsumeCarried(string ownerKey, string itemKey, int quantity)
@@ -313,7 +360,7 @@ public sealed class ItemTransferSession
         _taken.Clear(); foreach (var row in candidate) _taken.Add(row.Key, row.Value);
         _uses.Clear(); foreach (var row in allocations) _uses.Add(row.Key, row.Value);
         _consumed.Clear(); foreach (var row in eaten) _consumed.Add(row.Key, row.Value);
-        _custody.Clear();
+        _custody.Clear(); _ground.Clear();
         Revision++;
     }
 }

@@ -24,6 +24,13 @@ public sealed class CombatSession : ICombatSession
     private bool _over;
     private int? _winner;
     internal CombatMovement Movement { get; }
+    internal CombatLineOfFire LineOfFire { get; }
+    /// <summary>
+    /// The world's answer when the player throws the weapon in its active hand: it moves the unit to the ground at the landing
+    /// hex and returns the blows the hands now give (the next unit of a stack stays in the hand, else the bare hand's blow).
+    /// Without it the thrower falls back to its bare-handed blow.
+    /// </summary>
+    internal Func<CombatantState, int, (CombatWeapon Active, CombatWeapon Other)?>? Thrown { get; set; }
     // CE draws the AI's choices (called shots) from the same generator as the attacks.
     internal ICombatRandom Random => _random;
     /// <summary>
@@ -76,6 +83,7 @@ public sealed class CombatSession : ICombatSession
         if (_combatants.Select(c => c.Team).Distinct().Count() < 2) throw new InvalidDataException("A fight needs two teams.");
         if (initiatorId != null && _combatants.All(c => c.Id != initiatorId)) throw new InvalidDataException("Unknown initiator.");
         Movement = new CombatMovement(navigation, _combatants);
+        LineOfFire = new CombatLineOfFire(navigation, _combatants);
         // _combat_sequence_init sets attacker and defender against each other; every other creature that noticed the player
         // ran attack_complex in combat, which marks it engaging with the player as its danger (opAttackComplex).
         CombatantState? player = _combatants.FirstOrDefault(c => c.IsPlayer);
@@ -122,8 +130,26 @@ public sealed class CombatSession : ICombatSession
     public static int AttackCost(CombatantState attacker, HitLocation location)
     {
         bool aiming = attacker.IsPlayer ? location != HitLocation.Uncalled : location is not (HitLocation.Torso or HitLocation.Uncalled);
-        int fastShot = attacker.IsPlayer && attacker.Stats.FastShot && attacker.Weapon.Range > 2 ? 1 : 0;
+        int fastShot = attacker.IsPlayer && attacker.Stats.FastShot && Range(attacker) > 2 ? 1 : 0;
         return Math.Max(1, attacker.Weapon.ActionPoints - fastShot + (aiming ? 1 : 0));
+    }
+
+    /// <summary>CE weaponGetRange: a thrown weapon reaches at most 3 x ST hexes (Heave Ho! is not modeled).</summary>
+    public static int Range(CombatantState attacker) => attacker.Weapon.Throws
+        ? Math.Min(attacker.Weapon.Range, 3 * Math.Min(attacker.Stats.Special.Strength, 10)) : attacker.Weapon.Range;
+
+    /// <summary>
+    /// The player picks the active hand's other attack mode (the item button; free in FO2): only on its own turn, with a
+    /// blow from the same item.
+    /// </summary>
+    public bool ChangeMode(CombatWeapon weapon)
+    {
+        ArgumentNullException.ThrowIfNull(weapon);
+        if (Active is not { IsPlayer: true } player || weapon.Pid == null || weapon.Pid != player.Weapon.Pid) return false;
+        if (InventoryOpen) { InventoryOpen = false; _log.Add(new InventoryClosed(player.Id)); }
+        player.Weapon = weapon;
+        _log.Add(new AttackModeChanged(player.Id, weapon.Name));
+        return true;
     }
 
     /// <summary>
@@ -181,10 +207,15 @@ public sealed class CombatSession : ICombatSession
                 DamageFlags arms = actor.Conditions & DamageFlags.CrippledArms;
                 CombatActionStatus status = actor.IsPlayer && proposal.Location != HitLocation.Uncalled && !CanAim(actor) ? CombatActionStatus.CannotAim
                     : actor.Weapon.IsItem && (arms == DamageFlags.CrippledArms || arms != 0 && actor.Weapon.TwoHanded) ? CombatActionStatus.ArmCrippled
-                    : CombatResolver.Reach(actor, target) > actor.Weapon.Range ? CombatActionStatus.OutOfRange
+                    : CombatResolver.Reach(actor, target) > Range(actor) ? CombatActionStatus.OutOfRange
                     : attackCost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready;
+                // _combat_check_bad_shot: a shot, a throw or any blow reaching past the next hex needs a free line of fire.
+                int crowd = 0;
+                if ((actor.Weapon.IsRanged || Range(actor) > 1) && LineOfFire.Blocked(actor, target, out crowd) && status == CombatActionStatus.Ready)
+                    status = CombatActionStatus.AimBlocked;
                 // The odds are shown even when the attack is not yet possible, so the HUD can explain the refusal.
-                return new(status, attackCost, ap - attackCost, Array.Empty<int>(), CombatResolver.ToHit(actor, target, proposal.Location), DamageCalculator.Estimate(actor, target));
+                return new(status, attackCost, ap - attackCost, Array.Empty<int>(),
+                    CombatResolver.ToHit(actor, target, proposal.Location, crittersOnLine: actor.Weapon.IsRanged ? crowd : 0), DamageCalculator.Estimate(actor, target));
             default:
                 return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
         }
@@ -284,10 +315,53 @@ public sealed class CombatSession : ICombatSession
                     _log.Add(new CombatantDied(target.Id, actor.Id, experience));
                     CheckOver();
                 }
+                if (actor.Weapon.IsRanged && !hit && !failure) StrayShot(actor, target, location);
+                // _action_ranged: unless the throw failed critically, the weapon flies to the struck defender or the miss's
+                // landing hex and stays there.
+                if (actor.Weapon.Throws && !failure) Throw(actor, hit ? target.Hex : _landing);
                 if (failure) CriticalMiss(actor, criticalRoll, needed);
                 break;
         }
         return new(CombatActionStatus.Ready, preview, _log.Skip(start).ToArray());
+    }
+
+    private int _landing;
+
+    /// <summary>
+    /// attackCompute after a plain ranged miss: the shot flies on _tile_num_beyond's distance (the weapon's range) past the
+    /// defender; the first obstacle on that stretch, else whatever blocks walkers where it lands, is struck instead (normal
+    /// damage, no critical). A wall only stops it. _check_ranged_miss never strikes anyone in CE (its final test is
+    /// inverted), so it is not reproduced.
+    /// </summary>
+    private void StrayShot(CombatantState actor, CombatantState target, HitLocation location)
+    {
+        _landing = OriginalStraightPath.TileBeyond(actor.Hex, target.Hex, Range(actor));
+        CombatLineOfFire.Obstacle? struck = LineOfFire.Beyond(target, _landing);
+        if (struck == null) return;
+        _landing = struck.Hex;
+        if (struck.Combatant is not { Alive: true } victim) return;
+        DamageEstimate estimate = DamageCalculator.Estimate(actor, victim);
+        int damageRoll = _random.Between(estimate.MinRoll, estimate.MaxRoll);
+        int damage = DamageCalculator.Apply(damageRoll, actor.Weapon, estimate.Threshold, estimate.Resistance, DamageCalculator.NormalHitMultiplier);
+        victim.HitPoints = Math.Max(0, victim.HitPoints - damage);
+        _log.Add(new StrayHit(actor.Id, victim.Id, damageRoll, damage, victim.HitPoints));
+        AfterAttack(actor, victim, damage);
+        if (!victim.Alive)
+        {
+            int experience = actor.IsPlayer && victim.Team != actor.Team ? victim.Experience : 0;
+            _experience += experience;
+            _log.Add(new CombatantDied(victim.Id, actor.Id, experience));
+            CheckOver();
+        }
+    }
+
+    // The thrown weapon leaves the hand; the world places it and says what the hands hold now.
+    private void Throw(CombatantState actor, int landing)
+    {
+        string weapon = actor.Weapon.Name;
+        if (actor.IsPlayer && Thrown?.Invoke(actor, landing) is var (active, other)) { actor.Weapon = active; actor.AlternateWeapon = other; }
+        else actor.Weapon = CombatWeapon.UnarmedFor(actor.Stats, 1, kick: actor.RightHandActive);
+        _log.Add(new WeaponThrown(actor.Id, weapon, landing));
     }
 
     /// <summary>

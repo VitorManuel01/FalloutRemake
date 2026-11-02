@@ -138,8 +138,9 @@ internal static class TempleRunAudit
                 { fight.Execute(CombatActionProposal.UseHealing("player")); used++; continue; }
                 var attack = fight.Preview(CombatActionProposal.Attack("player", foe.Id));
                 if (attack.Status == CombatActionStatus.Ready) fight.Execute(CombatActionProposal.Attack("player", foe.Id));
-                else if (attack.Status == CombatActionStatus.OutOfRange && hero.StepsAffordable(1) > 0
-                    && fight.Movement.Path(hero, h => FalloutGrid.Distance(h, foe.Hex) <= hero.Weapon.Range) is { Length: > 0 } path)
+                // Out of reach, close in; a wall in the spear's reach-2 line (CE _combat_check_bad_shot), step beside the foe.
+                else if (attack.Status is CombatActionStatus.OutOfRange or CombatActionStatus.AimBlocked && hero.StepsAffordable(1) > 0
+                    && fight.Movement.Path(hero, h => FalloutGrid.Distance(h, foe.Hex) <= (attack.Status == CombatActionStatus.AimBlocked ? 1 : CombatSession.Range(hero))) is { Length: > 0 } path)
                     fight.Execute(CombatActionProposal.Move("player", path[hero.StepsAffordable(path.Length) - 1]));
                 else fight.Execute(CombatActionProposal.EndTurn("player"));
             }
