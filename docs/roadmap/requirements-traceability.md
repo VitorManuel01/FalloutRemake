@@ -1,11 +1,11 @@
 # FalloutRemake — Matriz de Rastreabilidade de Requisitos, Tarefas e Testes
 
-> **Status:** Matriz Canônica de Rastreabilidade  
+> **Status:** Matriz Canônica de Rastreabilidade (Atualizado em 02/11/2026)  
 > **Data de Elaboração:** 28 de Outubro de 2026  
 > **Autor da Análise:** Gemini Flash 3.8 (Agente Solo)  
-> **Base de Código:** Commit `a66f31c`  
-> **Documento Principal:** [gameplay-combat-roadmap.md](file:///c:/Dev/FalloutRemake/docs/roadmap/gameplay-combat-roadmap.md)  
-> **Backlog Associado:** [parallel-work-packages.md](file:///c:/Dev/FalloutRemake/docs/roadmap/parallel-work-packages.md)
+> **Base de Código:** Commit `fe99d18`  
+> **Documento Principal:** [gameplay-combat-roadmap.md](file:///D:/Dev/FalloutRemake/docs/roadmap/gameplay-combat-roadmap.md)  
+> **Backlog Associado:** [parallel-work-packages.md](file:///D:/Dev/FalloutRemake/docs/roadmap/parallel-work-packages.md)
 
 ---
 
@@ -38,9 +38,11 @@
 
 | ID Requisito | Nome do Requisito | Prioridade | Fase | Pacote de Trabalho | Critério de Aceitação | Casos de Teste Associados |
 | :--- | :--- | :---: | :---: | :--- | :--- | :--- |
-| **NARR-001** | Ensaio Interativo de Conversa Repetida da Anciã | **P0** | Fase 1 | `CONT-001` | AC-NARR-01: Exibir Node004 e opções após primeiro diálogo sem mutar o mapa | `ArroyoElderConsultationChecks.cs` |
-| **NARR-002** | Aplicação Transacional dos Efeitos à Sessão | **P0** | Fase 1 | `CONT-002` | AC-NARR-02: Gravar GVAR 531=1 e reação auditada em `WorldSession` | `ArroyoElderStateTests.cs` |
-| **SAV-003** | Persistência do Diálogo da Anciã no Save v10 | **P0** | Fase 1 | `CONT-003` | AC-SAV-03: Save/load retém estado da Anciã com migração v1-v9 | `CheckpointTests.cs` |
+| **NARR-001** | Ensaio Interativo de Conversa Repetida da Anciã | **P0** | Fase 1 | `CONT-001` *(Concluído)* | AC-NARR-01: Exibir Node004 e opções após primeiro diálogo sem mutar o mapa | `ArroyoElderConsultationChecks.cs` |
+| **NARR-002** | Aplicação Transacional dos Efeitos à Sessão | **P0** | Fase 1 | `CONT-002` *(Concluído)* | AC-NARR-02: Gravar GVAR 531=1 e reação auditada em `WorldSession` | `ArroyoElderStateTests.cs` |
+| **SAV-003** | Persistência do Diálogo da Anciã no Save v10 | **P0** | Fase 1 | `CONT-003` *(Concluído)* | AC-SAV-03: Save/load retém estado da Anciã com migração v1-v9 | `CheckpointTests.cs` |
+| **NARR-003** | Aplicação da Conversa Repetida (`Node004`) à Sessão | **P0** | Fase 1 | `CONT-005` *(Concluído)* | AC-NARR-03: Atualizar reação e ajuste acumulado (`L0`, `L1`, `L3`) na `WorldSession` após conversa repetida | `ArroyoElderStateTests.cs` |
+| **SAV-004** | Persistência da Conversa Repetida em `SavedElderState` | **P0** | Fase 1 | `CONT-005` *(Concluído)* | AC-SAV-04: Save/load retém histórico de escolhas e reação pós-conversa repetida | `CheckpointTests.cs` |
 | **ARCH-001** | Contrato Desacoplado `ICombatSession` em C# Puro | **P0** | Fase 2 | `ARCH-001` | AC-ARCH-01: Interfaces puras .NET 8 sem dependência do namespace Godot | Compilação `TempleInspector` |
 | **COM-001** | Modelo de Estado Mutável do Combatente (`CombatantState`) | **P0** | Fase 2 | `COM-001` | AC-COM-01: Instanciar combatente com HP, AP, posições e status mutáveis | `CombatantStatsTests.cs` |
 | **COM-002** | Derivação de Atributos Secundários de Combate | **P0** | Fase 2 | `COM-001` | AC-COM-02: SPECIAL gera MaxHP, MaxAP, AC, Sequence e Melee Dmg corretos | `CombatantStatsTests.cs` |

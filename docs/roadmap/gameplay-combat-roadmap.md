@@ -1,19 +1,19 @@
 # FalloutRemake — Roadmap Geral de Gameplay, Continuidade e Combate Modernizado
 
-> **Status:** Documento Canônico de Planejamento e Arquitetura  
+> **Status:** Documento Canônico de Planejamento e Arquitetura (Atualizado em 02/11/2026)  
 > **Data de Elaboração:** 28 de Outubro de 2026  
 > **Autor da Análise:** Gemini Flash 3.8 (Agente Solo)  
-> **Base de Código Verificada:** Commit `a66f31c` (`codex/arroyo-elder-entry-audit`)  
-> **Repositório Principal:** `C:\Dev\FalloutRemake`  
+> **Base de Código Verificada:** Commit `fe99d18` (`codex/arroyo-elder-entry-audit`)  
+> **Repositório Principal:** `D:\Dev\FalloutRemake`  
 > **Acervo Externo de Assets:** `D:\FalloutRemakeAssets`  
-> **Ambientes de Desenvolvimento Isolados:** `D:\Dev\FalloutRemakeCodex`, `C:\Dev\FalloutRemakeClaude`, `D:\Dev\FalloutRemakeIntegracao`  
+> **Ambientes de Desenvolvimento Isolados:** `D:\Dev\FalloutRemakeArgon`, `D:\Dev\FalloutRemakeCodex`, `D:\Dev\FalloutRemakeClaude`, `D:\Dev\FalloutRemakeIntegracao`  
 > **Documentos Complementares:**
-> - [combat-functional-specification.md](file:///c:/Dev/FalloutRemake/docs/roadmap/combat-functional-specification.md)
-> - [companions-and-tactical-ai.md](file:///c:/Dev/FalloutRemake/docs/roadmap/companions-and-tactical-ai.md)
-> - [tactical-ui-and-qol.md](file:///c:/Dev/FalloutRemake/docs/roadmap/tactical-ui-and-qol.md)
-> - [parallel-work-packages.md](file:///c:/Dev/FalloutRemake/docs/roadmap/parallel-work-packages.md)
-> - [architecture-and-design-decisions.md](file:///c:/Dev/FalloutRemake/docs/roadmap/architecture-and-design-decisions.md)
-> - [requirements-traceability.md](file:///c:/Dev/FalloutRemake/docs/roadmap/requirements-traceability.md)
+> - [combat-functional-specification.md](file:///D:/Dev/FalloutRemake/docs/roadmap/combat-functional-specification.md)
+> - [companions-and-tactical-ai.md](file:///D:/Dev/FalloutRemake/docs/roadmap/companions-and-tactical-ai.md)
+> - [tactical-ui-and-qol.md](file:///D:/Dev/FalloutRemake/docs/roadmap/tactical-ui-and-qol.md)
+> - [parallel-work-packages.md](file:///D:/Dev/FalloutRemake/docs/roadmap/parallel-work-packages.md)
+> - [architecture-and-design-decisions.md](file:///D:/Dev/FalloutRemake/docs/roadmap/architecture-and-design-decisions.md)
+> - [requirements-traceability.md](file:///D:/Dev/FalloutRemake/docs/roadmap/requirements-traceability.md)
 
 ---
 
@@ -42,58 +42,45 @@ Abaixo é apresentada a classificação rigorosa de cada subsistema do projeto, 
 
 | Frente / Subsistema | Classificação Real | Evidências no Código / Testes | Descrição do Estado Real |
 | :--- | :--- | :--- | :--- |
-| **Leitura de Formatos Originais** | **Implementado e confirmado** | `src/Import/DatArchive.cs`, `MapDocument.cs`, `CritterPrototypeData.cs`, `IntProgram.cs`, `MapLayoutWriter.cs` | Leitura determinística de DAT, MAP, PRO, GAM, MSG, FRM e opcodes INT. 337 grupos de testes sintéticos aprovados em `TempleInspector`. |
+| **Leitura de Formatos Originais** | **Implementado e confirmado** | `src/Import/DatArchive.cs`, `MapDocument.cs`, `CritterPrototypeData.cs`, `WeaponPrototypeData.cs`, `ArmorPrototypeData.cs`, `AmmoPrototypeData.cs`, `DrugPrototypeData.cs`, `CharacterFile.cs`, `AiPacketCatalog.cs`, `IntProgram.cs`, `MapLayoutWriter.cs` | Leitura determinística de DAT, MAP, PRO, GAM, MSG, FRM, GCD, AI e opcodes INT. 476 grupos de testes sintéticos aprovados em `TempleInspector`. |
 | **Grid Hexagonal e Matemática** | **Implementado e confirmado** | `src/Geometry/FalloutGrid.cs` | 40.000 hexágonos (200x200), conversão afim 3D/hex, cálculo de distância topológica e identificação de 6 vizinhos. |
-| **Pathfinding e Navegação** | **Implementado e confirmado** | `src/Geometry/HexNavigation.cs` | BFS com bloqueadores multihex, suporte a 3 elevações (0, 1, 2) e políticas de saída (`StopAtExits`, `ContinueAcrossExits`). |
-| **Sessão e Checkpoints (v1 a v9)** | **Implementado e confirmado** | `src/Runtime/WorldSession.cs`, `WorldCheckpoint.cs`, `AtomicFileReplacement.cs` | Persistência multi-mapa em JSON atômico ($\le$ 1 MB) com migração retroativa de versões anteriores e validação estrita. |
+| **Pathfinding e Navegação** | **Implementado e confirmado** | `src/Geometry/HexNavigation.cs`, `OriginalPathfinder.cs`, `OriginalStraightPath.cs` | BFS e pathfinder CE com bloqueadores multihex, suporte a 3 elevações (0, 1, 2) e políticas de saída (`StopAtExits`, `ContinueAcrossExits`). |
+| **Sessão e Checkpoints (v1 a v13)** | **Implementado e confirmado** | `src/Runtime/WorldSession.cs`, `WorldCheckpoint.cs`, `AtomicFileReplacement.cs` | Persistência multi-mapa em JSON atômico ($\le$ 1 MB) com migração retroativa de versões anteriores e validação estrita (`v1`–`v13`). |
 | **Portas, Chaves e Lockpick** | **Implementado e confirmado** | `src/Runtime/TempleDoorAdapter.cs`, `DoorSession.cs`, `PrototypeCharacter.cs` | Abertura/fechamento, arrombamento (Lockpick 9) com 25 XP únicos e porta 100 da vila desbloqueável via tecla U. |
 | **Explosivos e Barreira** | **Implementado e confirmado** | `src/Runtime/ExplosiveTimer.cs`, `TempleBarrierProjection.cs` | Dinamite com timer lógico (+1s/+10s), detonação atômica, remoção do bloqueador da barreira do Templo e abertura do caminho para Elevação 2. |
 | **Inventário, Peso e Contêineres** | **Implementado e confirmado** | `src/Runtime/ItemTransferSession.cs`, `CarryWeight.cs`, `ItemOriginRoute.cs` | Coleta rápida ("Take All") e devolução integral ("Return All") com limite estrito de peso por Força. Itens rastreados por origem. |
 | **Speech do Templo (Cameron)** | **Implementado e confirmado** | `src/Runtime/TempleSpeechDraft.cs`, `WorldTempleSpeech.cs`, `TempleNpcDeparture.cs` | Rota diplomática de 5 escolhas (`actemvil.int`), partida física do NPC e abertura da porta para a vila de Arroyo. |
-| **Transição para Arroyo e Recompensas**| **Implementado e confirmado** | `src/Runtime/TempleVillageRoute.cs`, `ArroyoRewardProfile.cs` | Saída pela porta 100 para o mapa 4 (`arvillag.map`), concessão única de 600 XP (acumulando 625 XP totais), Karma 15 e Reputação 65 persistidos no checkpoint v9. |
+| **Transição para Arroyo e Recompensas**| **Implementado e confirmado** | `src/Runtime/TempleVillageRoute.cs`, `ArroyoRewardProfile.cs` | Saída pela porta 100 para o mapa 4 (`arvillag.map`), concessão única de recompensa, Karma e Reputação de Arroyo persistidos no checkpoint. |
 | **Aproximação da Anciã (Elder)** | **Implementado e confirmado** | `src/Preview/ArroyoElderApproachChecks.cs`, `ArroyoElderApproach.cs` | Rota guiada do personagem até o hex adjacente à Anciã (Tile 18915) na Elevação 0 de Arroyo. |
-| **Consulta de Diálogo da Anciã** | **Parcialmente implementado** | `src/Runtime/ArroyoElderConsultation.cs`, `src/Preview/ArroyoElderConsultationChecks.cs` | Ensaio desacoplado funcional exibindo mensagens originais de `ahelder.msg` em janela de texto. Desconectado da partida viva (`AppliedToWorld=false`). |
-| **Auditoria da Conversa Repetida** | **Parcialmente implementado** | `tools/TempleInspector/ArroyoElderRepeatAudit.cs`, `ArroyoElderStateTests.cs` | Lógica auditada em testes de domínio C# para `Node004`, `Node013` e `Node999`. Pendente de integração na interface e no runtime. |
-| **Aplicação de Efeitos de Diálogo** | **Parcialmente implementado** | `src/Runtime/ArroyoElderStateProfile.cs` | Efeitos de reação (-10, -20) e variáveis (GVAR_TALKED_TO_ELDER 531) projetados em memória, mas desabilitados na partida viva (`RuntimeDialogueEnabled=false`). |
-| **Dados de Criaturas (Critters)** | **Dados disponíveis** | `src/Import/CritterPrototypeData.cs` | Leitura de 35 base stats, 35 bonus stats e 18 skills de arquivos `.pro`. Criaturas do Templo confirmadas: Formiga Gigante (PID 382), Escorpião (PID 5) e Dumar/Cameron (PID 274). |
-| **Dados de Armas, Armaduras e Munições** | **Dados disponíveis** | `src/Import/PrototypeCatalog.cs` | Validação de tamanho dos arquivos `.pro` de itens. Decodificação detalhada dos campos específicos de combate (dano, DT, DR, alcance, AP) ainda não implementada no parser. |
-| **Sistema de Combate em Turnos** | **Ausente** | *(Nenhum código ativo)* | Inexistente no runtime. Sem pontos de ação (AP), ordem de iniciativa, cálculo de acerto/dano, cobertura ou overwatch. |
-| **Companions e IA Tática** | **Ausente** | *(Nenhum código ativo)* | Inexistente. Sem recrutamento, sem controle direto de membros do grupo e sem IA utilitária. |
-| **Apresentação de Assets 3D (Natureza)**| **Implementado e confirmado** | `src/Preview/NatureModels.cs`, `NaturePicking.cs` | Modelos GLB de rochas e árvores integrados na cena de teste com picking triangular 3D. |
-| **Apresentação de Demais Assets 3D** | **Parcialmente implementado** | Pastas em `Assets/Architecture`, `Containers`, `Furniture`, `Props` | Modelos GLB otimizados disponíveis no projeto, aguardando mapeamento na cena para substituir primitivas provisórias. |
+| **Consulta de Diálogo da Anciã** | **Implementado e confirmado (`CONT-001`)** | `src/Runtime/ArroyoElderConsultation.cs`, `src/Preview/ArroyoElderConsultationChecks.cs` | Ensaio interativo funcional exibindo mensagens originais de `ahelder.msg` tanto para o primeiro diálogo (`Node001`) quanto para a conversa repetida (`Node004`). |
+| **Auditoria da Conversa Repetida** | **Implementado e confirmado (`CONT-001`)** | `tools/TempleInspector/ArroyoElderRepeatAudit.cs`, `ArroyoElderStateTests.cs`, `ArroyoElderWindow.cs` | Lógica auditada e integrada na UI para `Node004`, `Node013` e `Node999` com opção 118 bloqueada (`metarule(17,11) == 0`). |
+| **Aplicação e Persistência de Diálogo** | **Implementado e confirmado (`CONT-002` a `CONT-005`)** | `src/Runtime/ArroyoElderStateProfile.cs`, `WorldSession.cs`, `WorldCheckpoint.cs` | Commit transacional do 1º diálogo (`CommitElderDialogue`, `GVAR_TALKED_TO_ELDER = 1` e locais `L0..L4`) e da conversa repetida (`CommitElderRepeatDialogue`), persistidos em `SavedElderState` (`Choices` e `RepeatChoices`) no checkpoint (`v10`–`v13`). |
+| **Dados de Criaturas (Critters)** | **Implementado e confirmado** | `src/Import/CritterPrototypeData.cs` | Leitura de 35 base stats, 35 bonus stats e 18 skills de arquivos `.pro`. Criaturas do Templo confirmadas: Formiga Gigante (PID 382), Escorpião (PID 5) e Dumar/Cameron (PID 274). |
+| **Dados de Armas, Armaduras e Munições** | **Implementado e confirmado** | `src/Import/WeaponPrototypeData.cs`, `ArmorPrototypeData.cs`, `AmmoPrototypeData.cs` | Decodificação detalhada dos campos de combate (dano, DT, DR, alcance, AP, munição, perks de arma/armadura) nos arquivos `.pro`. |
+| **Sistema de Combate em Turnos** | **Implementado e confirmado** | `src/Runtime/Combat/CombatSession.cs`, `WorldCombat.cs`, `WorldFirearms.cs`, `CombatViewAdapter.cs` | Combate por turnos CE com AP, ordem de iniciativa, ToHit/DT/DR, `combat_ai`, críticos, veneno, duas mãos, ataques mirados, arremesso, armas de fogo e munição (checkpoint `v13`). |
+| **Companions e IA Tática** | **Ausente** | *(Nenhum código ativo de grupo)* | Sem recrutamento de companions; inimigos utilizam `combat_ai` do CE com pacotes de `data/ai.txt`. |
+| **Apresentação de Assets 3D (Natureza e Templo)**| **Implementado e confirmado** | `src/Preview/NatureModels.cs`, `NaturePicking.cs`, `TempleArchitecture.cs` | Modelos GLB de rochas e árvores e kit modular glTF do Templo integrados na cena de teste com picking triangular 3D. |
+| **Apresentação de Demais Assets 3D** | **Parcialmente implementado** | Pastas em `Assets/Containers`, `Furniture`, `Props` | Modelos GLB otimizados disponíveis no projeto, aguardando mapeamento na cena para substituir primitivas provisórias. |
 | **Build Mobile / Android** | **Não verificável** | `Fallout Remake.csproj` | Configuração condicional presente, mas sem automação de build ou validação em dispositivo real. |
 
 ---
 
 ## 3. Próximas Tarefas de Continuidade (Frente A)
 
-Para garantir que o trabalho existente na Aldeia de Arroyo e no Templo não seja interrompido, a **Frente A** possui precedência operacional imediata.
+Com a conclusão de `CONT-001` a `CONT-005`, o primeiro diálogo da Anciã (`Node001 → Node999`), a conversa repetida (`Node004 → Node013 / Node999`), suas aplicações na `WorldSession` (`CommitElderDialogue` e `CommitElderRepeatDialogue`) e suas persistências em `SavedElderState` (`Choices` e `RepeatChoices` nos checkpoints `v10`–`v13`) estão integrados e validados.
 
-### 3.1. O que já está funcional e deve ser preservado
-1. **Aproximação da Anciã (`ArroyoElderApproach.cs`):** Caminhada do jogador a partir do ponto de entrada da vila até o hex adjacente à Anciã (Tile 18915), com detecção de bloqueios e cancelamento seguro de rota.
-2. **Consulta Textual do Primeiro Diálogo (`ArroyoElderConsultation.cs`):** Janela modal de consulta que carrega os textos originais em inglês de `ahelder.msg` (`Node001`, `Node002`, `Node006`, `Node008`, `Node013`, `Node999`).
-3. **Auditoria de Fontes e Refutação de Modificações (`ArroyoElderAudit.cs`):** Verificação rigorosa contra alteração em `scripts/ahelder.int`, `data/vault13.gam` e protótipos de criaturas.
-4. **Recompensa do Templo e Checkpoint v9 (`WorldCheckpoint.cs`):** Persistência transacional dos 625 XP acumulados, Karma 15 e Reputação de Arroyo 65.
+### 3.1. O que falta implementar na Frente A (`CONT-006` e subsequentes)
+1. **Habilitação dos Ramos de Entrega da Quest Principal (`Node007`, `Node014` e `Node015` — `CONT-006`):**
+   - Auditar e habilitar os efeitos de entrega do cantil da Vault 13 (`PID 267`), concessão de `100` Caps, marcação de Klamath (`area 1`) como conhecida e gravação de `L7 = 1` (destravando a opção pós-quest `120 → Node009` em `Node004`).
 
-### 3.2. O que foi validado apenas em ensaio isolado
-1. **Projeção de Estados do Diálogo (`ArroyoElderStateProfile.cs`):** Ajustes de reação do jogador perante a Anciã (base 32, redução de -10 em caminhos rudes e -20 em `Node013`).
-2. **Auditoria de Conversa Repetida (`ArroyoElderRepeatAudit.cs`):** Verificação de instrução bytecode e opções de diálogo de `Node004`, demonstrando que a opção de área 11 depende de `metarule(17, 11)` (área visitada no mapa-múndi).
-
-### 3.3. O que falta testar e integrar na partida viva
-1. **Ensaio Interativo da Conversa Repetida no Godot:** Permitir que o jogador, após concluir o primeiro diálogo na cena `TemplePreview`, consiga abrir novamente a janela e navegar pelas opções de `Node004` (conversa repetida).
-2. **Integração Controlada dos Efeitos à Sessão (`CommitElderDialogue`):**
-   - Transicionar de `AppliedToWorld = false` para um commit explícito na máquina de estados `WorldSession`.
-   - Gravar no bloco de variáveis globais: `GVAR_TALKED_TO_ELDER (531) = 1`.
-   - Gravar as variáveis locais do script da Anciã (`scripts/ahelder.int`): Local 0 (reação), Local 1 (banda de reação), Local 2 (já falou) e Local 3 (ajuste acumulado).
-3. **Persistência no Checkpoint (Schema v10):**
-   - Estender `WorldCheckpoint` para suportar `SavedElderState`, contendo o status da conversa e as variáveis auditadas, mantendo migração compatível a partir do schema v9.
-
-### 3.4. Sequência Recomendada de Execução da Frente A
+### 3.2. Sequência de Execução da Frente A
 ```mermaid
 flowchart TD
-    A["Tarefa CONT-001\nEnsaio Interativo de Conversa Repetida na UI"] --> B["Tarefa CONT-002\nAplicação Controlada dos Efeitos à WorldSession"]
-    B --> C["Tarefa CONT-003\nMigração de Checkpoint para Schema v10"]
-    C --> D["Tarefa CONT-004\nValidação Headless Completa (Validate-Temple.ps1)"]
+    A["Tarefa CONT-001 (Concluída)\nEnsaio Interativo de Conversa Repetida na UI"] --> B["Tarefa CONT-002 (Concluída)\nAplicação Controlada dos Efeitos à WorldSession"]
+    B --> C["Tarefa CONT-003 (Concluída)\nMigração de Checkpoint para Schema v10+"]
+    C --> D["Tarefa CONT-004 (Concluída)\nValidação Headless Completa (Validate-Temple.ps1)"]
+    D --> E["Tarefa CONT-005 (Concluída)\nPersistência da Conversa Repetida na WorldSession e Checkpoint"]
+    E --> F["Tarefa CONT-006\nRamos de Quest Principal (Node007/Node014/Node015, Cantil PID 267, 100 Caps, Klamath e L7=1)"]
 ```
 
 ---

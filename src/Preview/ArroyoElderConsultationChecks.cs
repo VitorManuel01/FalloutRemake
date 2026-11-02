@@ -74,7 +74,7 @@ public partial class TemplePreview
     }
     private async Task CheckArroyoElderDialogueCommit(Button action,ArroyoElderText text)
     {
-        if (_campaign!.TalkedToElder!=0 || _campaign.ElderDialogue!=null)
+        if (_campaign!.TalkedToElder!=0 || _campaign.ElderDialogue!=null || _campaign.ElderRepeatDialogue!=null)
             throw new InvalidDataException("Elder dialogue was marked committed before confirmation.");
         action.EmitSignal(Button.SignalName.Pressed);
         await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
@@ -90,37 +90,61 @@ public partial class TemplePreview
             throw new InvalidDataException("Completed first elder consultation did not offer transactional confirmation without premature mutation.");
         var staleCommit=window.CommitElderDialogueRequested!;
         _hud.CommitElderDialogueRequested!();
-        if (_elderWindow!=null || InspectorOpen || _campaign.TalkedToElder!=1
+        if (_elderWindow!=null || InspectorOpen || _campaign.TalkedToElder!=1 || _campaign.ElderRepeatDialogue!=null
             || _campaign.ElderDialogue is not {Complete:true,Procedure:"Node999",Reaction:22} committed
             || !committed.Choices.SequenceEqual(new[] {11868,16348})
             || committed.Local(0)!=22 || committed.Local(1)!=1 || committed.Local(2)!=1 || committed.Local(3)!=-10 || committed.Local(4)!=1
             || committed.Global(531)!=1)
             throw new InvalidDataException("Confirmed elder dialogue did not record GVAR 531=1 and reaction locals on WorldSession.");
         staleCommit();
-        action.EmitSignal(Button.SignalName.Pressed);
-        await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
-        window=_elderWindow ?? throw new InvalidDataException("Elder window did not reopen in repeat mode after commit.");
-        commit=(Button)window.FindChild("ElderCommitWorld",true,false);
-        if (_elderConsultation is not {Repeat:true,Complete:false,Procedure:"Node004"} || window.ReplyText!=text.Message(117) || commit.Visible)
-            throw new InvalidDataException("Committed elder session did not reopen in repeat Node004 without duplicate commit.");
-        window.ChoiceRequested!(14006);
-        if (!_elderConsultation.Complete || commit.Visible || !commit.Disabled)
-            throw new InvalidDataException("Repeat elder completion offered a duplicate session commit.");
-        window.CommitElderDialogueRequested!();
-        if (_campaign.ElderDialogue?.Reaction!=22 || _campaign.TalkedToElder!=1)
-            throw new InvalidDataException("Repeat elder consultation altered the committed first-talk state.");
-        window.EmitSignal(Window.SignalName.CloseRequested);
         SaveCheckpoint(); byte[] savedCommitted=CheckpointFile.Encode(_campaign.Capture(_mapCatalog!.Source.Sha256));
         ResetWalker(); LoadCheckpoint();
         SelectObject(_layout!.Objects.Single(o=>o.Source.Key==ArroyoElderSource.Match(_campaign.Current.Map)!.Key));
         if (!savedCommitted.SequenceEqual(CheckpointFile.Encode(_campaign.Capture(_mapCatalog.Source.Sha256)))
-            || _campaign.TalkedToElder!=1 || _campaign.ElderDialogue?.Reaction!=22 || _campaign.Experience!=625)
+            || _campaign.TalkedToElder!=1 || _campaign.ElderDialogue?.Reaction!=22 || _campaign.ElderRepeatDialogue!=null || _campaign.Experience!=625)
             throw new InvalidDataException("v10 checkpoint failed to persist and restore SavedElderState, XP and doors.");
         action.EmitSignal(Button.SignalName.Pressed);
         await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
-        if (_elderWindow?.Visible!=true || _elderConsultation is not {Repeat:true,Procedure:"Node004"} || _elderWindow.ReplyText!=text.Message(117))
-            throw new InvalidDataException("Restored v10 SavedElderState did not open repeat Node004.");
-        _elderWindow.EmitSignal(Window.SignalName.CloseRequested);
+        window=_elderWindow ?? throw new InvalidDataException("Elder window did not reopen in repeat mode after commit.");
+        commit=(Button)window.FindChild("ElderCommitWorld",true,false);
+        if (_elderConsultation is not {Repeat:true,Complete:false,Procedure:"Node004"} || window.ReplyText!=text.Message(117) || commit.Visible || !commit.Disabled)
+            throw new InvalidDataException("Committed elder session did not reopen in repeat Node004 with commit disabled while incomplete.");
+        window.CommitElderDialogueRequested!();
+        if (_campaign.ElderRepeatDialogue!=null || _campaign.ElderState?.Reaction!=22)
+            throw new InvalidDataException("Incomplete repeat elder consultation committed to the active world.");
+        window.ChoiceRequested!(13902); window.ChoiceRequested!(17510);
+        if (!_elderConsultation.Complete || !commit.Visible || commit.Disabled || _campaign.ElderRepeatDialogue!=null || _campaign.ElderState?.Reaction!=22)
+            throw new InvalidDataException("Completed repeat elder consultation did not offer transactional confirmation without premature mutation.");
+        var staleRepeatCommit=window.CommitElderDialogueRequested!;
+        _hud.CommitElderDialogueRequested!();
+        if (_elderWindow!=null || InspectorOpen || _campaign.TalkedToElder!=1
+            || _campaign.ElderDialogue?.Reaction!=22
+            || _campaign.ElderRepeatDialogue is not {Complete:true,Procedure:"Node999",Reaction:2} repeatCommitted
+            || !repeatCommitted.Choices.SequenceEqual(new[] {13902,17510})
+            || repeatCommitted.Local(0)!=2 || repeatCommitted.Local(1)!=0 || repeatCommitted.Local(3)!=-30
+            || _campaign.ElderState?.Reaction!=2)
+            throw new InvalidDataException("Confirmed repeat elder dialogue did not update reaction and repeat choices on WorldSession.");
+        staleRepeatCommit();
+        action.EmitSignal(Button.SignalName.Pressed);
+        await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
+        window=_elderWindow ?? throw new InvalidDataException("Elder window did not reopen after repeat commit.");
+        commit=(Button)window.FindChild("ElderCommitWorld",true,false);
+        window.ChoiceRequested!(14006);
+        if (!_elderConsultation!.Complete || commit.Visible || !commit.Disabled)
+            throw new InvalidDataException("Second repeat elder completion offered a duplicate repeat commit.");
+        window.CommitElderDialogueRequested!();
+        if (_campaign.ElderRepeatDialogue?.Reaction!=2 || _campaign.ElderState?.Reaction!=2)
+            throw new InvalidDataException("Subsequent repeat elder consultation altered the committed repeat state.");
+        window.EmitSignal(Window.SignalName.CloseRequested);
+        SaveCheckpoint(); byte[] savedRepeat=CheckpointFile.Encode(_campaign.Capture(_mapCatalog.Source.Sha256));
+        ResetWalker(); LoadCheckpoint();
+        SelectObject(_layout!.Objects.Single(o=>o.Source.Key==ArroyoElderSource.Match(_campaign.Current.Map)!.Key));
+        if (!savedRepeat.SequenceEqual(CheckpointFile.Encode(_campaign.Capture(_mapCatalog.Source.Sha256)))
+            || _campaign.TalkedToElder!=1 || _campaign.ElderDialogue?.Reaction!=22
+            || _campaign.ElderRepeatDialogue is not {Reaction:2} restoredRepeat
+            || !restoredRepeat.Choices.SequenceEqual(new[] {13902,17510})
+            || _campaign.ElderState?.Reaction!=2 || _campaign.Experience!=625)
+            throw new InvalidDataException("Checkpoint failed to persist and restore repeat SavedElderState.");
     }
     private async Task CheckArroyoElderRepeatConsultation(Button action,ArroyoElderText text,Action unchanged)
     {

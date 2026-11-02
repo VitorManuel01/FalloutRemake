@@ -1,17 +1,17 @@
 # FalloutRemake — Backlog Decomposto de Pacotes de Trabalho Paralelo
 
-> **Status:** Catálogo Operacional de Tarefas e Contratos  
+> **Status:** Catálogo Operacional de Tarefas e Contratos (Atualizado em 02/11/2026)  
 > **Data de Elaboração:** 28 de Outubro de 2026  
 > **Autor da Análise:** Gemini Flash 3.8 (Agente Solo)  
-> **Base de Código:** Commit `a66f31c` (`codex/arroyo-elder-entry-audit`)  
-> **Documento Principal:** [gameplay-combat-roadmap.md](file:///c:/Dev/FalloutRemake/docs/roadmap/gameplay-combat-roadmap.md)  
-> **Guia de Governança Paralela:** [parallel-agent-workflow.md](file:///c:/Dev/FalloutRemake/docs/development/parallel-agent-workflow.md)
+> **Base de Código:** Commit `fe99d18` (`codex/arroyo-elder-entry-audit`)  
+> **Documento Principal:** [gameplay-combat-roadmap.md](file:///D:/Dev/FalloutRemake/docs/roadmap/gameplay-combat-roadmap.md)  
+> **Guia de Governança Paralela:** [parallel-agent-workflow.md](file:///D:/Dev/FalloutRemake/docs/development/parallel-agent-workflow.md)
 
 ---
 
 ## 1. Visão Geral e Modelo de Paralelismo
 
-O backlog do **FalloutRemake** é decomposto em **Pacotes de Trabalho (Work Packages)** altamente delimitados e testáveis. A arquitetura desacoplada do projeto (onde a lógica de domínio reside em C# puro e a apresentação gráfica reside no Godot) permite que múltiplos agentes de IA (**Gemini Argon**, **Claude** e **Codex**) trabalhem simultaneamente em suas respectivas Git worktrees (`D:\Dev\FalloutRemakeCodex`, `C:\Dev\FalloutRemakeClaude`, `D:\Dev\FalloutRemakeIntegracao`) sem colisões de escrita.
+O backlog do **FalloutRemake** é decomposto em **Pacotes de Trabalho (Work Packages)** altamente delimitados e testáveis. A arquitetura desacoplada do projeto (onde a lógica de domínio reside em C# puro e a apresentação gráfica reside no Godot) permite que múltiplos agentes de IA (**Gemini Argon**, **Claude** e **Codex**) trabalhem simultaneamente em suas respectivas Git worktrees (`D:\Dev\FalloutRemakeArgon`, `D:\Dev\FalloutRemakeCodex`, `D:\Dev\FalloutRemakeClaude`, `D:\Dev\FalloutRemakeIntegracao`) sem colisões de escrita.
 
 ### Classificação de Paralelismo das Tarefas:
 - **Independente:** Pode iniciar imediatamente sem aguardar nenhuma outra tarefa.
@@ -26,10 +26,12 @@ O backlog do **FalloutRemake** é decomposto em **Pacotes de Trabalho (Work Pack
 ```mermaid
 flowchart TD
     subgraph FrenteA ["Frente A: Continuidade de Arroyo"]
-        CONT01["CONT-001\nEnsaio Interativo Conversa Repetida\n[Independente]"]
-        CONT02["CONT-002\nAplicação de Efeitos à WorldSession\n[Sequencial de CONT-001]"]
-        CONT03["CONT-003\nPersistência Checkpoint v10\n[Sequencial de CONT-002]"]
-        CONT01 --> CONT02 --> CONT03
+        CONT01["CONT-001\nEnsaio Interativo Conversa Repetida\n[Concluído]"]
+        CONT02["CONT-002\nAplicação de Efeitos à WorldSession\n[Concluído]"]
+        CONT03["CONT-003\nPersistência Checkpoint v10\n[Concluído]"]
+        CONT04["CONT-004\nValidação Headless Completa\n[Concluído]"]
+        CONT05["CONT-005\nPersistência da Conversa Repetida\n[Concluído]"]
+        CONT01 --> CONT02 --> CONT03 --> CONT04 --> CONT05
     end
 
     subgraph FrenteB ["Frente B: Núcleo de Combate C# Puro"]
@@ -132,6 +134,27 @@ flowchart TD
   3. `CheckpointTests` valida ida e volta (round-trip) perfeita em JSON.
 - **Testes:** 10 novos casos em `CheckpointTests.cs`.
 - **Complexidade:** Média (2 dias).
+
+---
+
+#### [CONT-005] Persistência da Conversa Repetida da Anciã na WorldSession e Checkpoint
+- **Objetivo:** Permitir que a conclusão de uma conversa repetida (`Node004 → Node999` ou `Node004 → Node013 → Node999`) após o primeiro diálogo seja aplicada transacionalmente à `WorldSession`, persista em `SavedElderState` no checkpoint e seja restaurada com validação estrita de histórico de escolhas e reação acumulada.
+- **Requisitos Cobertos:** `NARR-003`, `SAV-004`.
+- **Resultado Esperado:** Após o primeiro diálogo aplicado (ou restaurado de checkpoint), o jogador pode realizar e aplicar conversas repetidas em `Node004`, atualizando a reação e o ajuste acumulado (`L0`, `L1`, `L3`) na `WorldSession` e salvando/restaurando o estado resultante no checkpoint.
+- **Classificação:** **Sequencial.** (Depende de `CONT-003`).
+- **Arquivos Candidatos a Alteração:**
+  - `src/Runtime/ArroyoElderStateProfile.cs`
+  - `src/Runtime/WorldSession.cs`
+  - `src/Preview/ArroyoElderWindow.cs`
+  - `src/Preview/ArroyoElderConsultationPreview.cs`
+  - `src/Preview/ArroyoElderConsultationChecks.cs`
+  - `tools/TempleInspector/ArroyoElderStateTests.cs`
+  - `tools/TempleInspector/CheckpointTests.cs`
+- **Critérios de Aceitação:**
+  1. Conversas repetidas em `Node004` (`123` ou `121 → 17510`) podem ser aplicadas à `WorldSession` após o primeiro diálogo concluído.
+  2. O validador de `ArroyoElderStateProfile` e `SavedElderState` reconhece e valida de forma determinística tanto projeções de 1º diálogo quanto projeções com conversas repetidas aplicadas, recusando adulterações.
+  3. Checkpoint salva e restaura perfeitamente o estado pós-conversa repetida (incluindo redução adicional de `-20` de reação via `Node013`).
+- **Complexidade:** Média (1–2 dias).
 
 ---
 

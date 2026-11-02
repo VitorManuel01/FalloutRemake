@@ -85,6 +85,16 @@ public sealed class ArroyoElderStateProfile
             throw new InvalidDataException("Elder dialogue projection contradicts its audited script state.");
         return expected;
     }
+    public ElderDetachedProjection ValidateRepeat(ElderDetachedProjection? first,ElderDetachedProjection? repeat)
+    {
+        var baseline=Validate(first);
+        if (repeat==null || repeat.Choices==null || repeat.Profile!=Fingerprint || !repeat.Complete || repeat.Procedure!="Node999")
+            throw new InvalidDataException("Elder repeat dialogue requires a completed neutral repeat-talk projection.");
+        var expected=ProjectRepeat(baseline,repeat.Choices);
+        if (!expected.Complete || expected.Procedure!="Node999" || expected.Reaction!=repeat.Reaction || !SameScripts(expected.Scripts,repeat.Scripts))
+            throw new InvalidDataException("Elder repeat dialogue projection contradicts its audited script state.");
+        return expected;
+    }
     public ElderDetachedProjection Project(IEnumerable<int> choices)
     {
         if (choices==null) throw new InvalidDataException("Missing elder rehearsal choices.");

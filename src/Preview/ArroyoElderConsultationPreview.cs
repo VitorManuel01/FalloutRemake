@@ -57,7 +57,9 @@ public partial class TemplePreview
             {
                 var current=_elderConsultation!; long revision=current.Revision;
                 if (current.Complete) _elderRepeatToken=token; else if (!repeat) _elderRepeatToken=null;
-                bool canCommit=current.Complete && !current.Repeat && world.ElderDialogue==null;
+                bool canCommit=current.Complete && (!current.Repeat
+                    ? world.ElderDialogue==null
+                    : world.ElderDialogue!=null && world.ElderRepeatDialogue==null);
                 dialog.ChoiceRequested=offset=>
                 {
                     if (!Active() || _elderConsultation!=current || !current.Choose(offset,revision)) return;
@@ -65,15 +67,28 @@ public partial class TemplePreview
                 };
                 dialog.CommitElderDialogueRequested=()=>
                 {
-                    if (!Active() || _elderConsultation!=current || !current.Complete || current.Repeat || world.ElderDialogue!=null) return;
+                    if (!Active() || _elderConsultation!=current || !current.Complete) return;
+                    if (!current.Repeat && world.ElderDialogue!=null) return;
+                    if (current.Repeat && (world.ElderDialogue==null || world.ElderRepeatDialogue!=null)) return;
                     try
                     {
                         var stateProfile=ArroyoElderStateProfile.Create(world.Current.Map,data.Read);
-                        var projection=stateProfile.Project(current.Choices);
-                        world.CommitElderDialogue(stateProfile,projection,_walker?.Moving==true,world.SessionToken,token);
-                        _elderRepeatToken=token;
-                        CloseElderConsultation();
-                        NavigationStatus("Conversa da anciã aplicada na sessão · GVAR_TALKED_TO_ELDER=1");
+                        if (!current.Repeat)
+                        {
+                            var projection=stateProfile.Project(current.Choices);
+                            world.CommitElderDialogue(stateProfile,projection,_walker?.Moving==true,world.SessionToken,token);
+                            _elderRepeatToken=token;
+                            CloseElderConsultation();
+                            NavigationStatus("Conversa da anciã aplicada na sessão · GVAR_TALKED_TO_ELDER=1");
+                        }
+                        else
+                        {
+                            var projection=stateProfile.ProjectRepeat(world.ElderDialogue!,current.Choices);
+                            var committed=world.CommitElderRepeatDialogue(stateProfile,projection,_walker?.Moving==true,world.SessionToken,token);
+                            _elderRepeatToken=token;
+                            CloseElderConsultation();
+                            NavigationStatus($"Conversa repetida da anciã aplicada na sessão · reação {committed.Reaction}");
+                        }
                     }
                     catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
                     {

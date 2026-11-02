@@ -219,6 +219,49 @@ internal static class ArroyoElderStateTests
             Assert(world.TalkedToElder==1 && world.TempleRevision==committedRev
                 && JsonSerializer.Serialize(world.ElderDialogue)==committedState);
         });
+        check("WorldSession CommitElderRepeatDialogue applies repeat Node004 reaction updates and rejects premature duplicate or tampered repeat commits",()=>
+        {
+            var profile=new ArroyoElderStateProfile();
+            foreach (var (firstRoute,firstReaction,repeatRoute,repeatReaction,repeatDelta,repeatBand) in new[] {
+                (new[] {11868,16348},22,new[] {14006},22,-10,1),
+                (new[] {11868,16348},22,new[] {13902,17510},2,-30,0),
+                (new[] {11804,14664,16348},12,new[] {14006},12,-20,1),
+                (new[] {11804,14664,16348},12,new[] {13902,17510},-8,-40,0)})
+            {
+                var (world,adjacent,exitHex)=SessionFixture();
+                Reject(()=>world.CommitElderRepeatDialogue(repeatRoute));
+                var firstCommitted=world.CommitElderDialogue(firstRoute);
+                Assert(world.ElderRepeatDialogue==null && world.ElderState!.Reaction==firstReaction);
+                long rev=world.TempleRevision;
+                string firstBaseline=JsonSerializer.Serialize(world.ElderDialogue);
+                Reject(()=>world.CommitElderRepeatDialogue(Array.Empty<int>()));
+                Reject(()=>world.CommitElderRepeatDialogue(new[] {13902}));
+                Reject(()=>world.CommitElderRepeatDialogue(new[] {13814}));
+                Reject(()=>world.CommitElderRepeatDialogue(firstCommitted));
+                Reject(()=>world.CommitElderRepeatDialogue(profile.ProjectRepeat(firstCommitted,repeatRoute) with {Reaction=99}));
+                Reject(()=>world.CommitElderRepeatDialogue(repeatRoute,moving:true));
+                Reject(()=>world.CommitElderRepeatDialogue(repeatRoute,sessionToken:Guid.NewGuid()));
+                Reject(()=>world.CommitElderRepeatDialogue(repeatRoute,templeToken:Guid.NewGuid()));
+                world.Current.Travel.Arrive(new(4,0,exitHex,0));
+                Reject(()=>world.CommitElderRepeatDialogue(repeatRoute));
+                world.Current.Travel.Arrive(new(4,0,adjacent,0));
+                Assert(world.ElderRepeatDialogue==null && world.TempleRevision==rev && JsonSerializer.Serialize(world.ElderDialogue)==firstBaseline);
+                var repeatCommitted=world.CommitElderRepeatDialogue(repeatRoute,false,world.SessionToken,world.TempleToken);
+                Assert(world.TempleRevision==rev+1 && world.TalkedToElder==1
+                    && world.ElderDialogue!.Reaction==firstReaction
+                    && repeatCommitted.Complete && repeatCommitted.Procedure=="Node999" && repeatCommitted.Reaction==repeatReaction
+                    && repeatCommitted.Choices.SequenceEqual(repeatRoute)
+                    && repeatCommitted.Local(0)==repeatReaction && repeatCommitted.Local(1)==repeatBand && repeatCommitted.Local(3)==repeatDelta
+                    && world.ElderState!.Reaction==repeatReaction && world.ElderState.Local(3)==repeatDelta);
+                string expectedRepeat=JsonSerializer.Serialize(world.ElderRepeatDialogue);
+                repeatCommitted.Choices[0]=-1; repeatCommitted.Scripts.Blocks[0].Values[0]=999;
+                Assert(JsonSerializer.Serialize(world.ElderRepeatDialogue)==expectedRepeat);
+                Reject(()=>world.CommitElderRepeatDialogue(repeatRoute));
+                Reject(()=>world.CommitElderRepeatDialogue(new[] {14006}));
+                world.Reset();
+                Assert(world.TalkedToElder==0 && world.ElderDialogue==null && world.ElderRepeatDialogue==null && world.ElderState==null);
+            }
+        });
     }
     private static void Assert(bool value) {if (!value) throw new Exception("Elder detached state assertion failed.");}
     private static void Reject(Action action) {try {action();} catch (InvalidDataException) {return;} throw new Exception("Invalid elder detached state path accepted.");}

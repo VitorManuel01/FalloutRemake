@@ -48,8 +48,13 @@ public partial class ArroyoElderWindow : AcceptDialog
             _choices.AddChild(button); button.Pressed+=()=>{if (!button.Disabled) choose?.Invoke(offset);};
         }
         _commit.Visible=canCommit; _commit.Disabled=!canCommit;
+        _commit.TooltipText=consultation.Repeat
+            ? "Registra o resultado da conversa repetida (Node004) na sessão ativa e atualiza a reação da anciã."
+            : "Registra o fim da primeira conversa com a anciã na sessão ativa (GVAR_TALKED_TO_ELDER = 1 e reação).";
         _status.Text=consultation.Complete ? canCommit
-                ? "Consulta concluída (Node999) · partida preservada · Aplicar à partida grava GVAR 531=1"
+                ? consultation.Repeat
+                    ? "Consulta repetida concluída (Node999) · partida preservada · Aplicar à partida atualiza a reação da anciã"
+                    : "Consulta concluída (Node999) · partida preservada · Aplicar à partida grava GVAR 531=1"
                 : "Consulta concluída (Node999) · partida preservada"
             : consultation.Repeat ? committed
                 ? "Conversa repetida (Node004) · primeira conversa já aplicada na sessão (GVAR 531=1)."

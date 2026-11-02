@@ -324,6 +324,42 @@ internal static class CheckpointTests
             Assert(Encoding.UTF8.GetString(CheckpointFile.Encode(world.Capture("catalog"))) == expected
                 && world.ElderDialogue!.Reaction == 22 && world.TalkedToElder == 1);
         });
+        check("checkpoint JSON round-trips repeat SavedElderState RepeatChoices and rejects tampered repeat routes or reactions", () =>
+        {
+            foreach (var (firstRoute, firstReaction, repeatRoute, repeatReaction, repeatDelta) in new[] {
+                (new[] { 11868, 16348 }, 22, new[] { 14006 }, 22, -10),
+                (new[] { 11868, 16348 }, 22, new[] { 13902, 17510 }, 2, -30),
+                (new[] { 11804, 14664, 16348 }, 12, new[] { 13902, 17510 }, -8, -40) })
+            {
+                var (world, load, templeProfile, elderProfile) = ElderSessionFixture();
+                world.CommitElderDialogue(firstRoute);
+                var afterFirst = RestoreElder(CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog"))), load, templeProfile, elderProfile);
+                Assert(afterFirst.ElderRepeatDialogue == null && afterFirst.SavedElder!.RepeatChoices == null);
+                afterFirst.CommitElderRepeatDialogue(repeatRoute);
+                byte[] encoded = CheckpointFile.Encode(afterFirst.Capture("catalog"));
+                WorldCheckpoint decoded = CheckpointFile.Decode(encoded);
+                Assert(decoded.Elder != null && decoded.Elder.Choices.SequenceEqual(firstRoute)
+                    && decoded.Elder.RepeatChoices != null && decoded.Elder.RepeatChoices.SequenceEqual(repeatRoute)
+                    && decoded.Elder.Reaction == repeatReaction && decoded.Elder.Local(0) == repeatReaction
+                    && decoded.Elder.Local(3) == repeatDelta && decoded.Elder.Global(531) == 1);
+                var restored = RestoreElder(decoded, load, templeProfile, elderProfile);
+                Assert(encoded.SequenceEqual(CheckpointFile.Encode(restored.Capture("catalog")))
+                    && restored.TalkedToElder == 1 && restored.ElderDialogue!.Reaction == firstReaction
+                    && restored.ElderRepeatDialogue!.Reaction == repeatReaction
+                    && restored.ElderRepeatDialogue.Choices.SequenceEqual(repeatRoute)
+                    && restored.ElderState!.Reaction == repeatReaction && restored.ElderState.Local(3) == repeatDelta);
+                Reject(() => restored.CommitElderDialogue(firstRoute));
+                Reject(() => restored.CommitElderRepeatDialogue(repeatRoute));
+                var elder = decoded.Elder!;
+                foreach (var bad in new[] {
+                    elder with { RepeatChoices = Array.Empty<int>() },
+                    elder with { RepeatChoices = new[] { 13902 } },
+                    elder with { RepeatChoices = new[] { 13814 } },
+                    elder with { Choices = new[] { 11804 } },
+                    elder with { Reaction = firstReaction + 5 } })
+                    Reject(() => RestoreElder(decoded with { Elder = bad }, load, templeProfile, elderProfile));
+            }
+        });
     }
     private static void Reject(Action action) { try { action(); } catch (InvalidDataException) { return; } throw new Exception("Invalid checkpoint accepted."); }
     private static void Assert(bool condition) { if (!condition) throw new Exception("Checkpoint assertion failed."); }

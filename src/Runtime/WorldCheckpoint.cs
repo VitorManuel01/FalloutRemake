@@ -24,22 +24,28 @@ public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defe
     SurvivingCritter[]? Survivors = null, SavedPoison? Poison = null, long? GameTime = null, int? PlayerCrippled = null, SavedHands? Hands = null);
 /// <summary>The dude's poison (optional, inside v13): level and game ticks until the next poison event.</summary>
 public sealed record SavedPoison([property: JsonRequired] int Level, [property: JsonRequired] int TicksLeft);
-/// <summary>v10: committed Arroyo elder dialogue state (choices, reaction and audited local/global variables).</summary>
+/// <summary>v10: committed Arroyo elder dialogue state (choices, reaction, audited local/global variables, and optional repeat choices).</summary>
 public sealed record SavedElderState(
     [property: JsonRequired] string Profile,
     [property: JsonRequired] int[] Choices,
     [property: JsonRequired] string Procedure,
     [property: JsonRequired] bool Complete,
     [property: JsonRequired] int Reaction,
-    [property: JsonRequired] ScriptStateSnapshot Scripts)
+    [property: JsonRequired] ScriptStateSnapshot Scripts,
+    int[]? RepeatChoices = null)
 {
     public int Local(int index) => ToProjection().Local(index);
     public int Global(int index) => ToProjection().Global(index);
-    public ElderDetachedProjection ToProjection() => new(Profile, Choices?.ToArray()!, Procedure, Complete, Reaction, Scripts);
-    public static SavedElderState FromProjection(ElderDetachedProjection projection)
+    public ElderDetachedProjection ToProjection() => new(Profile, (RepeatChoices ?? Choices)?.ToArray()!, Procedure, Complete, Reaction, Scripts);
+    public ElderDetachedProjection ToFirstProjection() => new(Profile, Choices?.ToArray()!, Procedure, Complete, Reaction, Scripts);
+    public static SavedElderState FromProjection(ElderDetachedProjection first, ElderDetachedProjection? repeat = null)
     {
-        var cloned = new ArroyoElderStateProfile().Validate(projection);
-        return new(cloned.Profile, cloned.Choices, cloned.Procedure, cloned.Complete, cloned.Reaction, cloned.Scripts);
+        var profile = new ArroyoElderStateProfile();
+        var clonedFirst = profile.Validate(first);
+        if (repeat == null)
+            return new(clonedFirst.Profile, clonedFirst.Choices, clonedFirst.Procedure, clonedFirst.Complete, clonedFirst.Reaction, clonedFirst.Scripts);
+        var clonedRepeat = profile.ValidateRepeat(clonedFirst, repeat);
+        return new(clonedRepeat.Profile, clonedFirst.Choices, clonedRepeat.Procedure, clonedRepeat.Complete, clonedRepeat.Reaction, clonedRepeat.Scripts, clonedRepeat.Choices);
     }
 }
 
