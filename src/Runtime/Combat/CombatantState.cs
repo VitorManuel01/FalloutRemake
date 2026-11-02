@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime.Combat;
@@ -45,6 +46,8 @@ public sealed class CombatantState
     public bool Acting { get; internal set; }
     /// <summary>Carried healing doses this combatant can take during the fight.</summary>
     public int HealingDoses { get; internal set; }
+    /// <summary>Carried ammunition, in inventory order (reloads draw from it); the rounds left change as the fight goes.</summary>
+    public IReadOnlyList<CombatAmmo> Ammunition { get; init; } = Array.Empty<CombatAmmo>();
     public LifeStatus Status => HitPoints <= 0 ? LifeStatus.Dead : LifeStatus.Active;
     public bool Alive => Status == LifeStatus.Active;
     /// <summary>Yields when its turn starts below half its maximum HP (a duel, not a fight to the death).</summary>
@@ -123,5 +126,22 @@ public sealed class CombatantState
         return new(source.Key, name, prototype.Pid, team, false, source.Header.Tile, source.Header.Elevation, stats,
             weapon ?? CombatWeapon.Unarmed(prototype.DamageType is int natural and >= 0 and <= 6 ? (DamageType)natural : DamageType.Normal),
             hp, prototype.Experience) { Rotation = source.Header.Rotation, PoisonsOnHit = poisonsOnHit, KillType = prototype.KillType, Ai = ai };
+    }
+}
+
+/// <summary>
+/// One carried stack of ammunition as reloads see it: CE keeps the top box's rounds and full boxes under it, so a stack is
+/// its total rounds ((boxes - 1) x box + top); reloading takes rounds from it until the weapon is full.
+/// </summary>
+public sealed class CombatAmmo
+{
+    public string Key { get; }
+    public AmmoPrototypeData Data { get; }
+    public int Rounds { get; internal set; }
+    public CombatAmmo(string key, AmmoPrototypeData data, int rounds)
+    {
+        if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Ammunition key is required.", nameof(key));
+        Key = key; Data = data ?? throw new ArgumentNullException(nameof(data));
+        Rounds = rounds >= 0 ? rounds : throw new ArgumentOutOfRangeException(nameof(rounds));
     }
 }

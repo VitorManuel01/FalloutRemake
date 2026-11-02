@@ -158,16 +158,17 @@ public sealed class CombatSession : ICombatSession
         ArgumentNullException.ThrowIfNull(weapon);
         if (Active is not { IsPlayer: true } player || weapon.Pid == null || weapon.Pid != player.Weapon.Pid) return false;
         if (InventoryOpen) { InventoryOpen = false; _log.Add(new InventoryClosed(player.Id)); }
-        player.Weapon = weapon;
+        // Both modes fire the same item's rounds.
+        player.Weapon = weapon.UsesAmmo ? weapon with { Rounds = player.Weapon.Rounds, AmmoPid = player.Weapon.AmmoPid, Ammo = player.Weapon.Ammo } : weapon;
         _log.Add(new AttackModeChanged(player.Id, weapon.Name));
         return true;
     }
 
     /// <summary>
-    /// CE critterCanAim: the player with Fast Shot never aims; nobody aims explosive, fire or EMP damage, nor a thrown
-    /// plasma weapon. (Bursts would be refused too; no weapon here fires them.)
+    /// CE critterCanAim: the player with Fast Shot never aims; nobody aims a burst, explosive, fire or EMP damage, nor a
+    /// thrown plasma weapon.
     /// </summary>
-    public static bool CanAim(CombatantState attacker) => !(attacker.IsPlayer && attacker.Stats.FastShot)
+    public static bool CanAim(CombatantState attacker) => !(attacker.IsPlayer && attacker.Stats.FastShot) && !attacker.Weapon.Burst
         && attacker.Weapon.DamageType is not (DamageType.Explosion or DamageType.Fire or DamageType.Emp)
         && !(attacker.Weapon.DamageType == DamageType.Plasma && attacker.Weapon.AttackType == FalloutRemake.Import.WeaponAttackType.Throw);
 
@@ -210,6 +211,11 @@ public sealed class CombatSession : ICombatSession
                 return new(inventory > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready, inventory, ap - inventory, Array.Empty<int>(), null, null);
             case CombatActionKind.CloseInventory:
                 return InventoryOpen ? new(CombatActionStatus.Ready, 0, ap, Array.Empty<int>(), null, null) : CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
+            case CombatActionKind.Reload:
+                if (!actor.Weapon.UsesAmmo || actor.Weapon.Rounds >= actor.Weapon.AmmoCapacity) return CombatActionPreview.Refused(CombatActionStatus.AlreadyLoaded, ap);
+                if (ReloadSource(actor) == null) return CombatActionPreview.Refused(CombatActionStatus.NoItem, ap);
+                int reloadCost = ReloadCost(actor.Weapon);
+                return new(reloadCost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready, reloadCost, ap - reloadCost, Array.Empty<int>(), null, null);
             case CombatActionKind.Attack:
                 CombatantState? target = _combatants.FirstOrDefault(c => c.Id == proposal.TargetId);
                 if (target == null || target == actor || !target.InFight) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
@@ -220,7 +226,8 @@ public sealed class CombatSession : ICombatSession
                 CombatActionStatus status = actor.IsPlayer && proposal.Location != HitLocation.Uncalled && !CanAim(actor) ? CombatActionStatus.CannotAim
                     : actor.Weapon.IsItem && (arms == DamageFlags.CrippledArms || arms != 0 && actor.Weapon.TwoHanded) ? CombatActionStatus.ArmCrippled
                     : CombatResolver.Reach(actor, target) > Range(actor) ? CombatActionStatus.OutOfRange
-                    : attackCost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready;
+                    : attackCost > ap ? CombatActionStatus.NotEnoughActionPoints
+                    : actor.Weapon.UsesAmmo && actor.Weapon.Rounds <= 0 ? CombatActionStatus.NoAmmo : CombatActionStatus.Ready;
                 // _combat_check_bad_shot: a shot, a throw or any blow reaching past the next hex needs a free line of fire.
                 int crowd = 0;
                 if ((actor.Weapon.IsRanged || Range(actor) > 1) && LineOfFire.Blocked(actor, target, out crowd) && status == CombatActionStatus.Ready)
@@ -284,67 +291,264 @@ public sealed class CombatSession : ICombatSession
                 // _ai_attack and the dude's attack both turn toward the target first (animationRegisterRotateToTile).
                 actor.Rotation = OriginalStraightPath.RotationTo(actor.Hex, target.Hex);
                 actor.ActionPoints -= preview.ActionPointCost;
-                int chance = preview.ToHit!.Chance, roll = _random.Between(1, 100), margin = chance - roll;
-                bool hit = CombatResolver.Hits(chance, roll), critical = false, failure = false;
-                // randomTranslateRoll: from game day 1 a second d100 may upgrade the hit (margin / 10 + Critical Chance - the
-                // torso's 0 penalty) or the miss (miss margin / 10). The margin is taken from the clamped chance that decided the hit.
-                int criticalRoll = 0, needed = 0;
-                HitLocation location = proposal.Location;
-                if (CriticalRules.CriticalsAllowed(GameTime))
-                {
-                    criticalRoll = _random.Between(1, 100);
-                    needed = hit ? margin / 10 + actor.Stats.CriticalChance - CriticalRules.Penalty(location) : -margin / 10;
-                    (critical, failure) = (hit && criticalRoll <= needed, !hit && criticalRoll <= needed);
-                }
-                // attackCompute: with the dude Jinxed (trait or perk), a plain miss by anyone turns into a critical failure on a coin
-                // flip, on any day (the dude's own failure then still waits for day 6, as attackComputeCriticalFailure does).
-                if (!hit && !failure && Jinxed && _random.Between(0, 1) == 1) (failure, criticalRoll, needed) = (true, 0, 0);
-                // attackCompute: Slayer makes every melee or unarmed hit of the dude critical; Sniper a firearm hit on d10 <= LK.
-                if (hit && !critical && actor.IsPlayer && actor.Weapon.AddsMeleeDamage && actor.Stats.Perks.Has(FalloutRemake.Runtime.Perk.Slayer))
-                    (critical, criticalRoll, needed) = (true, 1, 100);
-                if (hit && !critical && actor.IsPlayer && actor.Weapon.AttackType == FalloutRemake.Import.WeaponAttackType.Ranged
-                    && actor.Stats.Perks.Has(FalloutRemake.Runtime.Perk.Sniper) && _random.Between(1, 10) <= actor.Stats.Special.Luck)
-                    (critical, criticalRoll, needed) = (true, 1, 100);
-                // attackCompute: a plain hit by the player's advanced unarmed blow turns critical on d100 <= its bonus, any day.
-                if (hit && !critical && actor.IsPlayer && actor.Weapon.AddsMeleeDamage && actor.Weapon.BonusCriticalChance != 0
-                    && _random.Between(1, 100) is int bonusRoll && bonusRoll <= actor.Weapon.BonusCriticalChance)
-                    (critical, criticalRoll, needed) = (true, bonusRoll, actor.Weapon.BonusCriticalChance);
-                int damageRoll = 0, damage = 0;
-                // CE _combat_display warns the player first (combat.msg 107) when its weapon wants more Strength.
-                bool weak = actor.IsPlayer && actor.Weapon.IsItem && CombatResolver.StrengthShortfall(actor) > 0;
-                if (hit)
-                {
-                    var (multiplier, flags) = critical ? CriticalStrike(actor, target, criticalRoll, needed, location) : (DamageCalculator.NormalHitMultiplier, DamageFlags.None);
-                    bool bypass = (flags & DamageFlags.Bypass) != 0;
-                    int threshold = bypass ? DamageCalculator.Threshold(target, actor.Weapon, true) : preview.Damage!.Threshold;
-                    int resistance = bypass ? DamageCalculator.Resistance(target, actor.Weapon, true) : preview.Damage!.Resistance;
-                    damageRoll = _random.Between(preview.Damage!.MinRoll, preview.Damage.MaxRoll);
-                    damage = DamageCalculator.Apply(damageRoll, actor.Weapon, threshold, resistance, multiplier, DamageCalculator.RollBonus(actor), DamageCalculator.AfterBonus(actor, target));
-                    target.HitPoints = Math.Max(0, target.HitPoints - damage);
-                    // DAM_DEAD from the table kills whatever HP are left (_damage_object then critterKill).
-                    if ((flags & DamageFlags.Dead) != 0) target.HitPoints = 0;
-                    _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, damageRoll, damage, target.HitPoints, preview.ActionPointCost, location, weak));
-                    if (target.Alive && flags != DamageFlags.None) ApplyResults(target, flags);
-                }
-                else _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, 0, 0, target.HitPoints, preview.ActionPointCost, location, weak));
-                AfterAttack(actor, target, damage);
-                // CE runs the attacker's combat_p_proc (fixed_param 2) after every hit on a critter that stood before it.
-                if (hit && actor.PoisonsOnHit && target.IsPlayer) Sting(actor, target);
-                if (!target.Alive)
-                {
-                    int experience = actor.IsPlayer ? target.Experience : 0;
-                    _experience += experience;
-                    _log.Add(new CombatantDied(target.Id, actor.Id, experience));
-                    CheckOver();
-                }
-                if (actor.Weapon.IsRanged && !hit && !failure) StrayShot(actor, target, location);
-                // _action_ranged: unless the throw failed critically, the weapon flies to the struck defender or the miss's
-                // landing hex and stays there.
-                if (actor.Weapon.Throws && !failure) Throw(actor, hit ? target.Hex : _landing);
-                if (failure) CriticalMiss(actor, criticalRoll, needed);
+                CombatWeapon used = actor.Weapon;
+                int fired = used.Burst ? Burst(actor, target, preview, out DamageFlags failed) : Single(actor, target, preview, proposal.Location, out failed);
+                SpendAmmo(actor, used, fired, failed);
+                break;
+            case CombatActionKind.Reload:
+                Reload(actor, preview.ActionPointCost);
                 break;
         }
         return new(CombatActionStatus.Ready, preview, _log.Skip(start).ToArray());
+    }
+
+
+    // One shot or blow (attackCompute's randomRoll path); returns the rounds it fires and the critical failure's flags.
+    private int Single(CombatantState actor, CombatantState target, CombatActionPreview preview, HitLocation location, out DamageFlags failed)
+    {
+        int chance = preview.ToHit!.Chance, roll = _random.Between(1, 100), margin = chance - roll;
+        bool hit = CombatResolver.Hits(chance, roll), critical = false, failure = false;
+        // randomTranslateRoll: from game day 1 a second d100 may upgrade the hit (margin / 10 + Critical Chance - the
+        // torso's 0 penalty) or the miss (miss margin / 10). The margin is taken from the clamped chance that decided the hit.
+        int criticalRoll = 0, needed = 0;
+        if (CriticalRules.CriticalsAllowed(GameTime))
+        {
+            criticalRoll = _random.Between(1, 100);
+            needed = hit ? margin / 10 + actor.Stats.CriticalChance - CriticalRules.Penalty(location) : -margin / 10;
+            (critical, failure) = (hit && criticalRoll <= needed, !hit && criticalRoll <= needed);
+        }
+        // attackCompute: with the dude Jinxed (trait or perk), a plain miss by anyone turns into a critical failure on a coin
+        // flip, on any day (the dude's own failure then still waits for day 6, as attackComputeCriticalFailure does).
+        if (!hit && !failure && Jinxed && _random.Between(0, 1) == 1) (failure, criticalRoll, needed) = (true, 0, 0);
+        // attackCompute: Slayer makes every melee or unarmed hit of the dude critical; Sniper a firearm hit on d10 <= LK.
+        if (hit && !critical && actor.IsPlayer && actor.Weapon.AddsMeleeDamage && actor.Stats.Perks.Has(FalloutRemake.Runtime.Perk.Slayer))
+            (critical, criticalRoll, needed) = (true, 1, 100);
+        if (hit && !critical && actor.IsPlayer && actor.Weapon.AttackType == FalloutRemake.Import.WeaponAttackType.Ranged
+            && actor.Stats.Perks.Has(FalloutRemake.Runtime.Perk.Sniper) && _random.Between(1, 10) <= actor.Stats.Special.Luck)
+            (critical, criticalRoll, needed) = (true, 1, 100);
+        // attackCompute: a plain hit by the player's advanced unarmed blow turns critical on d100 <= its bonus, any day.
+        if (hit && !critical && actor.IsPlayer && actor.Weapon.AddsMeleeDamage && actor.Weapon.BonusCriticalChance != 0
+            && _random.Between(1, 100) is int bonusRoll && bonusRoll <= actor.Weapon.BonusCriticalChance)
+            (critical, criticalRoll, needed) = (true, bonusRoll, actor.Weapon.BonusCriticalChance);
+        int damageRoll = 0, damage = 0;
+        // CE _combat_display warns the player first (combat.msg 107) when its weapon wants more Strength.
+        bool weak = actor.IsPlayer && actor.Weapon.IsItem && CombatResolver.StrengthShortfall(actor) > 0;
+        if (hit)
+        {
+            var (multiplier, flags) = critical ? CriticalStrike(actor, target, criticalRoll, needed, location) : (DamageCalculator.NormalHitMultiplier, DamageFlags.None);
+            bool bypass = (flags & DamageFlags.Bypass) != 0;
+            int threshold = bypass ? DamageCalculator.Threshold(target, actor.Weapon, true) : preview.Damage!.Threshold;
+            int resistance = bypass ? DamageCalculator.Resistance(target, actor.Weapon, true) : preview.Damage!.Resistance;
+            damageRoll = _random.Between(preview.Damage!.MinRoll, preview.Damage.MaxRoll);
+            damage = DamageCalculator.Apply(damageRoll, actor.Weapon, threshold, resistance, multiplier, DamageCalculator.RollBonus(actor), DamageCalculator.AfterBonus(actor, target));
+            target.HitPoints = Math.Max(0, target.HitPoints - damage);
+            // DAM_DEAD from the table kills whatever HP are left (_damage_object then critterKill).
+            if ((flags & DamageFlags.Dead) != 0) target.HitPoints = 0;
+            _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, damageRoll, damage, target.HitPoints, preview.ActionPointCost, location, weak));
+            if (target.Alive && flags != DamageFlags.None) ApplyResults(target, flags);
+        }
+        else _log.Add(new AttackResolved(actor.Id, target.Id, chance, roll, hit, 0, 0, target.HitPoints, preview.ActionPointCost, location, weak));
+        AfterAttack(actor, target, damage);
+        // CE runs the attacker's combat_p_proc (fixed_param 2) after every hit on a critter that stood before it.
+        if (hit && actor.PoisonsOnHit && target.IsPlayer) Sting(actor, target);
+        if (!target.Alive)
+        {
+            int experience = actor.IsPlayer ? target.Experience : 0;
+            _experience += experience;
+            _log.Add(new CombatantDied(target.Id, actor.Id, experience));
+            CheckOver();
+        }
+        if (actor.Weapon.IsRanged && !hit && !failure) StrayShot(actor, target, location);
+        // _action_ranged: unless the throw failed critically, the weapon flies to the struck defender or the miss's
+        // landing hex and stays there.
+        if (actor.Weapon.Throws && !failure) Throw(actor, hit ? target.Hex : _landing);
+        failed = failure ? CriticalMiss(actor, criticalRoll, needed) : DamageFlags.None;
+        return 1;
+    }
+
+    /// <summary>
+    /// CE _compute_spray for ANIM_FIRE_BURST: the burst fires min(burst rounds, rounds loaded). One roll against the chance
+    /// (Critical Chance for its critical die) opens it; a critical failure ends it there, a critical success adds 20 to the
+    /// accuracy. A third of the rounds (at least one) go down the center, a third to the left and the rest to the right;
+    /// half the center's (at least one, taken from the center) roll each at the main target. The center's other rounds, less
+    /// those hits, then fly along the line past the target (_shoot_along_path), and the left and right ones along lines
+    /// beside it: every critter met in turn takes rounds while d100 rolls at or under its own chance, the rest fly on, and
+    /// at most six others are struck. A burst that hits nothing is a miss (one stray round); a missed opening roll that hit
+    /// anything becomes a hit. Hits on the main target take its damage together, criticals included.
+    /// </summary>
+    private int Burst(CombatantState actor, CombatantState target, CombatActionPreview preview, out DamageFlags failed)
+    {
+        CombatWeapon weapon = actor.Weapon;
+        int accuracy = preview.ToHit!.Chance, range = Range(actor), fired = Math.Min(weapon.BurstRounds, weapon.Rounds);
+        int roll = _random.Between(1, 100), margin = accuracy - roll, criticalRoll = 0, needed = 0;
+        bool hit = margin >= 0, critical = false, failure = false;
+        if (CriticalRules.CriticalsAllowed(GameTime))
+        {
+            criticalRoll = _random.Between(1, 100);
+            needed = hit ? margin / 10 + actor.Stats.CriticalChance : -margin / 10;
+            (critical, failure) = (hit && criticalRoll <= needed, !hit && criticalRoll <= needed);
+        }
+        var others = new List<(CombatantState Critter, int Rounds, int Damage)>();
+        int mainRounds = 0, mainHits = 0;
+        if (!failure)
+        {
+            if (critical) accuracy += 20;
+            int center = Math.Max(1, fired / 3), left = fired / 3, right = fired - center - left;
+            mainRounds = center / 2;
+            if (mainRounds == 0) { mainRounds = 1; center--; }
+            for (int i = 0; i < mainRounds; i++) if (RollSucceeds(accuracy)) mainHits++;
+            mainHits += ShootAlong(actor, target, OriginalStraightPath.TileBeyond(actor.Hex, target.Hex, range), center - mainHits, others);
+            int centerTile = CombatResolver.Reach(actor, target) <= 3 ? OriginalStraightPath.TileBeyond(actor.Hex, target.Hex, 3) : target.Hex;
+            int rotation = OriginalStraightPath.RotationTo(centerTile, actor.Hex);
+            if (FalloutGrid.Neighbor(centerTile, (rotation + 1) % 6) is int leftTile)
+                mainHits += ShootAlong(actor, target, OriginalStraightPath.TileBeyond(actor.Hex, leftTile, range), left, others);
+            if (FalloutGrid.Neighbor(centerTile, (rotation + 5) % 6) is int rightTile)
+                mainHits += ShootAlong(actor, target, OriginalStraightPath.TileBeyond(actor.Hex, rightTile, range), right, others);
+            if (!hit && (mainHits > 0 || others.Count > 0)) hit = true;
+            else if (hit && mainHits == 0 && others.Count == 0) (hit, critical) = (false, false);
+        }
+        if (!hit && !failure && Jinxed && _random.Between(0, 1) == 1) (failure, criticalRoll, needed) = (true, 0, 0);
+        if (hit && !critical && actor.IsPlayer && actor.Stats.Perks.Has(FalloutRemake.Runtime.Perk.Sniper) && _random.Between(1, 10) <= actor.Stats.Special.Luck)
+            (critical, criticalRoll, needed) = (true, 1, 100);
+        _log.Add(new BurstFired(actor.Id, target.Id, preview.ToHit.Chance, roll, fired, mainRounds, mainHits,
+            others.Select(o => new BurstHit(o.Critter.Id, o.Rounds, o.Damage, Math.Max(0, o.Critter.HitPoints - o.Damage))).ToArray()));
+        bool weak = actor.IsPlayer && CombatResolver.StrengthShortfall(actor) > 0;
+        int damage = 0;
+        if (hit)
+        {
+            var (multiplier, flags) = critical ? CriticalStrike(actor, target, criticalRoll, needed, HitLocation.Torso) : (DamageCalculator.NormalHitMultiplier, DamageFlags.None);
+            damage = RoundsDamage(actor, target, mainHits, multiplier, (flags & DamageFlags.Bypass) != 0);
+            target.HitPoints = Math.Max(0, target.HitPoints - damage);
+            if ((flags & DamageFlags.Dead) != 0) target.HitPoints = 0;
+            _log.Add(new AttackResolved(actor.Id, target.Id, preview.ToHit.Chance, roll, true, 0, damage, target.HitPoints, preview.ActionPointCost, HitLocation.Uncalled, weak));
+            if (target.Alive && flags != DamageFlags.None) ApplyResults(target, flags);
+        }
+        else _log.Add(new AttackResolved(actor.Id, target.Id, preview.ToHit.Chance, roll, false, 0, 0, target.HitPoints, preview.ActionPointCost, HitLocation.Uncalled, weak));
+        AfterAttack(actor, target, damage);
+        Killed(actor, target);
+        // The others take their damage with the main target's (_combat_display applies them all).
+        foreach (var (critter, _, dealt) in others)
+        {
+            critter.HitPoints = Math.Max(0, critter.HitPoints - dealt);
+            AfterAttack(actor, critter, dealt);
+            Killed(actor, critter);
+        }
+        if (!hit && !failure) StrayShot(actor, target, HitLocation.Uncalled);
+        failed = failure ? CriticalMiss(actor, criticalRoll, needed, fired) : DamageFlags.None;
+        return fired;
+    }
+
+    // randomRoll(difficulty, 0) >= ROLL_SUCCESS: the d100, then the critical die from day 1 (its result unused here).
+    private bool RollSucceeds(int difficulty)
+    {
+        bool success = difficulty - _random.Between(1, 100) >= 0;
+        if (CriticalRules.CriticalsAllowed(GameTime)) _random.Between(1, 100);
+        return success;
+    }
+
+    /// <summary>
+    /// CE _shoot_along_path: from the attacker toward <paramref name="end"/>, each critter on the line (not walls or other
+    /// objects, which stop it) takes rounds while d100 rolls at or under its own chance (torso, crowd included). Rounds that
+    /// strike the main target are returned; the others are added up per critter. A critter of the map outside the fight
+    /// stops the line too (the project does not damage it).
+    /// </summary>
+    private int ShootAlong(CombatantState actor, CombatantState target, int end, int rounds, List<(CombatantState Critter, int Rounds, int Damage)> others)
+    {
+        int mainHits = 0, current = actor.Hex;
+        object? previous = actor;
+        for (int guard = 0; guard < 400; guard++)
+        {
+            if (rounds <= 0 || current == end || others.Count >= 6) break;
+            CombatLineOfFire.Obstacle? obstacle = LineOfFire.First(current, end, actor, previous);
+            if (obstacle is not { Combatant: { } critter }) break;
+            LineOfFire.Blocked(actor, critter, out int crowd);
+            int accuracy = CombatResolver.ToHit(actor, critter, HitLocation.Torso, crittersOnLine: crowd).Chance, hits = 0;
+            // The roll comes first, so a line that ran out of rounds still throws one more d100.
+            while (_random.Between(1, 100) <= accuracy && rounds > 0) { rounds--; hits++; }
+            if (hits != 0)
+            {
+                if (critter == target) mainHits += hits;
+                else
+                {
+                    int damage = RoundsDamage(actor, critter, hits, DamageCalculator.NormalHitMultiplier, false);
+                    int index = others.FindIndex(o => o.Critter == critter);
+                    if (index < 0) others.Add((critter, hits, damage));
+                    else others[index] = (critter, others[index].Rounds + hits, others[index].Damage + damage);
+                }
+            }
+            current = critter.Hex; previous = critter;
+        }
+        return mainHits;
+    }
+
+    // attackComputeDamage(attack, rounds, multiplier): a damage roll per round, each through DT and DR, then the dude's
+    // after-bonus once.
+    private int RoundsDamage(CombatantState actor, CombatantState victim, int rounds, int multiplier, bool bypass)
+    {
+        var (min, max) = DamageCalculator.RollRange(actor, actor.Weapon);
+        int threshold = DamageCalculator.Threshold(victim, actor.Weapon, bypass);
+        int resistance = DamageCalculator.Resistance(victim, actor.Weapon, bypass, DamageCalculator.HasFinesse(actor));
+        int total = 0, bonus = DamageCalculator.RollBonus(actor);
+        for (int round = 0; round < rounds; round++)
+            total += DamageCalculator.Apply(_random.Between(min, max), actor.Weapon, threshold, resistance, multiplier, bonus);
+        return total + DamageCalculator.AfterBonus(actor, victim);
+    }
+
+    // A combatant left without HP dies once: XP to the player for an enemy (CombatantDied), then the fight may end.
+    private void Killed(CombatantState actor, CombatantState victim)
+    {
+        if (victim.Alive || _log.OfType<CombatantDied>().Any(d => d.CombatantId == victim.Id)) return;
+        int experience = actor.IsPlayer && victim.Team != actor.Team ? victim.Experience : 0;
+        _experience += experience;
+        _log.Add(new CombatantDied(victim.Id, actor.Id, experience));
+        CheckOver();
+    }
+
+    /// <summary>
+    /// _combat_anim_finished: a weapon that takes ammunition loses the rounds the attack spent (a burst's rounds, else one;
+    /// twice that for the Super Cattle Prod and the Mega Power Fist, _item_w_compute_ammo_cost). A firearm's critical
+    /// failure with LoseAmmo spends all it held. CE could leave those two weapons below zero; the project stops at 0.
+    /// </summary>
+    private void SpendAmmo(CombatantState actor, CombatWeapon used, int fired, DamageFlags failed)
+    {
+        if (!used.UsesAmmo || actor.Weapon.Pid != used.Pid) return;
+        bool ranged = used.AttackType == FalloutRemake.Import.WeaponAttackType.Ranged;
+        int spent = ranged ? fired : 1;
+        if (used.Pid is SuperCattleProdPid or MegaPowerFistPid) spent *= 2;
+        if (ranged && (failed & DamageFlags.LoseAmmo) != 0) spent = actor.Weapon.Rounds;
+        int left = Math.Max(0, actor.Weapon.Rounds - spent);
+        actor.Weapon = actor.Weapon with { Rounds = left };
+        _log.Add(new AmmoSpent(actor.Id, spent, left));
+    }
+    public const int SuperCattleProdPid = 399, MegaPowerFistPid = 407, SolarScorcherPid = 390;
+
+    /// <summary>CE weaponGetActionPointCost for a reload hit mode: 2, or 1 with a Fast Reload weapon.</summary>
+    public static int ReloadCost(CombatWeapon weapon) => weapon.WeaponPerk == FalloutRemake.Runtime.Perk.WeaponFastReload ? 1 : 2;
+
+    /// <summary>
+    /// weaponAttemptReload's choice: first a stack of the ammunition loaded last, then, only into an empty weapon, any stack
+    /// of its caliber (weaponCanBeReloadedWith); the Solar Scorcher recharges from light, which is not modeled.
+    /// </summary>
+    private static CombatAmmo? ReloadSource(CombatantState actor)
+    {
+        CombatWeapon weapon = actor.Weapon;
+        if (weapon.Pid == SolarScorcherPid || weapon.Rounds >= weapon.AmmoCapacity) return null;
+        bool Fits(CombatAmmo stack) => stack.Rounds > 0 && stack.Data.Caliber == weapon.Caliber && (weapon.Rounds == 0 || stack.Data.Pid == weapon.AmmoPid);
+        return actor.Ammunition.FirstOrDefault(a => a.Data.Pid == weapon.AmmoPid && Fits(a)) ?? actor.Ammunition.FirstOrDefault(Fits);
+    }
+
+    // _intface_item_reload: weaponAttemptReload until the weapon is full or nothing fits; the AP are paid once it loaded.
+    private void Reload(CombatantState actor, int cost)
+    {
+        while (ReloadSource(actor) is { } stack)
+        {
+            int take = Math.Min(actor.Weapon.AmmoCapacity - actor.Weapon.Rounds, stack.Rounds);
+            stack.Rounds -= take;
+            actor.Weapon = actor.Weapon with { Rounds = actor.Weapon.Rounds + take, AmmoPid = stack.Data.Pid, Ammo = stack.Data };
+            _log.Add(new WeaponReloaded(actor.Id, stack.Key, stack.Data.Pid, take, actor.Weapon.Rounds, 0));
+        }
+        actor.ActionPoints = Math.Max(0, actor.ActionPoints - cost);
+        if (_log[^1] is WeaponReloaded last) _log[^1] = last with { ActionPointsSpent = cost };
     }
 
     private int _landing;
@@ -411,21 +615,25 @@ public sealed class CombatSession : ICombatSession
     /// <summary>
     /// attackComputeCriticalFailure: the player's wait for game day 6 (a plain miss before). d100 - 5 x (LK - 5) picks the
     /// weapon's failure column. Applied: lost turn (no AP left now, the next turn lost), knockdown, random cripple and the
-    /// self hit (x2, the attacker's own DT/DR). HurtSelf has no effect in CE. Drop, RandomHit, LoseAmmo, Destroy, Explode,
-    /// Dud and OnFire are reported but not applied: no natural attack or bare hands can draw them.
+    /// self hit (x2, the attacker's own DT/DR, one roll per round a firearm fired). HurtSelf has no effect in CE. LoseAmmo
+    /// empties a firearm (<see cref="SpendAmmo"/>). Drop, RandomHit, Destroy, Explode, Dud and OnFire are reported but not
+    /// applied. Returns the flags drawn.
     /// </summary>
-    private void CriticalMiss(CombatantState attacker, int roll, int needed)
+    private DamageFlags CriticalMiss(CombatantState attacker, int roll, int needed, int rounds = 1)
     {
-        if (attacker.IsPlayer && !CriticalRules.PlayerFailuresAllowed(GameTime)) return;
+        if (attacker.IsPlayer && !CriticalRules.PlayerFailuresAllowed(GameTime)) return DamageFlags.None;
         int effectRoll = _random.Between(1, 100) - 5 * (attacker.Stats.Special.Luck - 5), effect = CriticalRules.FailureEffect(effectRoll);
         DamageFlags flags = CriticalRules.Failure(attacker.Weapon.CriticalFailureType, effect);
         int selfRoll = 0, selfDamage = 0;
         if ((flags & DamageFlags.HitSelf) != 0)
         {
             var (min, max) = DamageCalculator.RollRange(attacker, attacker.Weapon);
-            selfRoll = _random.Between(min, max);
-            selfDamage = DamageCalculator.Apply(selfRoll, attacker.Weapon, DamageCalculator.Threshold(attacker, attacker.Weapon),
-                DamageCalculator.Resistance(attacker, attacker.Weapon, finesse: DamageCalculator.HasFinesse(attacker)));
+            int threshold = DamageCalculator.Threshold(attacker, attacker.Weapon), resistance = DamageCalculator.Resistance(attacker, attacker.Weapon, finesse: DamageCalculator.HasFinesse(attacker));
+            for (int round = 0; round < (attacker.Weapon.AttackType == FalloutRemake.Import.WeaponAttackType.Ranged ? rounds : 1); round++)
+            {
+                selfRoll = _random.Between(min, max);
+                selfDamage += DamageCalculator.Apply(selfRoll, attacker.Weapon, threshold, resistance);
+            }
             attacker.HitPoints = Math.Max(0, attacker.HitPoints - selfDamage);
         }
         if ((flags & DamageFlags.LoseTurn) != 0) attacker.ActionPoints = 0;
@@ -437,11 +645,12 @@ public sealed class CombatSession : ICombatSession
             _log.Add(new CombatantDied(attacker.Id, attacker.Id, 0));
             CheckOver();
             if (!_over) EndTurn(attacker);
-            return;
+            return flags;
         }
         ApplyResults(attacker, flags);
         // _combat_attack: an attacker its own failure knocked down gets up at once, unless the turn is lost.
         if ((attacker.Conditions & DamageFlags.KnockedDown) != 0 && (attacker.Conditions & DamageFlags.LoseTurn) == 0) StandUp(attacker);
+        return flags;
     }
 
     /// <summary>

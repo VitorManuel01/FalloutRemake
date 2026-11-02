@@ -158,40 +158,66 @@ public sealed record CombatWeapon(string Name, int? Pid, WeaponAttackType Attack
     /// <summary>Keeps only 20% of the target's DT, as the Penetrate perk (unarmedIsPenetrating).</summary>
     public bool Penetrates { get; init; }
 
-    public static CombatWeapon Primary(string name, WeaponPrototypeData weapon, AmmoPrototypeData? ammo = null)
+    /// <param name="rounds">Rounds loaded (the item's ammoQuantity); <paramref name="ammo"/> is the PRO of its ammoTypePid.</param>
+    public static CombatWeapon Primary(string name, WeaponPrototypeData weapon, AmmoPrototypeData? ammo = null, int rounds = 0)
     {
         ArgumentNullException.ThrowIfNull(weapon);
         WeaponAttackType type = WeaponPrototypeData.TypeOf(weapon.PrimaryMode);
         if (type == WeaponAttackType.None) throw new InvalidDataException($"Weapon PRO {weapon.Pid:X8} has no primary attack.");
         if (ammo != null && ammo.Caliber != weapon.Caliber) throw new InvalidDataException("Ammunition caliber does not match the weapon.");
-        return Mode(name, weapon, type, weapon.PrimaryRange, weapon.PrimaryActionPoints, ammo);
+        if (weapon.PrimaryMode == WeaponAttackMode.Flame) throw new InvalidDataException($"Weapon PRO {weapon.Pid:X8} fires continuously, which is not supported.");
+        return Mode(name, weapon, type, weapon.PrimaryRange, weapon.PrimaryActionPoints, ammo, weapon.PrimaryMode, rounds);
     }
 
     /// <summary>
-    /// The weapon's second attack (CE secondary hit mode: maxRange2, actionPointCost2), such as the spear's throw; null when
-    /// the PRO names none. Only thrown and melee second modes are supported until ammunition is tracked.
+    /// The weapon's second attack (CE secondary hit mode: maxRange2, actionPointCost2), such as the spear's throw or the
+    /// SMG's burst; null when the PRO names none. A continuous (flamer) mode is not supported.
     /// </summary>
-    public static CombatWeapon? Secondary(string name, WeaponPrototypeData weapon)
+    public static CombatWeapon? Secondary(string name, WeaponPrototypeData weapon, AmmoPrototypeData? ammo = null, int rounds = 0)
     {
         ArgumentNullException.ThrowIfNull(weapon);
         WeaponAttackType type = WeaponPrototypeData.TypeOf(weapon.SecondaryMode);
-        return type is WeaponAttackType.Throw or WeaponAttackType.Melee
-            ? Mode(name, weapon, type, weapon.SecondaryRange, weapon.SecondaryActionPoints, null) with { IsSecondary = true } : null;
+        if (ammo != null && ammo.Caliber != weapon.Caliber) throw new InvalidDataException("Ammunition caliber does not match the weapon.");
+        return type is WeaponAttackType.Throw or WeaponAttackType.Melee || type == WeaponAttackType.Ranged && weapon.SecondaryMode != WeaponAttackMode.Flame
+            ? Mode(name, weapon, type, weapon.SecondaryRange, weapon.SecondaryActionPoints, ammo, weapon.SecondaryMode, rounds) with { IsSecondary = true } : null;
     }
 
-    private static CombatWeapon Mode(string name, WeaponPrototypeData weapon, WeaponAttackType type, int range, int actionPoints, AmmoPrototypeData? ammo)
+    private static CombatWeapon Mode(string name, WeaponPrototypeData weapon, WeaponAttackType type, int range, int actionPoints, AmmoPrototypeData? ammo,
+        WeaponAttackMode mode, int rounds)
     {
-        // Project mapping until CE weaponGetSkillValue is ported: energy damage uses Energy Weapons, other guns Small Guns.
+        // CE weaponGetSkillForHitMode: laser, plasma and electrical guns use Energy Weapons, Big Gun PROs Big Guns, other guns Small Guns.
         int skill = type switch
         {
             WeaponAttackType.Unarmed => DerivedCombatStats.Unarmed, WeaponAttackType.Melee => DerivedCombatStats.MeleeWeapons,
             WeaponAttackType.Throw => DerivedCombatStats.Throwing,
-            _ => weapon.DamageType is 1 or 3 or 4 ? DerivedCombatStats.EnergyWeapons : DerivedCombatStats.SmallGuns
+            _ => weapon.DamageType is 1 or 3 or 4 ? DerivedCombatStats.EnergyWeapons : weapon.BigGun ? DerivedCombatStats.BigGuns : DerivedCombatStats.SmallGuns
         };
+        if (rounds < 0 || rounds > Math.Max(0, weapon.AmmoCapacity)) throw new InvalidDataException($"Weapon PRO {weapon.Pid:X8} cannot hold {rounds} rounds.");
         return new(name, weapon.Pid, type, weapon.MinDamage, weapon.MaxDamage, (DamageType)weapon.DamageType,
             Math.Max(1, range), Math.Max(1, actionPoints), weapon.MinStrength, skill, ammo)
-        { CriticalFailureType = weapon.CriticalFailureType, TwoHanded = weapon.TwoHanded, AnimationCode = weapon.AnimationCode };
+        {
+            CriticalFailureType = weapon.CriticalFailureType, TwoHanded = weapon.TwoHanded, AnimationCode = weapon.AnimationCode,
+            AmmoCapacity = Math.Max(0, weapon.AmmoCapacity), Caliber = weapon.Caliber, AmmoPid = ammo?.Pid ?? weapon.AmmoPid, Rounds = rounds,
+            WeaponPerk = weapon.Perk, Penetrates = weapon.Perk == FalloutRemake.Runtime.Perk.WeaponPenetrate,
+            BurstRounds = mode == WeaponAttackMode.Burst ? Math.Max(1, weapon.BurstRounds) : 0
+        };
     }
+
+    /// <summary>CE ammoGetCapacity of the weapon: 0 when it takes no ammunition.</summary>
+    public int AmmoCapacity { get; init; }
+    /// <summary>CE ammoGetQuantity: rounds loaded, shared by the item's attack modes.</summary>
+    public int Rounds { get; init; }
+    /// <summary>The weapon PRO's caliber, which ammunition must match (weaponCanBeReloadedWith).</summary>
+    public int Caliber { get; init; }
+    /// <summary>CE weapon.ammoTypePid: the ammunition loaded last (the PRO's default until then); <see cref="Ammo"/> holds its PRO.</summary>
+    public int AmmoPid { get; init; } = -1;
+    /// <summary>The weapon PRO's perk (Long Range, Accurate, Penetrate, Scope Range, Fast Reload…); -1 for none.</summary>
+    public int WeaponPerk { get; init; } = -1;
+    /// <summary>Rounds a burst fires at most (weaponGetBurstRounds); 0 for a single shot or a blow.</summary>
+    public int BurstRounds { get; init; }
+    /// <summary>The mode's animation is ANIM_FIRE_BURST (CE _compute_spray).</summary>
+    public bool Burst => BurstRounds > 0;
+    public bool UsesAmmo => AmmoCapacity > 0;
 
     /// <summary>The weapon PRO's animation code: 0 (WEAPON_ANIMATION_NONE) for bare hands and fist weapons (HtH Evade counts them as empty).</summary>
     public int AnimationCode { get; init; }

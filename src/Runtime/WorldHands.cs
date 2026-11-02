@@ -42,9 +42,8 @@ public sealed partial class WorldSession
         var held = new HeldItem(item.Map, item.Source.Key);
         if (CarriedHeld(held) is not { } carried) return HandStatus.NoItem;
         if (PrototypeOf(carried) is not { Type: 0, Subtype: WeaponPrototypeData.Subtype } prototype) return HandStatus.NotWeapon;
-        CombatWeapon weapon = CombatWeapon.Primary("", WeaponPrototypeData.Read(prototype));
-        // Firearms wait for ammunition; thrown weapons (the plant spike) leave the hand when used.
-        if (weapon.IsRanged && !weapon.Throws) return HandStatus.Unsupported;
+        // Firearms wait for the world to track their rounds; thrown weapons (the plant spike) leave the hand when used.
+        if (WeaponPrototypeData.TypeOf(WeaponPrototypeData.Read(prototype).PrimaryMode) == WeaponAttackType.Ranged) return HandStatus.Unsupported;
         // One unit per hand: a single item moves from the other hand, a stack of two can fill both.
         return HandStatus.Ready;
     }

@@ -12,7 +12,7 @@ namespace FalloutRemake.Runtime.Combat;
 /// </summary>
 public static class CombatResolver
 {
-    public const int MinimumChance = 5, MaximumChance = 95, BlindPenalty = 25;
+    public const int MinimumChance = 5, MaximumChance = 95, BlindPenalty = 25, AccurateBonus = 20, ScopeMinimumDistance = 8;
 
     public static int Reach(CombatantState attacker, CombatantState target) => FalloutGrid.Distance(attacker.Hex, target.Hex);
 
@@ -26,11 +26,13 @@ public static class CombatResolver
         int skill = attacker.Stats.Skill(weapon.SkillIndex), distance = 0;
         if (weapon.IsRanged)
         {
-            // Default weapons (no long-range/scope perk): perception multiplier 2, no minimum effective distance.
-            // Sharpshooter adds 2 PE per rank to the dude's range term.
+            // The weapon's perk sets the perception multiplier: Long Range 4, Scope Range 5 (closer than 8 hexes it costs the
+            // missing distance instead), others 2. Sharpshooter adds 2 PE per rank to the dude's range term.
             int perception = attacker.Perception + (attacker.IsPlayer ? 2 * attacker.Stats.Perks.Rank(FalloutRemake.Runtime.Perk.Sharpshooter) : 0);
-            int modifier = (useDistance ? FalloutGrid.Distance(fromHex ?? attacker.Hex, target.Hex) : 0)
-                - (attacker.IsPlayer ? 2 * (perception - 2) : 2 * perception);
+            int multiplier = weapon.WeaponPerk switch { FalloutRemake.Runtime.Perk.WeaponLongRange => 4, FalloutRemake.Runtime.Perk.WeaponScopeRange => 5, _ => 2 };
+            int minimum = weapon.WeaponPerk == FalloutRemake.Runtime.Perk.WeaponScopeRange ? ScopeMinimumDistance : 0;
+            int modifier = useDistance ? FalloutGrid.Distance(fromHex ?? attacker.Hex, target.Hex) : 0;
+            modifier = modifier >= minimum ? modifier - multiplier * (attacker.IsPlayer ? perception - 2 : perception) : modifier + minimum;
             modifier = Math.Max(modifier, -2 * perception);
             distance = modifier * (modifier >= 0 && (attacker.Conditions & DamageFlags.Blind) != 0 ? -12 : -4);
             if (!useDistance && distance <= 0) distance = 0;
@@ -41,11 +43,12 @@ public static class CombatResolver
         int armorClass = Math.Max(0, target.EffectiveArmorClass + (weapon.Ammo?.ArmorClassModifier ?? 0));
         int penalty = weapon.IsRanged ? CriticalRules.Penalty(location) : CriticalRules.Penalty(location) / 2;
         int prone = target.Prone ? CriticalRules.ProneTargetBonus : 0;
+        int accurate = weapon.WeaponPerk == FalloutRemake.Runtime.Perk.WeaponAccurate ? AccurateBonus : 0;
         int blind = (attacker.Conditions & DamageFlags.Blind) != 0 ? BlindPenalty : 0;
         // Raw stays uncapped for the HUD's arithmetic; CE's own value is Math.Min(Raw, 95).
-        int raw = skill + distance + oneHander - strength - armorClass + penalty - blind + prone;
+        int raw = skill + distance + oneHander - strength - armorClass + penalty - blind + prone + accurate;
         return new ToHitBreakdown(skill, weapon.SkillIndex, distance, strength, armorClass, raw, Math.Clamp(raw, MinimumChance, MaximumChance), prone, penalty, blind,
-            oneHander);
+            oneHander, accurate);
     }
 
     /// <summary>

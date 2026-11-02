@@ -7,7 +7,7 @@ public enum DamageType { Normal, Laser, Fire, Plasma, Electrical, Emp, Explosion
 public enum LifeStatus { Active, Dead }
 /// <summary>CE hit locations; Uncalled is the plain attack, which CE resolves on the torso row.</summary>
 public enum HitLocation { Head, LeftArm, RightArm, Torso, RightLeg, LeftLeg, Eyes, Groin, Uncalled }
-public enum CombatActionKind { Move, Attack, EndTurn, UseHealing, LeaveCombat, SwitchHand, OpenInventory, CloseInventory }
+public enum CombatActionKind { Move, Attack, EndTurn, UseHealing, LeaveCombat, SwitchHand, OpenInventory, CloseInventory, Reload }
 public enum CombatActionStatus
 {
     Ready, CombatOver, NotActive, UnknownCombatant, InvalidTarget, AlreadyThere, Unreachable,
@@ -17,7 +17,11 @@ public enum CombatActionStatus
     /// <summary>The player cannot aim this blow (CE critterCanAim: Fast Shot, or explosive, fire or EMP damage).</summary>
     CannotAim,
     /// <summary>A wall or scenery stands in the line of fire (CE COMBAT_BAD_SHOT_AIM_BLOCKED, combat.msg 104).</summary>
-    AimBlocked
+    AimBlocked,
+    /// <summary>The weapon takes ammunition and holds none (CE COMBAT_BAD_SHOT_NO_AMMO).</summary>
+    NoAmmo,
+    /// <summary>Reloading a weapon already full, or one that takes no ammunition.</summary>
+    AlreadyLoaded
 }
 
 /// <summary>What a combatant wants to do; previewed and executed through the same rules.</summary>
@@ -40,6 +44,8 @@ public sealed record CombatActionProposal(string ActorId, CombatActionKind Kind,
     /// <summary>CE inventoryOpen in combat: 4 AP on the player's turn; inside, wielding and using items cost nothing more.</summary>
     public static CombatActionProposal OpenInventory(string actor) => new(actor, CombatActionKind.OpenInventory);
     public static CombatActionProposal CloseInventory(string actor) => new(actor, CombatActionKind.CloseInventory);
+    /// <summary>The active hand's reload (CE _intface_item_reload): 2 AP, 1 with a Fast Reload weapon, only when it loads anything.</summary>
+    public static CombatActionProposal Reload(string actor) => new(actor, CombatActionKind.Reload);
 }
 
 /// <summary>
@@ -47,7 +53,7 @@ public sealed record CombatActionProposal(string ActorId, CombatActionKind Kind,
 /// ProneTarget is the +40 against a knocked down or out target.
 /// </summary>
 public sealed record ToHitBreakdown(int Skill, int SkillIndex, int DistanceModifier, int StrengthPenalty, int TargetArmorClass, int Raw, int Chance,
-    int ProneTarget = 0, int LocationPenalty = 0, int BlindPenalty = 0, int OneHanderModifier = 0);
+    int ProneTarget = 0, int LocationPenalty = 0, int BlindPenalty = 0, int OneHanderModifier = 0, int AccurateBonus = 0);
 
 /// <summary>Damage range of one hit after the target's threshold and resistance, using the exact resolution arithmetic.</summary>
 public sealed record DamageEstimate(DamageType Type, int MinRoll, int MaxRoll, int Threshold, int Resistance, int MinDamage, int MaxDamage);
@@ -75,6 +81,17 @@ public sealed record WeaponsChanged(string CombatantId, string Blow, string Othe
 public sealed record WeaponThrown(string AttackerId, string Weapon, int LandingHex) : CombatEvent;
 /// <summary>A missed shot or throw flew on and struck someone else (attackCompute's accidental target).</summary>
 public sealed record StrayHit(string AttackerId, string TargetId, int DamageRoll, int Damage, int TargetHitPoints) : CombatEvent;
+/// <summary>A weapon that takes ammunition spent rounds on an attack (CE _combat_anim_finished): how many and how many are left.</summary>
+public sealed record AmmoSpent(string CombatantId, int Rounds, int Left) : CombatEvent;
+/// <summary>The active weapon was reloaded from the carried ammunition: its type, the rounds now loaded and the AP spent.</summary>
+public sealed record WeaponReloaded(string CombatantId, string AmmoKey, int AmmoPid, int RoundsLoaded, int Rounds, int ActionPointsSpent) : CombatEvent;
+/// <summary>
+/// A burst (CE _compute_spray): the opening roll against the chance, the rounds fired, how many went to the main target and
+/// hit it, and every other combatant the left, center and right lines struck (rounds that hit, damage, HP after).
+/// </summary>
+public sealed record BurstFired(string AttackerId, string TargetId, int Chance, int Roll, int RoundsFired, int MainRounds, int MainHits,
+    BurstHit[] Others) : CombatEvent;
+public sealed record BurstHit(string TargetId, int Rounds, int Damage, int HitPoints);
 /// <summary>The player changed the active hand's attack mode (FO2's item button): the blow now used.</summary>
 public sealed record AttackModeChanged(string CombatantId, string Blow) : CombatEvent;
 /// <summary>Inside the open inventory the player put on armor (its name) or took it off (null): the armor class it now has.</summary>

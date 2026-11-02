@@ -162,6 +162,7 @@ internal static class SelfTests
             PerkTests.Run(Check);
             RestTests.Run(Check);
             MedicalTests.Run(Check);
+            FirearmTests.Run(Check);
         WorldDrugTests.Run(Check);
         PlayerCharacterTests.Run(Check);
         TempleDuelTests.Run(Check);
