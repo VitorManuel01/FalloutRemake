@@ -171,13 +171,14 @@ public static class PerkCatalog
         Perk.Sharpshooter, Perk.Educated, Perk.BetterCriticals, Perk.Slayer, Perk.ActionBoy, Perk.Lifegiver, Perk.Dodger, Perk.Snakeater,
         Perk.MasterThief, Perk.HeaveHo, Perk.QuickPockets, Perk.GainStrength, Perk.GainPerception, Perk.GainEndurance, Perk.GainCharisma,
         Perk.GainIntelligence, Perk.GainAgility, Perk.GainLuck, Perk.HtHEvade, Perk.LivingAnatomy, Perk.PackRat, Perk.QuickRecovery,
-        Perk.Thief, Perk.WeaponHandling, Perk.Tag, Perk.Mutate, Perk.HereAndNow, Perk.SwiftLearner, Perk.FasterHealing
+        Perk.Thief, Perk.WeaponHandling, Perk.Tag, Perk.Mutate, Perk.HereAndNow, Perk.SwiftLearner, Perk.FasterHealing,
+        Perk.Healer, Perk.Medic, Perk.VaultCityTraining
     };
     // Perks whose rule is on the sheet with no system using it yet.
     private static readonly HashSet<int> SheetPerks = new()
     {
-        Perk.BonusRangedDamage, Perk.BonusRateOfFire, Perk.RadResistance, Perk.Sniper, Perk.Medic, Perk.MrFixit,
-        Perk.Speaker, Perk.Ranger, Perk.Survivalist, Perk.Gambler, Perk.Negotiator, Perk.Salesman, Perk.Pyromaniac, Perk.VaultCityTraining
+        Perk.BonusRangedDamage, Perk.BonusRateOfFire, Perk.RadResistance, Perk.Sniper, Perk.MrFixit,
+        Perk.Speaker, Perk.Ranger, Perk.Survivalist, Perk.Gambler, Perk.Negotiator, Perk.Salesman, Perk.Pyromaniac
     };
 
     public static PerkEffect Effect(int perk) => AppliedPerks.Contains(perk) ? PerkEffect.Applied : SheetPerks.Contains(perk) ? PerkEffect.SheetOnly : PerkEffect.NotModeled;

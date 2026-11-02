@@ -12,8 +12,9 @@ public enum SkillCommitStatus { Ready, Unchanged, Stale, InCombat }
 /// <summary>Perks (optional, inside v13): the perks chosen, in order, with the level each was chosen at; absent when none.</summary>
 /// <summary>FreePerk: whether a perk waits to be chosen (written by every save that knows it; older saves leave it out).</summary>
 /// <summary>SwiftExperience: the XP Swift Learner added (absent without it).</summary>
+/// <summary>FirstAidUses, DoctorUses: CE _timesSkillUsed of each skill, oldest first (absent when unused); MedicalExperience: the XP they earned.</summary>
 public sealed record SavedSkills([property: JsonRequired] int[] Raises, [property: JsonRequired] int Unspent, ChosenPerk[]? Perks = null, bool? FreePerk = null,
-    int? SwiftExperience = null);
+    int? SwiftExperience = null, long[]? FirstAidUses = null, long[]? DoctorUses = null, int? MedicalExperience = null);
 
 /// <summary>CE skill.cc rules for spending skill points.</summary>
 public static class SkillSpendingRules
@@ -137,7 +138,8 @@ public sealed partial class WorldSession
     private void ResetSkills() { _skillRaises = new int[CharacterSkill.Count]; _unspentSkillPoints = 0; _skillPointLevel = 1; _skillRevision++; _perks = PerkRanks.None; ResetFreePerk(); ResetSwiftExperience(); }
 
     private SavedSkills CaptureSkills() => new(_skillRaises.ToArray(), UnspentSkillPoints, _perks.Count == 0 ? null : _perks.Chosen.ToArray(), PerksAvailable > 0,
-        _swiftExperience == 0 ? null : _swiftExperience);
+        _swiftExperience == 0 ? null : _swiftExperience, _firstAidUses[0] == 0 ? null : _firstAidUses.ToArray(), _doctorUses[0] == 0 ? null : _doctorUses.ToArray(),
+        _medicalExperience == 0 ? null : _medicalExperience);
 
     // Runs after the XP sources are restored. The unspent pool plus what the raises cost can never exceed what the levels
     // granted; less is possible, since the 99 cap drops points that were not spent in time.

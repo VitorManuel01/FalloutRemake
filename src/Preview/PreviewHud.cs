@@ -40,6 +40,7 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _doorUse = new() { Text = "Usar porta [U]", Disabled = true, CustomMinimumSize = new Vector2(0, 30) };
     private readonly Button _lockpick = new() { Name = "LockpickAction", Text = "Arrombar [L]", Disabled = true, CustomMinimumSize = new Vector2(0, 30) };
     private readonly Button _rest = new() { Name = "RestAction", Text = "Descansar", CustomMinimumSize = new Vector2(0, 30) };
+    private readonly Button _medical = new() { Name = "MedicalAction", Text = "Curar", CustomMinimumSize = new Vector2(0, 30) };
     private readonly Label _character = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Button _exit = new() { Name = "ExitAction", Text = "Passar [Enter]", Visible = false, Disabled = true };
     private PanelContainer? _navigationPanel;
@@ -47,6 +48,7 @@ public partial class PreviewHud : CanvasLayer
     public Action? DoorUseRequested;
     public Action? LockpickRequested;
     public Action? RestRequested;
+    public Action? MedicalRequested;
     public Action? ExitRequested;
     public Action? SaveRequested, LoadRequested;
     public Action? CharacterFocusRequested, CharacterSheetRequested, SkillSheetRequested;
@@ -168,6 +170,7 @@ public partial class PreviewHud : CanvasLayer
         _lockpick.Pressed += () => LockpickRequested?.Invoke(); actions.AddChild(_lockpick);
         _exit.Pressed += () => ExitRequested?.Invoke(); actions.AddChild(_exit);
         _rest.Pressed += () => RestRequested?.Invoke(); actions.AddChild(_rest);
+        _medical.Pressed += () => MedicalRequested?.Invoke(); actions.AddChild(_medical);
         _character.AddThemeFontSizeOverride("font_size", 12); _character.Modulate = new Color("d2c397"); navigation.AddChild(_character);
         var movement = new HBoxContainer(); navigation.AddChild(movement);
         _navigationStatus.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;

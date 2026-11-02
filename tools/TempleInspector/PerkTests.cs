@@ -27,7 +27,8 @@ internal static class PerkTests
                 && PerkCatalog.Get(Perk.ActionBoy) is { MaxRank: 2, MinLevel: 12, Stat: 8, StatModifier: 1 }
                 && PerkCatalog.Get(Perk.MasterThief) is { Param1: CharacterSkill.Steal, Value1: 50, ParamMode: PerkCatalog.Both, Param2: CharacterSkill.Lockpick, Value2: 50 }
                 && PerkCatalog.Get(Perk.AdrenalineRush).Stats[0] == -10 && !PerkCatalog.Get(Perk.PoweredArmor).Selectable, "Rows.");
-            Assert(PerkCatalog.Effect(Perk.Toughness) == PerkEffect.Applied && PerkCatalog.Effect(Perk.Medic) == PerkEffect.SheetOnly
+            Assert(PerkCatalog.Effect(Perk.Toughness) == PerkEffect.Applied && PerkCatalog.Effect(Perk.MrFixit) == PerkEffect.SheetOnly
+                && PerkCatalog.Effect(Perk.Medic) == PerkEffect.Applied && PerkCatalog.Effect(Perk.Healer) == PerkEffect.Applied
                 && PerkCatalog.Effect(Perk.Awareness) == PerkEffect.NotModeled, "What each does here.");
         });
         check("CE perkCanAdd: level, rank, SPECIAL (negative means below), skills by parameter mode; perks not modeled here are refused", () =>

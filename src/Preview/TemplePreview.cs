@@ -72,6 +72,7 @@ public partial class TemplePreview : Node3D
 			_hud.DoorUseRequested = UseSelectedDoor;
 			_hud.LockpickRequested = UseSelectedLockpick;
 			_hud.RestRequested = OpenRestWindow;
+			_hud.MedicalRequested = OpenMedicalWindow;
 			_hud.ExitRequested = UseExit;
 			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
 			_hud.CharacterFocusRequested = FocusCharacter; _hud.CharacterSheetRequested = OpenCharacterWindow; _hud.SkillSheetRequested = OpenSkillSheet;
@@ -136,6 +137,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckThrow();
 				if (_test) await CheckPerkWindow();
 				if (_test) await CheckRestWindow();
+				if (_test) await CheckMedicalWindow();
 				if (_test) await CheckLockpick();
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();

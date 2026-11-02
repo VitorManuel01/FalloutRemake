@@ -22,7 +22,7 @@ internal static class WorldDrugTests
         return combat with { ObjectLayers = new[] { combat.ObjectLayers[0] with { Objects = objects, DeclaredCount = objects.Length } },
             Prototypes = combat.Prototypes.Concat(new[] { items.Prototypes[0], prototype }).ToArray() };
     }
-    static WorldSession World(int carried = 2, string hash = HealingDrugProfile.SourcePrototypeHash)
+    internal static WorldSession World(int carried = 2, string hash = HealingDrugProfile.SourcePrototypeHash)
     {
         var map = Map(hash); var world = new WorldSession(_ => map, new[] { 3, 126 });
         if (carried > 0) world.Current.Items.Restore(new[] { new TakenItem("owner", "powder", carried) });
@@ -30,7 +30,7 @@ internal static class WorldDrugTests
     }
     // The near ant walks in (no bite); the player waits two turns (it leads round 2 on Sequence); the ant bites for 4:
     // the player stands at 26/30 leading round 3.
-    static CombatSession Hurt(WorldSession world, params int[] rest)
+    internal static CombatSession Hurt(WorldSession world, params int[] rest)
     {
         var fight = world.BeginCombat(WorldCombatTests.NearAnt(world), WorldCombatTests.Spear(), new CombatTests.Scripted(new[] { 1, 4 }.Concat(rest).ToArray()));
         ProvisionalMeleeBehavior.TakeTurn(fight); fight.Execute(CombatActionProposal.EndTurn("player")); fight.Execute(CombatActionProposal.EndTurn("player"));
@@ -39,7 +39,7 @@ internal static class WorldDrugTests
         return fight;
     }
     // From Hurt: the player ends its turn, the ant misses (99), the spear kills it (1, 11).
-    static void Win(CombatSession fight)
+    internal static void Win(CombatSession fight)
     {
         fight.Execute(CombatActionProposal.EndTurn("player")); ProvisionalMeleeBehavior.TakeTurn(fight); fight.Execute(CombatActionProposal.Attack("player", "map3:near-ant"));
         Assert(fight.Turn.Over, "Won.");

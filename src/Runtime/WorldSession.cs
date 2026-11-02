@@ -28,7 +28,7 @@ public sealed partial class WorldSession
     public ActorLocation Location => Current.Travel.Location;
     public int Experience => BaseExperience + _swiftExperience;
     // Every XP source but Swift Learner's share.
-    private int BaseExperience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0) + (_arroyoReward?.Experience ?? 0) + _combatExperience + _perks.Experience;
+    private int BaseExperience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0) + (_arroyoReward?.Experience ?? 0) + _combatExperience + _perks.Experience + _medicalExperience;
     public IReadOnlyList<WorldArea> Areas => _areas.OrderBy(p => p.Key).Select(p => p.Value).ToArray();
     public CarriedItem[] Carried => Areas.SelectMany(a => a.Items.Carried).ToArray();
     public WorldItemUse[] ItemUses => Areas.SelectMany(a => a.Items.CaptureUses().Select(u => new WorldItemUse(a.Map.Prefix.Header.MapIndex, u))).ToArray();
@@ -203,7 +203,7 @@ public sealed partial class WorldSession
     public void Reset()
     {
         _templeProgress = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
-        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat(); ResetTempleDuel(); ResetSkills();
+        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat(); ResetTempleDuel(); ResetSkills(); ResetMedicine();
         foreach (WorldArea area in _areas.Values) { area.Scenery.Reset(); area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
     }
@@ -251,6 +251,7 @@ public sealed partial class WorldSession
         // Perks change the level's HP bound too (Lifegiver); their levels are checked once XP is known.
         candidate.RestorePerks(checkpoint.Skills?.Perks);
         candidate.RestoreSwiftExperience(checkpoint.Skills?.SwiftExperience);
+        candidate.RestoreMedicalExperience(checkpoint.Skills?.MedicalExperience);
         var bodyLoot = new List<(WorldArea Area, TakenItem[] Rows)>();
         foreach (SavedArea saved in checkpoint.Areas)
         {
@@ -268,7 +269,7 @@ public sealed partial class WorldSession
             TakenItem[] taken = saved.Taken ?? Array.Empty<TakenItem>();
             bodyLoot.Add((area, taken.Where(t => t?.OwnerKey != null && area.Items.IsBody(t.OwnerKey)).ToArray()));
             area.Items.Restore(taken.Where(t => t?.OwnerKey == null || !area.Items.IsBody(t.OwnerKey)).ToArray(), saved.Uses ?? Array.Empty<ItemUseAllocation>(),
-                saved.Consumed ?? Array.Empty<ConsumedItem>(), HealingDrugProfile.Supported);
+                saved.Consumed ?? Array.Empty<ConsumedItem>(), p => HealingDrugProfile.Supported(p) || MedicalKits.Supported(p));
             bool killed = checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed;
             area.Doors.Restore(saved.Session, checkpoint.Version >= 5, checkpoint.Version >= 7 && (checkpoint.Temple != null || killed), killed);
         }
@@ -286,6 +287,7 @@ public sealed partial class WorldSession
         candidate.RestoreHands(checkpoint.Combat?.Hands);
         candidate.ValidatePerks();
         candidate.RestoreSkills(checkpoint.Skills);
+        candidate.RestoreMedicalUses(checkpoint.Skills?.FirstAidUses, checkpoint.Skills?.DoctorUses);
         candidate.ValidateTempleExit();
         candidate.ValidateUses();
         foreach (SavedArea saved in checkpoint.Areas) candidate._areas[saved.Map].Travel.Arrive(saved.Location);
