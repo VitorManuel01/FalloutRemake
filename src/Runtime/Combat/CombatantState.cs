@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime.Combat;
@@ -143,5 +144,42 @@ public sealed class CombatAmmo
         if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Ammunition key is required.", nameof(key));
         Key = key; Data = data ?? throw new ArgumentNullException(nameof(data));
         Rounds = rounds >= 0 ? rounds : throw new ArgumentOutOfRangeException(nameof(rounds));
+    }
+}
+
+/// <summary>CE weaponAttemptReload and weaponReload, shared by the fight's reload and the world's outside it.</summary>
+public static class FirearmReload
+{
+    public const int SolarScorcherPid = 390;
+
+    /// <summary>
+    /// weaponAttemptReload's choice: first a stack of the ammunition loaded last, then, only into an empty weapon, any stack
+    /// of its caliber (weaponCanBeReloadedWith); null when the weapon is full or nothing fits. The Solar Scorcher recharges
+    /// from light, which is not modeled.
+    /// </summary>
+    public static CombatAmmo? Source(CombatWeapon weapon, IEnumerable<CombatAmmo> ammo)
+    {
+        ArgumentNullException.ThrowIfNull(weapon); ArgumentNullException.ThrowIfNull(ammo);
+        if (!weapon.UsesAmmo || weapon.Pid == SolarScorcherPid || weapon.Rounds >= weapon.AmmoCapacity) return null;
+        bool Fits(CombatAmmo stack) => stack.Rounds > 0 && stack.Data.Caliber == weapon.Caliber && (weapon.Rounds == 0 || stack.Data.Pid == weapon.AmmoPid);
+        return ammo.FirstOrDefault(a => a.Data.Pid == weapon.AmmoPid && Fits(a)) ?? ammo.FirstOrDefault(Fits);
+    }
+
+    /// <summary>
+    /// _intface_item_reload: weaponAttemptReload until the weapon is full or nothing fits. Each stack gives what the weapon
+    /// still takes (weaponReload); the weapon's ammunition type becomes the stack's. The rounds taken are listed in order.
+    /// </summary>
+    public static CombatWeapon Fill(CombatWeapon weapon, IEnumerable<CombatAmmo> ammo, List<(CombatAmmo Stack, int Rounds)> taken)
+    {
+        ArgumentNullException.ThrowIfNull(taken);
+        var stacks = ammo.ToArray();
+        while (Source(weapon, stacks) is { } stack)
+        {
+            int take = Math.Min(weapon.AmmoCapacity - weapon.Rounds, stack.Rounds);
+            stack.Rounds -= take;
+            weapon = weapon with { Rounds = weapon.Rounds + take, AmmoPid = stack.Data.Pid, Ammo = stack.Data };
+            taken.Add((stack, take));
+        }
+        return weapon;
     }
 }

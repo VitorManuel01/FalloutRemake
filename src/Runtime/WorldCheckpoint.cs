@@ -11,7 +11,7 @@ namespace FalloutRemake.Runtime;
 public sealed record SavedArea(int Map, string SourceHash, string DependenciesHash, ActorLocation Location, SavedDoorSession Session, TakenItem[]? Taken = null, ItemUseAllocation[]? Uses = null, SceneryReplacement[]? Replacements = null,
     ConsumedItem[]? Consumed = null, GroundItem[]? Ground = null);
 public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null, SavedWorldEntries? Entries = null,
-    SavedCombat? Combat = null, SavedCharacter? Character = null, SavedTempleDuel? Duel = null, SavedSkills? Skills = null);
+    SavedCombat? Combat = null, SavedCharacter? Character = null, SavedTempleDuel? Duel = null, SavedSkills? Skills = null, SavedFirearms? Firearms = null);
 /// <summary>v11 adds <see cref="SavedArea.Consumed"/> (drugs taken from collected items). v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>
 /// <summary>Survivors (optional, inside v13): critters left standing when the player ended a fight, where they stand.</summary>
 /// <summary>

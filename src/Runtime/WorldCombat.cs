@@ -94,22 +94,24 @@ public sealed partial class WorldSession
     }
 
     /// <summary>Drops the open fight without applying it (load, reset or a refused outcome).</summary>
-    public void AbandonCombat() { _activeFight = null; AbandonTempleDuel(); }
+    public void AbandonCombat() { _activeFight = null; _fightLoads = null; AbandonTempleDuel(); }
 
     public CombatCommitStatus CommitCombat(CombatSession fight)
     {
         ArgumentNullException.ThrowIfNull(fight);
         if (!fight.Turn.Over) return CombatCommitStatus.NotOver;
-        if (ReferenceEquals(fight, _activeFight)) _activeFight = null;
+        var fightLoads = ReferenceEquals(fight, _activeFight) ? _fightLoads : null;
+        if (ReferenceEquals(fight, _activeFight)) { _activeFight = null; _fightLoads = null; }
         CombatantState[] players = fight.Combatants.Where(c => c.IsPlayer).ToArray();
         if (players.Length != 1) return CombatCommitStatus.InvalidFight;
         if (!players[0].Alive) return CombatCommitStatus.PlayerDefeated;
         // Cameron's challenge is fought out: the gate is locked behind both duelists.
         if (!players[0].Poison.Valid || fight.GameTime < _gameTime || (players[0].Conditions & ~DamageFlags.Crippled) != 0) return CombatCommitStatus.InvalidFight;
+        if (!FightAmmoValid(players[0])) return CombatCommitStatus.InvalidFight;
         if (ReferenceEquals(fight, _duelFight))
         {
             CombatCommitStatus duel = fight.Left ? CombatCommitStatus.InvalidFight : CommitTempleDuel(fight, players[0]);
-            if (duel == CombatCommitStatus.Ready) { _poison = players[0].Poison; _gameTime = fight.GameTime; _playerCrippled = players[0].Conditions; KeepHand(players[0]); }
+            if (duel == CombatCommitStatus.Ready) { _poison = players[0].Poison; _gameTime = fight.GameTime; _playerCrippled = players[0].Conditions; KeepHand(players[0]); CommitFightFirearms(fight, players[0], fightLoads); }
             return duel;
         }
         var roots = Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key, StringComparer.Ordinal);
@@ -145,6 +147,7 @@ public sealed partial class WorldSession
         _playerDamage = players[0].Stats.MaxHitPoints - players[0].HitPoints;
         _poison = players[0].Poison;
         _gameTime = fight.GameTime; _playerCrippled = players[0].Conditions; KeepHand(players[0]);
+        CommitFightFirearms(fight, players[0], fightLoads);
         return CombatCommitStatus.Ready;
     }
 
@@ -282,7 +285,7 @@ public sealed partial class WorldSession
         var stats = PlayerStats();
         var combatants = new List<CombatantState> { new("player", Character.Name, null, 0, true, Location.Hex, Location.Elevation, stats,
             playerWeapon, HitPoints, healingDoses: HealingDoses) { PoisonResistance = Sheet.PoisonResistance, Poison = _poison, Conditions = _playerCrippled,
-            AlternateWeapon = HandWeapon(Other(ActiveHand)), RightHandActive = ActiveHand == Hand.Right } };
+            AlternateWeapon = HandWeapon(Other(ActiveHand)), RightHandActive = ActiveHand == Hand.Right, Ammunition = CarriedAmmunition() } };
         foreach (string key in encounter.FoeKeys)
         {
             if (!roots.TryGetValue(key, out MapObject? source) || IsDefeated(CurrentMap, key)) throw new InvalidOperationException("Encounter critter is no longer available.");
@@ -295,7 +298,7 @@ public sealed partial class WorldSession
         }
         if (InCombat) throw new InvalidOperationException("A fight is already open.");
         var session = new CombatSession(combatants, Current.Doors.Navigation(Location.Elevation), random, encounter.InitiatorKey, _gameTime);
-        _activeFight = session; _activeFightMap = CurrentMap; session.Thrown = OnThrown;
+        _activeFight = session; _activeFightMap = CurrentMap; session.Thrown = OnThrown; _fightLoads = new(_loads);
         return session;
     }
 }

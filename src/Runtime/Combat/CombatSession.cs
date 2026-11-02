@@ -520,32 +520,23 @@ public sealed class CombatSession : ICombatSession
         actor.Weapon = actor.Weapon with { Rounds = left };
         _log.Add(new AmmoSpent(actor.Id, spent, left));
     }
-    public const int SuperCattleProdPid = 399, MegaPowerFistPid = 407, SolarScorcherPid = 390;
+    public const int SuperCattleProdPid = 399, MegaPowerFistPid = 407;
 
     /// <summary>CE weaponGetActionPointCost for a reload hit mode: 2, or 1 with a Fast Reload weapon.</summary>
     public static int ReloadCost(CombatWeapon weapon) => weapon.WeaponPerk == FalloutRemake.Runtime.Perk.WeaponFastReload ? 1 : 2;
 
-    /// <summary>
-    /// weaponAttemptReload's choice: first a stack of the ammunition loaded last, then, only into an empty weapon, any stack
-    /// of its caliber (weaponCanBeReloadedWith); the Solar Scorcher recharges from light, which is not modeled.
-    /// </summary>
-    private static CombatAmmo? ReloadSource(CombatantState actor)
-    {
-        CombatWeapon weapon = actor.Weapon;
-        if (weapon.Pid == SolarScorcherPid || weapon.Rounds >= weapon.AmmoCapacity) return null;
-        bool Fits(CombatAmmo stack) => stack.Rounds > 0 && stack.Data.Caliber == weapon.Caliber && (weapon.Rounds == 0 || stack.Data.Pid == weapon.AmmoPid);
-        return actor.Ammunition.FirstOrDefault(a => a.Data.Pid == weapon.AmmoPid && Fits(a)) ?? actor.Ammunition.FirstOrDefault(Fits);
-    }
+    private static CombatAmmo? ReloadSource(CombatantState actor) => FirearmReload.Source(actor.Weapon, actor.Ammunition);
 
     // _intface_item_reload: weaponAttemptReload until the weapon is full or nothing fits; the AP are paid once it loaded.
     private void Reload(CombatantState actor, int cost)
     {
-        while (ReloadSource(actor) is { } stack)
+        var taken = new List<(CombatAmmo Stack, int Rounds)>();
+        actor.Weapon = FirearmReload.Fill(actor.Weapon, actor.Ammunition, taken);
+        int loaded = actor.Weapon.Rounds - taken.Sum(t => t.Rounds);
+        foreach (var (stack, rounds) in taken)
         {
-            int take = Math.Min(actor.Weapon.AmmoCapacity - actor.Weapon.Rounds, stack.Rounds);
-            stack.Rounds -= take;
-            actor.Weapon = actor.Weapon with { Rounds = actor.Weapon.Rounds + take, AmmoPid = stack.Data.Pid, Ammo = stack.Data };
-            _log.Add(new WeaponReloaded(actor.Id, stack.Key, stack.Data.Pid, take, actor.Weapon.Rounds, 0));
+            loaded += rounds;
+            _log.Add(new WeaponReloaded(actor.Id, stack.Key, stack.Data.Pid, rounds, loaded, 0));
         }
         actor.ActionPoints = Math.Max(0, actor.ActionPoints - cost);
         if (_log[^1] is WeaponReloaded last) _log[^1] = last with { ActionPointsSpent = cost };

@@ -42,8 +42,11 @@ public sealed partial class WorldSession
         var held = new HeldItem(item.Map, item.Source.Key);
         if (CarriedHeld(held) is not { } carried) return HandStatus.NoItem;
         if (PrototypeOf(carried) is not { Type: 0, Subtype: WeaponPrototypeData.Subtype } prototype) return HandStatus.NotWeapon;
-        // Firearms wait for the world to track their rounds; thrown weapons (the plant spike) leave the hand when used.
-        if (WeaponPrototypeData.TypeOf(WeaponPrototypeData.Read(prototype).PrimaryMode) == WeaponAttackType.Ranged) return HandStatus.Unsupported;
+        // A firearm needs a single-unit source (a CE stack shares one load), a firing mode the fight supports and readable
+        // ammunition for its load; thrown weapons (the plant spike) leave the hand when used.
+        var data = WeaponPrototypeData.Read(prototype);
+        if (data.PrimaryMode == WeaponAttackMode.Flame || data.AmmoCapacity > 0 && (_areas[carried.Map].Items.Balance(carried.OwnerKey, carried.Source.Key)?.Original != 1
+            || LoadedWeapon(carried, data, false) == null)) return HandStatus.Unsupported;
         // One unit per hand: a single item moves from the other hand, a stack of two can fill both.
         return HandStatus.Ready;
     }
@@ -74,6 +77,8 @@ public sealed partial class WorldSession
     private void RearmFight()
     {
         if (_activeFight is not { InventoryOpen: true } fight || fight.Combatants.FirstOrDefault(c => c.IsPlayer) is not { } player) return;
+        // The rounds fired so far stay with the weapons they were fired from.
+        if (_fightLoads != null) SyncFightLoads(fight, _fightLoads);
         Hand active = player.RightHandActive ? Hand.Right : Hand.Left;
         fight.ChangeWeapons(HandWeapon(active), HandWeapon(Other(active)));
     }
@@ -145,8 +150,7 @@ public sealed partial class WorldSession
         var stats = PlayerStats();
         if (Held(hand) is { } held && CarriedHeld(held) is { } item && PrototypeOf(item) is { } prototype)
         {
-            var weapon = WeaponPrototypeData.Read(prototype);
-            return (_secondMode.Contains(hand) ? CombatWeapon.Secondary($"PID {prototype.Pid}", weapon) : null) ?? CombatWeapon.Primary($"PID {prototype.Pid}", weapon);
+            if (LoadedWeapon(item, WeaponPrototypeData.Read(prototype), _secondMode.Contains(hand)) is { } weapon) return weapon;
         }
         return CombatWeapon.UnarmedFor(stats, Level, kick: hand == Hand.Right);
     }

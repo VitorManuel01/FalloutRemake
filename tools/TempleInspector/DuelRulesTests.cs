@@ -120,7 +120,8 @@ internal static class DuelRulesTests
             CarriedItem spear = world.Carried.Single(c => c.Source.Header.Pid == 7), pistol = world.Carried.Single(c => c.Source.Header.Pid == 8);
             Assert(world.ActiveHand == Hand.Left && world.PlayerWeapon() is { Pid: null, Kick: false, Name: "Desarmado" } && world.HandWeapon(Hand.Right).Kick,
                 "Carrying is not wielding: empty hands punch (left) and kick (right).");
-            Assert(world.Wield(pistol, Hand.Left, false) == HandStatus.Unsupported && world.Wield(spear, Hand.Left, true) == HandStatus.Busy, "No firearm without ammunition; not while walking.");
+            Assert(world.CanWield(pistol, Hand.Left, false) == HandStatus.Ready && world.HandWeapon(Hand.Left).Pid == null && world.Wield(spear, Hand.Left, true) == HandStatus.Busy,
+                "An empty firearm may be wielded (it fires once loaded); not while walking.");
             Assert(world.Wield(spear, Hand.Left, false) == HandStatus.Ready && world.PlayerWeapon() is { Pid: 7, Range: 2, ActionPoints: 4 } && world.Held(Hand.Left)!.ItemKey == "map3:spear",
                 "The spear in the left hand.");
             Assert(world.Wield(spear, Hand.Right, false) == HandStatus.Ready && world.Held(Hand.Left) == null && world.HandWeapon(Hand.Left).Name == "Desarmado",
@@ -175,7 +176,7 @@ internal static class DuelRulesTests
             var loaded = Load(saved);
             Assert(loaded.Held(Hand.Left) == new HeldItem(3, "map3:spear") && loaded.ActiveHand == Hand.Right && loaded.PlayerWeapon().Kick, "Both come back.");
             SavedHands hands = saved.Combat.Hands!;
-            foreach (SavedHands bad in new[] { hands with { RightActive = false }, new SavedHands(null, null, null), hands with { Left = new HeldItem(3, "map3:pistol") },
+            foreach (SavedHands bad in new[] { hands with { RightActive = false }, new SavedHands(null, null, null), hands with { Left = new HeldItem(126, "map3:spear") },
                 hands with { Left = new HeldItem(3, "map3:ghost") }, hands with { Right = hands.Left } })
                 try { Load(saved with { Combat = saved.Combat with { Hands = bad } }); throw new Exception($"Forged hands accepted: {bad}."); }
                 catch (InvalidDataException) { }

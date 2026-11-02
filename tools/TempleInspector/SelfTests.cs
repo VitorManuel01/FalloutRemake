@@ -163,6 +163,7 @@ internal static class SelfTests
             RestTests.Run(Check);
             MedicalTests.Run(Check);
             FirearmTests.Run(Check);
+            WorldFirearmTests.Run(Check);
         WorldDrugTests.Run(Check);
         PlayerCharacterTests.Run(Check);
         TempleDuelTests.Run(Check);

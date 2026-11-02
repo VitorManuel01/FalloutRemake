@@ -43,7 +43,7 @@ public partial class TemplePreview
     {
         if (weapon.Pid is not int pid) return weapon;
         CarriedItem? item = _campaign?.Carried.FirstOrDefault(i => i.Source.Header.Pid == pid);
-        string mode = weapon.Throws ? " (arremesso)" : "";
+        string mode = (weapon.Throws ? " (arremesso)" : weapon.Burst ? " (rajada)" : "") + (weapon.UsesAmmo ? $" {weapon.Rounds}/{weapon.AmmoCapacity}" : "");
         return item != null && OriginalText(item.Source)?.Name is { } name ? weapon with { Name = ShortName(name) + mode } : weapon with { Name = weapon.Name + mode };
     }
 
@@ -125,7 +125,8 @@ public partial class TemplePreview
         CombatActionStatus.EnemiesAware => "inimigos ainda percebem você",
         CombatActionStatus.ArmCrippled => "braço aleijado não segura a arma",
         CombatActionStatus.CannotAim => "este golpe não pode ser mirado",
-        CombatActionStatus.AimBlocked => "a linha de tiro está bloqueada", _ => "alvo inválido"
+        CombatActionStatus.AimBlocked => "a linha de tiro está bloqueada",
+        CombatActionStatus.NoAmmo => "a arma está sem munição", CombatActionStatus.AlreadyLoaded => "a arma já está carregada", _ => "alvo inválido"
     };
 
     // CE combat results in the HUD's words; the critical tables only ever produce these on the torso.
@@ -136,6 +137,7 @@ public partial class TemplePreview
         if ((flags & DamageFlags.KnockedOut) != 0) words.Add("nocauteado");
         else if ((flags & DamageFlags.KnockedDown) != 0) words.Add("caído");
         if ((flags & DamageFlags.LoseTurn) != 0) words.Add("perde o turno");
+        if ((flags & DamageFlags.LoseAmmo) != 0) words.Add("perde a munição");
         if ((flags & DamageFlags.CrippledLegs) == DamageFlags.CrippledLegs) words.Add("pernas aleijadas");
         else if ((flags & DamageFlags.CrippledLegs) != 0) words.Add("perna aleijada");
         if ((flags & DamageFlags.CrippledArms) == DamageFlags.CrippledArms) words.Add("braços aleijados");
@@ -297,6 +299,30 @@ public partial class TemplePreview
         ApplyCombatResult(result);
     }
 
+    // CE _intface_item_reload: 2 AP in a fight (1 with Fast Reload), free outside one.
+    private void ReloadActiveWeapon()
+    {
+        if (_campaign == null) return;
+        if (_combat != null)
+        {
+            if (_combat.Active is not { IsPlayer: true } player) { NavigationStatus("Aguarde: é o turno da criatura."); return; }
+            CombatActionResult result = _combat.Execute(CombatActionProposal.Reload(player.Id));
+            if (result.Status == CombatActionStatus.NoItem) { NavigationStatus("Ação recusada · nenhuma munição do calibre na bolsa"); return; }
+            ApplyCombatResult(result); return;
+        }
+        ReloadStatus status = _campaign.Reload(_campaign.ActiveHand, _walker?.Moving == true);
+        NavigationStatus(status switch
+        {
+            ReloadStatus.Ready => $"Arma recarregada · {HandsLine()}",
+            ReloadStatus.NoWeapon => "Recarregar: a mão ativa não tem arma que use munição.",
+            ReloadStatus.AlreadyLoaded => "Recarregar: a arma já está carregada.",
+            ReloadStatus.NoAmmo => "Recarregar: nenhuma munição do calibre na bolsa.",
+            ReloadStatus.Busy => "Recarregar: pare de andar primeiro.",
+            _ => "Recarregar: indisponível agora."
+        });
+        RefreshBag(); RefreshDoorAction();
+    }
+
     private void UseCombatHealing()
     {
         if (_combat?.Active is not { IsPlayer: true } player) { NavigationStatus("Aguarde: é o turno da criatura."); return; }
@@ -342,6 +368,16 @@ public partial class TemplePreview
                         + (thrown.AttackerId == "player" ? " · J ao lado para recolher" : "")); break;
                 case StrayHit stray:
                     lines.Add($"O arremesso perdido atinge {CombatName(stray.TargetId)}: {stray.Damage} de dano ({stray.TargetHitPoints} HP)"); break;
+                case AmmoSpent spent:
+                    if (spent.CombatantId == "player") _combatWeapon = NamedWeapon(_combat.Get("player").Weapon);
+                    lines.Add($"{CombatName(spent.CombatantId)} gastou {spent.Rounds} bala(s) · {spent.Left} no pente"); break;
+                case WeaponReloaded reloaded:
+                    if (reloaded.CombatantId == "player") _combatWeapon = NamedWeapon(_combat.Get("player").Weapon);
+                    lines.Add($"{CombatName(reloaded.CombatantId)} recarregou {reloaded.RoundsLoaded} bala(s) · {reloaded.Rounds} no pente"
+                        + (reloaded.ActionPointsSpent > 0 ? $" · {reloaded.ActionPointsSpent} AP" : "")); break;
+                case BurstFired burst:
+                    lines.Add($"Rajada de {burst.RoundsFired}: {burst.Roll} em {burst.Chance}% · {burst.MainHits} bala(s) em {CombatName(burst.TargetId)}"
+                        + string.Concat(burst.Others.Select(o => $" · {o.Rounds} em {CombatName(o.TargetId)} ({o.Damage} de dano, {o.HitPoints} HP)"))); break;
                 case AttackModeChanged mode:
                     lines.Add($"Modo de ataque: {NamedWeapon(_combat.Get(mode.CombatantId).Weapon).Name}"); break;
                 case ArmorChanged armor:

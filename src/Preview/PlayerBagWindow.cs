@@ -155,7 +155,7 @@ public partial class PlayerBagWindow : AcceptDialog
         HandStatus.Ready => "Empunhar nesta mão. A mão ativa é a que ataca; X troca de mão.",
         HandStatus.Busy => "Pare de andar para trocar o que está na mão.",
         HandStatus.InCombat => "Empunhar fica para fora do combate.",
-        HandStatus.Unsupported => "Armas de fogo esperam o controle de munição.",
+        HandStatus.Unsupported => "Esta arma não é suportada: lança-chamas, uma pilha de armas iguais ou munição que o jogo não lê.",
         HandStatus.NoItem => "Você já não carrega este item.",
         _ => "Este item não é uma arma."
     };

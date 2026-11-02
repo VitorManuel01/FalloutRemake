@@ -17,8 +17,12 @@ public partial class TemplePreview
         _campaign!.Carried.FirstOrDefault(c => c.Map == held.Map && c.Source.Key == held.ItemKey) is { } item
             ? CarriedText(item)?.Name is { } name ? ShortName(name) : $"PID {item.Source.Header.Pid}" : fallback;
 
-    private string HandBlowName(Hand hand) => (_campaign!.Held(hand) is { } held ? CarriedName(held, _campaign.HandWeapon(hand).Name) : _campaign.HandWeapon(hand).Name)
-        + (_campaign.UsesSecondMode(hand) ? " (arremesso)" : "");
+    private string HandBlowName(Hand hand)
+    {
+        CombatWeapon weapon = _campaign!.HandWeapon(hand);
+        return (_campaign.Held(hand) is { } held ? CarriedName(held, weapon.Name) : weapon.Name)
+            + (_campaign.UsesSecondMode(hand) ? weapon.Burst ? " (rajada)" : " (arremesso)" : "") + (weapon.UsesAmmo ? $" {weapon.Rounds}/{weapon.AmmoCapacity}" : "");
+    }
 
     private string HandsLine() => _campaign == null ? ""
         : $"Mãos: esquerda {HandBlowName(Hand.Left)}{(_campaign.ActiveHand == Hand.Left ? " (ativa)" : "")} · direita {HandBlowName(Hand.Right)}{(_campaign.ActiveHand == Hand.Right ? " (ativa)" : "")}"

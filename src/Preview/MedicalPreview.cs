@@ -97,4 +97,23 @@ public partial class TemplePreview
         }
         finally { CloseMedicalWindow(); _checkingNavigation = checking; }
     }
+
+    /// <summary>
+    /// The reload button in the preview: no map of the Temple or Arroyo holds a firearm or ammunition, so the active hand has
+    /// nothing to reload; the rules themselves are covered by the synthetic tests (FirearmTests, WorldFirearmTests).
+    /// </summary>
+    private async Task CheckReload()
+    {
+        bool checking = _checkingNavigation; _checkingNavigation = true;
+        try
+        {
+            ResetWalker();
+            if (_campaign!.CanReload(_campaign.ActiveHand, false) != ReloadStatus.NoWeapon) throw new InvalidDataException("The bare hand offers a reload.");
+            ReloadActiveWeapon();
+            if (!_hud.NavigationStatusText.Contains("Recarregar")) throw new InvalidDataException("The reload refusal is not shown: " + _hud.NavigationStatusText);
+            await Task.CompletedTask;
+            GD.Print("RELOAD_OK: the reload button answers; without a firearm in hand it is refused (no firearm or ammunition on maps 3, 4 or 126).");
+        }
+        finally { _checkingNavigation = checking; }
+    }
 }
