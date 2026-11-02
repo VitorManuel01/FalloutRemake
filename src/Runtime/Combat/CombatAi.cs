@@ -187,15 +187,12 @@ public static class CombatAi
 
         HitLocation CalledShot(CombatantState target)
         {
-            if (!target.IsPlayer || CombatSession.AttackCost(actor, HitLocation.Head) > actor.ActionPoints || !CanAim()) return HitLocation.Torso;
+            if (!target.IsPlayer || CombatSession.AttackCost(actor, HitLocation.Head) > actor.ActionPoints || !CombatSession.CanAim(actor)) return HitLocation.Torso;
             if (session.Random.Between(1, ai.CalledFrequency) != 1 || actor.Stats.Special.Intelligence < CalledShotIntelligence) return HitLocation.Torso;
             var location = (HitLocation)session.Random.Between(0, (int)HitLocation.Uncalled);
             int chance = Math.Min(CombatResolver.MaximumChance, CombatResolver.ToHit(actor, target, PunchAsLocation).Raw);
             return chance < ai.MinToHit ? HitLocation.Torso : location;
         }
-
-        // critterCanAim: no burst, and not explosive, fire or EMP damage.
-        bool CanAim() => actor.Weapon.DamageType is not (DamageType.Explosion or DamageType.Fire or DamageType.Emp);
 
         /// <summary>The CE pathfinder's route (combat costs) toward a hex, the destination's own blocker ignored; null without one.</summary>
         int[]? PathTo(int hex, Func<int, bool>? blocked = null, bool checkDestination = false) =>

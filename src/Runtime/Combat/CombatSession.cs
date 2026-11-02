@@ -113,9 +113,26 @@ public sealed class CombatSession : ICombatSession
     public IEnumerable<CombatantState> AwareEnemies(CombatantState player) => _combatants.Where(c => c.InFight && c.Team != player.Team && !c.KnockedOut
         && !c.Fleeing && !c.Disengaging && (c.Rejoining || CritterSight.WithinPerception(c.Hex, c.Rotation, false, c.Perception, player.Hex, inCombat: true)));
 
-    /// <summary>CE weaponGetActionPointCost: the weapon's (or bare hands') cost, one more when aimed at a location.</summary>
-    public static int AttackCost(CombatantState attacker, HitLocation location) =>
-        attacker.Weapon.ActionPoints + (location is HitLocation.Torso or HitLocation.Uncalled ? 0 : 1);
+    /// <summary>
+    /// CE weaponGetActionPointCost, with _combat_attack's aiming: the weapon's (or bare hands') cost, one more when aimed.
+    /// A critter aims only off the torso (its plain blow names the torso); the player aims through the called-shot window,
+    /// so any location it names, the torso included, costs the extra AP. Fast Shot takes 1 AP off a weapon of range above
+    /// 2 for the player. Never below 1.
+    /// </summary>
+    public static int AttackCost(CombatantState attacker, HitLocation location)
+    {
+        bool aiming = attacker.IsPlayer ? location != HitLocation.Uncalled : location is not (HitLocation.Torso or HitLocation.Uncalled);
+        int fastShot = attacker.IsPlayer && attacker.Stats.FastShot && attacker.Weapon.Range > 2 ? 1 : 0;
+        return Math.Max(1, attacker.Weapon.ActionPoints - fastShot + (aiming ? 1 : 0));
+    }
+
+    /// <summary>
+    /// CE critterCanAim: the player with Fast Shot never aims; nobody aims explosive, fire or EMP damage, nor a thrown
+    /// plasma weapon. (Bursts would be refused too; no weapon here fires them.)
+    /// </summary>
+    public static bool CanAim(CombatantState attacker) => !(attacker.IsPlayer && attacker.Stats.FastShot)
+        && attacker.Weapon.DamageType is not (DamageType.Explosion or DamageType.Fire or DamageType.Emp)
+        && !(attacker.Weapon.DamageType == DamageType.Plasma && attacker.Weapon.AttackType == FalloutRemake.Import.WeaponAttackType.Throw);
 
     public CombatActionPreview Preview(CombatActionProposal proposal)
     {
@@ -159,14 +176,11 @@ public sealed class CombatSession : ICombatSession
                 CombatantState? target = _combatants.FirstOrDefault(c => c.Id == proposal.TargetId);
                 if (target == null || target == actor || !target.InFight) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
                 if (target.Elevation != actor.Elevation) return CombatActionPreview.Refused(CombatActionStatus.OtherElevation, ap);
-                // Aimed blows need the defender's table for every location: only the player's is whole. The AI's plain blow
-                // names the torso, which every table has.
-                if (proposal.Location is < HitLocation.Head or > HitLocation.Uncalled
-                    || proposal.Location is not (HitLocation.Uncalled or HitLocation.Torso) && !target.IsPlayer)
-                    return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
+                if (proposal.Location is < HitLocation.Head or > HitLocation.Uncalled) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
                 int attackCost = AttackCost(actor, proposal.Location);
                 DamageFlags arms = actor.Conditions & DamageFlags.CrippledArms;
-                CombatActionStatus status = actor.Weapon.IsItem && (arms == DamageFlags.CrippledArms || arms != 0 && actor.Weapon.TwoHanded) ? CombatActionStatus.ArmCrippled
+                CombatActionStatus status = actor.IsPlayer && proposal.Location != HitLocation.Uncalled && !CanAim(actor) ? CombatActionStatus.CannotAim
+                    : actor.Weapon.IsItem && (arms == DamageFlags.CrippledArms || arms != 0 && actor.Weapon.TwoHanded) ? CombatActionStatus.ArmCrippled
                     : CombatResolver.Reach(actor, target) > actor.Weapon.Range ? CombatActionStatus.OutOfRange
                     : attackCost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready;
                 // The odds are shown even when the attack is not yet possible, so the HUD can explain the refusal.
@@ -283,7 +297,7 @@ public sealed class CombatSession : ICombatSession
     private (int Multiplier, DamageFlags Flags) CriticalStrike(CombatantState attacker, CombatantState target, int roll, int needed, HitLocation location)
     {
         int effectRoll = _random.Between(1, 100) + attacker.Stats.BetterCriticals, effect = CriticalRules.Effect(effectRoll);
-        CriticalEffect row = target.IsPlayer ? CriticalRules.Player(location, effect) : CriticalRules.Torso(false, target.KillType, effect);
+        CriticalEffect row = target.IsPlayer ? CriticalRules.Player(location, effect) : CriticalRules.Critter(target.KillType, location, effect);
         DamageFlags flags = row.Flags;
         int message = row.Message, statRoll = 0;
         bool massive = false;

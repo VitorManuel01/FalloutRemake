@@ -13,7 +13,9 @@ public enum CombatActionStatus
     Ready, CombatOver, NotActive, UnknownCombatant, InvalidTarget, AlreadyThere, Unreachable,
     NotEnoughActionPoints, OutOfRange, OtherElevation, NoItem, EnemiesAware,
     /// <summary>Both arms crippled, or one with a two-handed weapon (CE COMBAT_BAD_SHOT_*_CRIPPLED).</summary>
-    ArmCrippled
+    ArmCrippled,
+    /// <summary>The player cannot aim this blow (CE critterCanAim: Fast Shot, or explosive, fire or EMP damage).</summary>
+    CannotAim
 }
 
 /// <summary>What a combatant wants to do; previewed and executed through the same rules.</summary>

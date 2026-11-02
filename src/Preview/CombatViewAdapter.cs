@@ -122,7 +122,8 @@ public partial class TemplePreview
         CombatActionStatus.AlreadyThere => "você já está aqui", CombatActionStatus.CombatOver => "o combate terminou",
         CombatActionStatus.OtherElevation => "outra elevação", CombatActionStatus.NoItem => "sem Healing Powder na bolsa",
         CombatActionStatus.EnemiesAware => "inimigos ainda percebem você",
-        CombatActionStatus.ArmCrippled => "braço aleijado não segura a arma", _ => "alvo inválido"
+        CombatActionStatus.ArmCrippled => "braço aleijado não segura a arma",
+        CombatActionStatus.CannotAim => "este golpe não pode ser mirado", _ => "alvo inválido"
     };
 
     // CE combat results in the HUD's words; the critical tables only ever produce these on the torso.
@@ -142,8 +143,10 @@ public partial class TemplePreview
         return string.Join(", ", words);
     }
     // A creature's called shot names its target location; the plain blow (torso or uncalled) says nothing.
-    private static string Aimed(HitLocation location) => location switch
+    // The player's plain blow is Uncalled, so a torso it names was aimed; a critter's plain blow names the torso.
+    private static string Aimed(HitLocation location, bool player = false) => location switch
     {
+        HitLocation.Torso when player => " mirando o tronco",
         HitLocation.Head => " mirando a cabeça", HitLocation.LeftArm => " mirando o braço esquerdo", HitLocation.RightArm => " mirando o braço direito",
         HitLocation.RightLeg => " mirando a perna direita", HitLocation.LeftLeg => " mirando a perna esquerda", HitLocation.Eyes => " mirando os olhos",
         HitLocation.Groin => " mirando a virilha", _ => ""
@@ -173,7 +176,8 @@ public partial class TemplePreview
             CombatActionPreview attack = _combat.Preview(CombatActionProposal.Attack(player.Id, foe.Id));
             text = AttackSummary(attack, foe)
                 + $"\nAcerto: perícia {attack.ToHit!.Skill} − AC {attack.ToHit.TargetArmorClass}{(attack.ToHit.DistanceModifier != 0 ? $" {attack.ToHit.DistanceModifier:+0;−0} distância" : "")}{(attack.ToHit.StrengthPenalty > 0 ? $" − {attack.ToHit.StrengthPenalty} força" : "")}{(attack.ToHit.ProneTarget > 0 ? $" + {attack.ToHit.ProneTarget} alvo caído" : "")} = {attack.ToHit.Raw}"
-                + $" · DT {attack.Damage!.Threshold} · DR {attack.Damage.Resistance}%";
+                + $" · DT {attack.Damage!.Threshold} · DR {attack.Damage.Resistance}%"
+                + (CombatSession.CanAim(player) ? " · clique direito: mirar" : "");
         }
         else if (GroundHexAtScreen(screen) is int hex)
         {
@@ -205,6 +209,16 @@ public partial class TemplePreview
         }
         if (input is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mouse && !_hud.MouseOverPanel)
         { CombatClickAtScreen(mouse.Position); return true; }
+        // The right button still drags the view: only a click that ends where it started aims at the creature under it.
+        if (input is InputEventMouseButton { ButtonIndex: MouseButton.Right } aim)
+        {
+            if (aim.Pressed) { _aimPress = aim.Position; return false; }
+            bool click = _aimPress is { } press && press.DistanceTo(aim.Position) <= 6; _aimPress = null;
+            if (!click || _hud.MouseOverPanelAt(aim.Position) || EnemyAtScreen(aim.Position) is not { } foe) return false;
+            if (_combat.Active is not { IsPlayer: true }) NavigationStatus("Aguarde: é o turno da criatura.");
+            else OpenCalledShot(foe);
+            return true;
+        }
         return false;
     }
 
@@ -216,6 +230,36 @@ public partial class TemplePreview
             : GroundHexAtScreen(screen) is int hex ? _combat.Execute(CombatActionProposal.Move(player.Id, hex))
             : new(CombatActionStatus.InvalidTarget, CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, player.ActionPoints), Array.Empty<CombatEvent>());
         ApplyCombatResult(result);
+    }
+
+    private CalledShotWindow? _calledShot;
+    private Vector2? _aimPress;
+
+    // CE aimed attack: the called-shot window lists the eight locations with their odds; choosing one attacks it.
+    private void OpenCalledShot(CombatantState foe)
+    {
+        if (_combat?.Active is not { IsPlayer: true } player) return;
+        if (!CombatSession.CanAim(player)) { NavigationStatus("Mira recusada · " + (player.Stats.FastShot ? "o trait Fast Shot impede ataques mirados" : "este golpe não pode ser mirado")); return; }
+        CloseCalledShot();
+        GetTree().Root.GuiEmbedSubwindows = true;
+        var dialog = new CalledShotWindow { Theme = _hud.GetChild<Control>(0).Theme };
+        _calledShot = dialog; _hud.AddChild(dialog);
+        dialog.Confirmed += CloseCalledShot; dialog.Canceled += CloseCalledShot; dialog.CloseRequested += CloseCalledShot;
+        dialog.Chosen = location =>
+        {
+            if (_calledShot != dialog || _combat?.Active is not { IsPlayer: true } shooter) return;
+            CloseCalledShot();
+            ApplyCombatResult(_combat.Execute(CombatActionProposal.Attack(shooter.Id, foe.Id, location)));
+        };
+        dialog.Refresh(CombatName(foe.Id), _combatWeapon.Name, location => _combat.Preview(CombatActionProposal.Attack(player.Id, foe.Id, location)), Refusal);
+        dialog.PopupCentered(new Vector2I(560, 320));
+    }
+
+    private void CloseCalledShot()
+    {
+        if (_calledShot == null) return;
+        CalledShotWindow dialog = _calledShot; _calledShot = null;
+        dialog.Hide(); dialog.QueueFree();
     }
 
     private void EndCombatTurn()
@@ -281,7 +325,7 @@ public partial class TemplePreview
                 case AttackResolved attack:
                     Lunge(_combat.Get(attack.AttackerId), _combat.Get(attack.TargetId));
                     if (attack.UnderStrength) lines.Add("Você não tem força suficiente para usar esta arma direito.");
-                    lines.Add($"{CombatName(attack.AttackerId)} ataca {CombatName(attack.TargetId)}{Aimed(attack.Location)}: {attack.Roll} em {attack.Chance}% · "
+                    lines.Add($"{CombatName(attack.AttackerId)} ataca {CombatName(attack.TargetId)}{Aimed(attack.Location, attack.AttackerId == "player")}: {attack.Roll} em {attack.Chance}% · "
                         + (attack.Hit ? $"acerto, {attack.Damage} de dano ({attack.TargetHitPoints} HP)" : "erro")); break;
                 case InventoryOpened opened:
                     lines.Add($"Você abre a bolsa · {opened.ActionPointsSpent} AP"); break;
@@ -388,6 +432,7 @@ public partial class TemplePreview
 
     private void FinishCombat()
     {
+        CloseCalledShot();
         CombatSession fight = _combat!;
         int levelBefore = _campaign!.Level;
         _combat = null; _combatLabels.Clear(); _encounterCheckedHex = -1; _combatFinishPending = false; _combatTweens.Clear();
@@ -428,6 +473,7 @@ public partial class TemplePreview
 
     private void DiscardCombat()
     {
+        CloseCalledShot();
         if (_combat == null) return;
         _campaign?.AbandonCombat();
         _combat = null; _combatLabels.Clear(); _encounterCheckedHex = -1; _combatFinishPending = false; _combatTweens.Clear(); _hud.Combat(false, "", "", false);

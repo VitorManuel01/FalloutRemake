@@ -255,6 +255,49 @@ internal static class DuelRulesTests
                 "fallout2.exe rows.");
             try { ArmorPerks.Effect(70); throw new Exception("Unknown perk accepted."); } catch (InvalidDataException) { }
         });
+        check("the player's aimed blow costs 1 AP more on any location it names, the torso included; a critter pays it only off the torso (CE _combat_attack)", () =>
+        {
+            CombatWeapon punch = CombatWeapon.UnarmedFor(DerivedCombatStats.ForCharacter(Special.Neutral), 1);
+            CombatantState hero = Hero(punch), ant = Ant();
+            Assert(CombatSession.AttackCost(hero, HitLocation.Uncalled) == 3 && CombatSession.AttackCost(hero, HitLocation.Torso) == 4
+                && CombatSession.AttackCost(hero, HitLocation.Eyes) == 4, "Player: 3 plain, 4 aimed (torso too).");
+            Assert(CombatSession.AttackCost(ant, HitLocation.Torso) == ant.Weapon.ActionPoints && CombatSession.AttackCost(ant, HitLocation.Head) == ant.Weapon.ActionPoints + 1,
+                "Critter: its plain blow names the torso.");
+            Assert(CombatResolver.ToHit(hero, ant, HitLocation.Eyes).Raw == CombatResolver.ToHit(hero, ant).Raw + CriticalRules.Penalty(HitLocation.Eyes) / 2,
+                "Eyes: half the location penalty in melee.");
+            var fight = new CombatSession(new[] { hero, ant }, new HexNavigation(Array.Empty<MapObject>(), 0), new Middle(), "player");
+            int before = hero.ActionPoints;
+            CombatActionResult aimed = fight.Execute(CombatActionProposal.Attack("player", "ant", HitLocation.Eyes));
+            Assert(aimed.Status == CombatActionStatus.Ready && hero.ActionPoints == before - 4 && fight.Log.OfType<AttackResolved>().Single() is { Location: HitLocation.Eyes, ActionPointsSpent: 4 },
+                $"Aimed at the eyes for 4 AP ({aimed.Status}, {before} -> {hero.ActionPoints}).");
+        });
+        check("a creature's critical row follows the location aimed at (gCriticalHitTables[killType][location]); uncalled reads the torso", () =>
+        {
+            const int ant = 17, robot = 10;
+            Assert(CriticalRules.Critter(ant, HitLocation.Uncalled, 3) == CriticalRules.Critter(ant, HitLocation.Torso, 3)
+                && CriticalRules.Critter(ant, HitLocation.Torso, 3) == CriticalRules.Torso(false, ant, 3), "Uncalled is the torso.");
+            Assert(Enumerable.Range(0, 6).Any(e => CriticalRules.Critter(ant, HitLocation.Eyes, e) != CriticalRules.Critter(ant, HitLocation.Torso, e)), "The ant's eyes have rows of their own.");
+            Assert(CriticalRules.Critter(robot, HitLocation.Groin, 4) is { MassiveStat: 2, MassiveFlags: DamageFlags.CrippleRandom }, "fallout2.exe's robot groin row (CE's source drops the flag).");
+            Assert(CriticalRules.KillTypeTable.Length == CriticalRules.KillTypeCount && CriticalRules.KillTypeTable.All(k => k.Length == 9 && k.All(l => l.Length == 6)), "19 x 9 x 6.");
+        });
+        check("CE critterCanAim: Fast Shot never aims (and saves 1 AP beyond range 2), nor does explosive, fire or EMP damage", () =>
+        {
+            DerivedCombatStats fast = DerivedCombatStats.ForCharacter(Special.Neutral) with { FastShot = true };
+            var spear = CombatWeapon.Primary("Spear", WeaponPrototypeData.Read(CombatTests.Spear()));
+            var pistol = CombatWeapon.Primary("Pistola", WeaponPrototypeData.Read(CombatTests.Pistol()));
+            CombatantState quick = Hero(spear, fast), ant = Ant();
+            var fight = Fight(quick, ant, "player");
+            Assert(!CombatSession.CanAim(quick) && fight.Preview(CombatActionProposal.Attack("player", "ant", HitLocation.Head)).Status == CombatActionStatus.CannotAim
+                && fight.Preview(CombatActionProposal.Attack("player", "ant")).Status == CombatActionStatus.Ready, "Fast Shot: the plain blow only.");
+            Assert(CombatSession.AttackCost(quick, HitLocation.Uncalled) == spear.ActionPoints && CombatSession.AttackCost(Hero(pistol, fast), HitLocation.Uncalled) == pistol.ActionPoints - 1
+                && CombatSession.AttackCost(Hero(pistol), HitLocation.Uncalled) == pistol.ActionPoints, "Fast Shot: 1 AP less only beyond range 2.");
+            var player = PlayerCharacter.Create("Rapido", Special.Neutral with { Agility = 10 }, new[] { CharacterTrait.FastShot }, new[] { 0, 1, 2 }, 25, 0);
+            Assert(DerivedCombatStats.ForPlayer(player).FastShot && !DerivedCombatStats.ForPlayer(PlayerCharacter.Neutral).FastShot, "The sheet carries the trait.");
+            foreach (DamageType type in new[] { DamageType.Fire, DamageType.Explosion, DamageType.Emp })
+                Assert(!CombatSession.CanAim(Hero(spear with { DamageType = type })) && !CombatSession.CanAim(new CombatantState("npc", "npc", null, 1, false, Centre, 0,
+                    DerivedCombatStats.ForCharacter(Special.Neutral), spear with { DamageType = type }, 30)), $"{type} is never aimed.");
+            Assert(CombatSession.CanAim(Hero(spear)) && CombatSession.CanAim(Hero(spear with { DamageType = DamageType.Laser })), "Normal and laser damage aim.");
+        });
         check("a weapon's minimum Strength costs 20 to hit per missing point, the player is warned on each such attack (combat.msg 107) and a worn armor's ST closes the gap", () =>
         {
             var world = WorldWithArmor();

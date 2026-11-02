@@ -50,10 +50,17 @@ internal static class CriticalReport
         string path = Path.Combine(installDirectory, "fallout2.exe");
         byte[] bytes = File.ReadAllBytes(path);
         var exe = new Executable(bytes);
+        // The player aims too (called-shot window), so every kill type's nine locations are used.
+        var differing = new List<string>();
         for (int kind = 0; kind < CriticalRules.KillTypeCount; kind++)
-            for (int effect = 0; effect < Effects; effect++)
-                if (!Row(exe, KillTable + (uint)(((kind * Locations + Torso) * Effects + effect) * RowBytes)).SequenceEqual(Row(CriticalRules.Torso(false, kind, effect))))
-                    throw new InvalidDataException($"Kill type {kind} torso row {effect} differs from fallout2.exe.");
+            for (int location = 0; location < Locations; location++)
+                for (int effect = 0; effect < Effects; effect++)
+                {
+                    int[] original = Row(exe, KillTable + (uint)(((kind * Locations + location) * Effects + effect) * RowBytes));
+                    if (!original.SequenceEqual(Row(CriticalRules.KillTypeTable[kind][location][effect])))
+                        differing.Add($"{kind}/{(HitLocation)location}/{effect}: exe {string.Join(",", original)}");
+                }
+        if (differing.Count > 0) throw new InvalidDataException("Kill type rows differ from fallout2.exe: " + string.Join("; ", differing));
         // Creatures aim at the player (called shots), so all nine locations of the player's table are used.
         for (int location = 0; location < Locations; location++)
             for (int effect = 0; effect < Effects; effect++)
