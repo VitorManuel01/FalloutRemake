@@ -159,6 +159,11 @@ try
         }, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
+    if (args.Length == 3 && args[2] == "--rest-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(RestReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
     if (args.Length == 3 && args[2] == "--perk-report")
     {
         Console.WriteLine(JsonSerializer.Serialize(PerkReport.Create(new GameData(args[1]), args[1]), new JsonSerializerOptions { WriteIndented = true }));

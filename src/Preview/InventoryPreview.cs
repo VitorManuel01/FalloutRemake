@@ -10,7 +10,7 @@ namespace FalloutRemake.Preview;
 public partial class TemplePreview
 {
     private InventoryInspector? _inventory;
-    private bool InspectorOpen => _inventory?.Visible == true || _loot?.Visible == true || _bag?.Visible == true || _explosivePreparation?.Visible == true || _useClock?.Visible == true || _barrierEffectReview?.Visible == true || _speechWindow?.Visible == true || _departureWindow?.Visible == true || _elderWindow?.Visible == true || _characterWindow?.Visible == true || _skillSheet?.Visible == true || _perkWindow?.Visible == true;
+    private bool InspectorOpen => _inventory?.Visible == true || _loot?.Visible == true || _bag?.Visible == true || _explosivePreparation?.Visible == true || _useClock?.Visible == true || _barrierEffectReview?.Visible == true || _speechWindow?.Visible == true || _departureWindow?.Visible == true || _elderWindow?.Visible == true || _characterWindow?.Visible == true || _skillSheet?.Visible == true || _perkWindow?.Visible == true || _restWindow?.Visible == true;
     private void CloseInventory()
     {
         CloseSpeechConsultation();

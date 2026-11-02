@@ -7,7 +7,11 @@ using System.Text.RegularExpressions;
 
 namespace FalloutRemake.Import;
 
-public sealed record MapCatalogEntry(int Id, string Name, string ResourcePath);
+/// <param name="CanRestHere">can_rest_here per elevation (CE wmMapSlotInit sets every flag; "No" clears it).</param>
+public sealed record MapCatalogEntry(int Id, string Name, string ResourcePath, IReadOnlyList<bool>? CanRestHere = null)
+{
+    public bool CanRest(int elevation) => elevation is >= 0 and < 3 && (CanRestHere?[elevation] ?? true);
+}
 
 /// <summary>Bounded data/maps.txt subset. Section numbers are map IDs; never renumbered.</summary>
 public sealed class MapCatalog
@@ -22,13 +26,13 @@ public sealed class MapCatalog
         if (resource.Bytes.Length > 2 * 1024 * 1024) throw new InvalidDataException("Map catalog exceeds 2 MiB.");
         Source = ResourceIdentity.From(resource);
         using var reader = new StringReader(Encoding.Latin1.GetString(resource.Bytes));
-        int? id = null; string? file = null, name = null;
+        int? id = null; string? file = null, name = null; bool[]? rest = null;
         void Finish()
         {
             if (!id.HasValue) return;
             if (file == null || !Regex.IsMatch(file, @"^[A-Za-z0-9_]{1,32}$"))
                 throw new InvalidDataException("Map catalog contains an invalid or missing map_name.");
-            if (!_entries.TryAdd(id.Value, new MapCatalogEntry(id.Value, name ?? file, $"maps/{file.ToLowerInvariant()}.map")))
+            if (!_entries.TryAdd(id.Value, new MapCatalogEntry(id.Value, name ?? file, $"maps/{file.ToLowerInvariant()}.map", rest)))
                 throw new InvalidDataException("Duplicate map catalog ID.");
         }
         while (reader.ReadLine() is { } raw)
@@ -42,7 +46,7 @@ public sealed class MapCatalog
                 Match section = Regex.Match(line, @"^\[Map ([0-9]{3,4})\]$", RegexOptions.IgnoreCase);
                 if (!section.Success || !int.TryParse(section.Groups[1].Value, out int number) || number > 1023)
                     throw new InvalidDataException("Unsupported map catalog section.");
-                id = number; file = null; name = null;
+                id = number; file = null; name = null; rest = null;
             }
             else if (id.HasValue && line.IndexOf('=') is int split && split > 0)
             {
@@ -50,6 +54,14 @@ public sealed class MapCatalog
                 if (key.Equals("map_name", StringComparison.OrdinalIgnoreCase))
                 { if (file != null) throw new InvalidDataException("Repeated map_name."); file = value; }
                 else if (key.Equals("lookup_name", StringComparison.OrdinalIgnoreCase)) name = value;
+                else if (key.Equals("can_rest_here", StringComparison.OrdinalIgnoreCase))
+                {
+                    // wmMapInit: three Yes/No values, one per elevation.
+                    string[] parts = value.Split(',').Select(v => v.Trim()).ToArray();
+                    if (rest != null || parts.Length != 3 || parts.Any(v => !v.Equals("yes", StringComparison.OrdinalIgnoreCase) && !v.Equals("no", StringComparison.OrdinalIgnoreCase)))
+                        throw new InvalidDataException("Unsupported can_rest_here value.");
+                    rest = parts.Select(v => v.Equals("yes", StringComparison.OrdinalIgnoreCase)).ToArray();
+                }
             }
         }
         Finish();

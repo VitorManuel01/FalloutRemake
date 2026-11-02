@@ -160,6 +160,7 @@ internal static class SelfTests
             DuelRulesTests.Run(Check);
             ThrowTests.Run(Check);
             PerkTests.Run(Check);
+            RestTests.Run(Check);
         WorldDrugTests.Run(Check);
         PlayerCharacterTests.Run(Check);
         TempleDuelTests.Run(Check);
