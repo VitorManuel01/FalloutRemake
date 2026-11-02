@@ -133,6 +133,7 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckCombatBag();
 				if (_test) await CheckCalledShot();
 				if (_test) await CheckThrow();
+				if (_test) await CheckPerkWindow();
 				if (_test) await CheckLockpick();
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();
@@ -371,6 +372,7 @@ public partial class TemplePreview : Node3D
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.B }) CloseBag();
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.N }) CloseCharacterWindow();
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.H }) CloseSkillSheet();
+			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Y }) ClosePerkWindow();
 			return;
 		}
 		if (HandleCombatInput(input)) return;
@@ -389,6 +391,7 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.C) FocusCharacter();
 			if (key.PhysicalKeycode == Key.N) OpenCharacterWindow();
 			if (key.PhysicalKeycode == Key.H) OpenSkillSheet();
+			if (key.PhysicalKeycode == Key.Y) OpenPerkWindow();
 			if (key.PhysicalKeycode == Key.O) ChangeOriginalFloor(!_useOriginalFloor);
 			if (key.PhysicalKeycode == Key.Escape) StopWalking();
 			if (key.PhysicalKeycode == Key.V) ChangeRevealActor(!_revealActor);

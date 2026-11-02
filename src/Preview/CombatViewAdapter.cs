@@ -438,9 +438,9 @@ public partial class TemplePreview
         _hud.Combat(true, $"COMBATE · Rodada {turn.Round} · {(mine ? "seu turno" : $"turno de {CombatName(turn.ActiveId!)}")}",
             $"Você: {player.HitPoints}/{player.Stats.MaxHitPoints} HP · {player.ActionPoints}/{player.Stats.MaxActionPoints} AP · AC {player.EffectiveArmorClass} · {_combatWeapon.Name}{(player.HealingDoses > 0 ? $" · Healing Powder ×{player.HealingDoses}" : "")}{(player.Poison.Active ? $" · envenenado ({player.Poison.Level})" : "")}{State(player)}\n{foes}", mine);
         if (mine && _combatHoverKey.Length == 0) _hud.CombatPreview($"Clique no chão para mover ({player.ActionPointsPerHex} AP por hex) ou na criatura para atacar. Espaço encerra o turno; Enter sai do combate longe da percepção das criaturas."
-            + (player.HealingDoses > 0 ? $" H usa Healing Powder ({CombatSession.InventoryActionPoints} AP)." : "")
+            + (player.HealingDoses > 0 ? $" H usa Healing Powder ({CombatSession.InventoryCost(player)} AP)." : "")
             + (player.AlternateWeapon != null ? $" X troca para {player.AlternateWeapon.Name}." : "")
-            + (_combat.InventoryOpen ? " Bolsa aberta: trocar o que está nas mãos não custa mais AP." : $" B abre a bolsa ({CombatSession.InventoryActionPoints} AP)."));
+            + (_combat.InventoryOpen ? " Bolsa aberta: trocar o que está nas mãos não custa mais AP." : $" B abre a bolsa ({CombatSession.InventoryCost(player)} AP)."));
     }
 
     private void FinishCombat()

@@ -48,7 +48,8 @@ public partial class TemplePreview
             catch (Exception error) when (error is IOException or InvalidDataException) { GD.Print($"CHARACTER_TEXT_UNAVAILABLE: {file}: {error.Message}"); return fallback; }
         }
         _characterTexts = new CharacterTexts(Lookup("stat", 100, i => $"Atributo {i}"), Lookup("trait", 100, i => ((CharacterTrait)i).ToString()),
-            Lookup("trait", 200, _ => ""), Lookup("skill", 100, i => $"Perícia {i}"), Lookup("skill", 200, _ => ""));
+            Lookup("trait", 200, _ => ""), Lookup("skill", 100, i => $"Perícia {i}"), Lookup("skill", 200, _ => ""))
+            { Perk = Lookup("perk", 101, i => $"Perk {i}"), PerkDescription = Lookup("perk", 1101, _ => "") };
     }
 
     private void CloseCharacterWindow() { if (_characterWindow != null) { _characterWindow.Hide(); _characterWindow.QueueFree(); _characterWindow = null; } }

@@ -27,7 +27,8 @@ public static class CombatResolver
         if (weapon.IsRanged)
         {
             // Default weapons (no long-range/scope perk): perception multiplier 2, no minimum effective distance.
-            int perception = attacker.Perception;
+            // Sharpshooter adds 2 PE per rank to the dude's range term.
+            int perception = attacker.Perception + (attacker.IsPlayer ? 2 * attacker.Stats.Perks.Rank(FalloutRemake.Runtime.Perk.Sharpshooter) : 0);
             int modifier = (useDistance ? FalloutGrid.Distance(fromHex ?? attacker.Hex, target.Hex) : 0)
                 - (attacker.IsPlayer ? 2 * (perception - 2) : 2 * perception);
             modifier = Math.Max(modifier, -2 * perception);
@@ -51,7 +52,8 @@ public static class CombatResolver
     /// Strength points the attacker lacks for its weapon (weaponGetMinStrengthRequired − critterGetStat(ST)); 0 when strong
     /// enough or bare-handed. The player's ST already holds a worn armor's perk; the Weapon Handling perk (−3) is not modeled.
     /// </summary>
-    public static int StrengthShortfall(CombatantState attacker) => Math.Max(0, attacker.Weapon.MinStrength - attacker.Stats.Special.Strength);
+    public static int StrengthShortfall(CombatantState attacker) => Math.Max(0, attacker.Weapon.MinStrength - attacker.Stats.Special.Strength
+        - (attacker.IsPlayer && attacker.Stats.Perks.Has(FalloutRemake.Runtime.Perk.WeaponHandling) ? 3 : 0));
 
     /// <summary>Percentile hit: rolls 1–100 and hits when the roll does not exceed the chance.</summary>
     public static bool Hits(int chance, int roll) => roll is >= 1 and <= 100 ? roll <= chance : throw new ArgumentOutOfRangeException(nameof(roll));

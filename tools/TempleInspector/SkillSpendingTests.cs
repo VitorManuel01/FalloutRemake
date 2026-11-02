@@ -11,7 +11,7 @@ internal static class SkillSpendingTests
 
     static int Tile(int column, int row) => row * 200 + 199 - column;
     // A veteran ant whose PRO experience levels the character up, and a second one left alive.
-    static MapDocument Map(int experience)
+    internal static MapDocument Map(int experience)
     {
         var map = WorldTests.Map(3, 126);
         var ant = CombatTests.Critter(Tile(99, 102), 0x0100017E, 6, 1, "map3:veteran-ant");
@@ -21,7 +21,7 @@ internal static class SkillSpendingTests
     }
 
     // The ant bites for 4, then one spear hit kills it: its PRO experience levels the character up.
-    static WorldSession Leveled(MapDocument map, PlayerCharacter? character = null, Func<string, CharacterFile>? premade = null)
+    internal static WorldSession Leveled(MapDocument map, PlayerCharacter? character = null, Func<string, CharacterFile>? premade = null)
     {
         var world = new WorldSession(_ => map, new[] { 3, 126 }, premade: premade);
         if (character != null) world.StartNewGame(character);

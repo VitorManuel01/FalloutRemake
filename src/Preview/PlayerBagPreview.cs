@@ -38,7 +38,7 @@ public partial class TemplePreview
         {
             if (_combat.Active is not { IsPlayer: true } fighter) { NavigationStatus("Aguarde: é o turno da criatura."); return; }
             CombatActionResult opened = _combat.Execute(CombatActionProposal.OpenInventory(fighter.Id));
-            if (opened.Status != CombatActionStatus.Ready) { NavigationStatus($"Bolsa fechada · abrir em combate custa {CombatSession.InventoryActionPoints} AP"); return; }
+            if (opened.Status != CombatActionStatus.Ready) { NavigationStatus($"Bolsa fechada · abrir em combate custa {CombatSession.InventoryCost(fighter)} AP"); return; }
             ApplyCombatResult(opened);
         }
         CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseInventory(); CloseLoot(); ClearRouteHover();

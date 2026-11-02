@@ -9,7 +9,8 @@ public enum SkillSpendStatus { Ready, UnknownSkill, NoPoints, AtMaximum, NotEnou
 public enum SkillCommitStatus { Ready, Unchanged, Stale, InCombat }
 
 /// <summary>Level-up skill spending (checkpoint v13): base points bought per skill and the unspent pool.</summary>
-public sealed record SavedSkills([property: JsonRequired] int[] Raises, [property: JsonRequired] int Unspent);
+/// <summary>Perks (optional, inside v13): the perks chosen, in order, with the level each was chosen at; absent when none.</summary>
+public sealed record SavedSkills([property: JsonRequired] int[] Raises, [property: JsonRequired] int Unspent, ChosenPerk[]? Perks = null);
 
 /// <summary>CE skill.cc rules for spending skill points.</summary>
 public static class SkillSpendingRules
@@ -98,7 +99,7 @@ public sealed partial class WorldSession
     /// The character with the skill points spent on level-ups and the worn armor's perk: what combat, lockpicking and the
     /// sheet use.
     /// </summary>
-    public PlayerCharacter Sheet => Character.WithSkillRaises(_skillRaises).Wearing(WornPerk());
+    public PlayerCharacter Sheet => Character.WithSkillRaises(_skillRaises).Wearing(WornPerk()).WithPerks(_perks);
 
     /// <summary>
     /// CE pcAddExperience: each new level adds its skill points to the unspent pool, which never exceeds 99. XP only grows
@@ -109,7 +110,8 @@ public sealed partial class WorldSession
         get
         {
             for (int level = Level; _skillPointLevel < level; _skillPointLevel++)
-                _unspentSkillPoints = Math.Min(CharacterProgression.MaxUnspentSkillPoints, _unspentSkillPoints + Character.SkillPointsPerLevel);
+                _unspentSkillPoints = Math.Min(CharacterProgression.MaxUnspentSkillPoints,
+                    _unspentSkillPoints + Character.WithPerks(_perks).SkillPointsForLevel(_skillPointLevel + 1));
             return _unspentSkillPoints;
         }
     }
@@ -129,20 +131,21 @@ public sealed partial class WorldSession
         return SkillCommitStatus.Ready;
     }
 
-    private void ResetSkills() { _skillRaises = new int[CharacterSkill.Count]; _unspentSkillPoints = 0; _skillPointLevel = 1; _skillRevision++; }
+    private void ResetSkills() { _skillRaises = new int[CharacterSkill.Count]; _unspentSkillPoints = 0; _skillPointLevel = 1; _skillRevision++; _perks = PerkRanks.None; }
 
-    private SavedSkills CaptureSkills() => new(_skillRaises.ToArray(), UnspentSkillPoints);
+    private SavedSkills CaptureSkills() => new(_skillRaises.ToArray(), UnspentSkillPoints, _perks.Count == 0 ? null : _perks.Chosen.ToArray());
 
     // Runs after the XP sources are restored. The unspent pool plus what the raises cost can never exceed what the levels
     // granted; less is possible, since the 99 cap drops points that were not spent in time.
     private void RestoreSkills(SavedSkills? saved)
     {
-        ResetSkills();
+        PerkRanks perks = _perks;
+        ResetSkills(); _perks = perks;
         if (saved == null) return;
         if (saved.Raises is not { Length: CharacterSkill.Count } raises || raises.Any(r => r is < 0 or > PlayerCharacter.MaxSkill)
             || saved.Unspent is < 0 or > CharacterProgression.MaxUnspentSkillPoints)
             throw new InvalidDataException("Checkpoint skill spending is malformed.");
-        int granted = (Level - 1) * Character.SkillPointsPerLevel;
+        int granted = Enumerable.Range(2, Math.Max(0, Level - 1)).Sum(Character.WithPerks(_perks).SkillPointsForLevel);
         if (SkillSpendingRules.CostOf(Character, raises) + saved.Unspent > granted)
             throw new InvalidDataException("Checkpoint skill spending exceeds the points its levels grant.");
         _skillRaises = raises.ToArray(); _unspentSkillPoints = saved.Unspent; _skillPointLevel = Level;

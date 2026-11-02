@@ -9,7 +9,12 @@ namespace FalloutRemake.Preview;
 
 /// <summary>Original names and descriptions of stats, traits and skills (stat.msg, trait.msg, skill.msg: name 100 + id, text 200 + id).</summary>
 public sealed record CharacterTexts(Func<int, string> Stat, Func<int, string> Trait, Func<int, string> TraitDescription,
-    Func<int, string> Skill, Func<int, string> SkillDescription);
+    Func<int, string> Skill, Func<int, string> SkillDescription)
+{
+    /// <summary>perk.msg: name 101 + perk, text 1101 + perk.</summary>
+    public Func<int, string> Perk { get; init; } = i => $"Perk {i}";
+    public Func<int, string> PerkDescription { get; init; } = _ => "";
+}
 
 /// <summary>A premade character with its original biography (premade/*.bio).</summary>
 public sealed record PremadeChoice(PlayerCharacter Character, string Biography);

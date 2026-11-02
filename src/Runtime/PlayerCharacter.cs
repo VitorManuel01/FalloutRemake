@@ -191,33 +191,55 @@ public sealed class PlayerCharacter
         return worn;
     }
 
-    // CE traitGetStatModifier for SPECIAL; critterGetStat adds the bonus stats (the armor perk's) and clamps SPECIAL to 1–10.
-    public Special Effective => Adjusted(Armor.Strength);
+    /// <summary>The chosen perks (CE perkAdd): their stat and skill bonuses join this sheet. Saved apart from the character.</summary>
+    public PerkRanks Perks { get; private set; } = PerkRanks.None;
 
-    private Special Adjusted(int strengthBonus)
+    /// <summary>This sheet with these chosen perks.</summary>
+    public PlayerCharacter WithPerks(PerkRanks perks)
     {
-        int gifted = Has(CharacterTrait.Gifted) ? 1 : 0;
-        int Clamp(int v) => Math.Clamp(v, 1, 10);
-        return new(Clamp(Base.Strength + gifted + (Has(CharacterTrait.Bruiser) ? 2 : 0) + strengthBonus), Clamp(Base.Perception + gifted), Clamp(Base.Endurance + gifted),
-            Clamp(Base.Charisma + gifted), Clamp(Base.Intelligence + gifted), Clamp(Base.Agility + gifted + (Has(CharacterTrait.SmallFrame) ? 1 : 0)),
-            Clamp(Base.Luck + gifted));
+        ArgumentNullException.ThrowIfNull(perks);
+        if (ReferenceEquals(perks, Perks)) return this;
+        var sheet = (PlayerCharacter)MemberwiseClone();
+        sheet._creation = Creation; sheet.Perks = perks;
+        return sheet;
     }
 
-    // CE critterUpdateDerivedStats from the SPECIAL critterGetStat gives, then traitGetStatModifier; max HP alone takes
-    // the base SPECIAL with traits (critterGetBaseStatWithTraitModifier), so armor never changes it.
-    public int BaseMaxHitPoints => 15 + Adjusted(0).Strength + 2 * Adjusted(0).Endurance;
-    public int MaxActionPoints => 5 + Effective.Agility / 2 - (Has(CharacterTrait.Bruiser) ? 2 : 0);
-    public int ArmorClass => Has(CharacterTrait.Kamikaze) ? 0 : Effective.Agility;
-    public int MeleeDamage => Math.Max(Effective.Strength - 5, 1) + (Has(CharacterTrait.HeavyHanded) ? 4 : 0);
-    public int CarryWeight => 25 + 25 * Effective.Strength - (Has(CharacterTrait.SmallFrame) ? 10 * Effective.Strength : 0);
-    public int Sequence => 2 * Effective.Perception + (Has(CharacterTrait.Kamikaze) ? 5 : 0);
-    public int HealingRate => Math.Max(Effective.Endurance / 3, 1) + (Has(CharacterTrait.FastMetabolism) ? 2 : 0);
-    public int CriticalChance => Effective.Luck + (Has(CharacterTrait.Finesse) ? 10 : 0);
-    // Fast Metabolism removes the base value only; the armor perk's bonus still counts, clamped to CE's 0–95.
-    public int RadiationResistance => Math.Clamp((Has(CharacterTrait.FastMetabolism) ? 0 : 2 * Effective.Endurance) + Armor.RadiationResistance, 0, 95);
-    public int PoisonResistance => Has(CharacterTrait.FastMetabolism) ? 0 : 5 * Effective.Endurance;
+    // CE traitGetStatModifier for SPECIAL; critterGetStat adds the bonus stats (the armor perk's) and, for the dude, one
+    // point for each Gain perk, then clamps SPECIAL to 1–10.
+    public Special Effective => Adjusted(Armor.Strength, gains: true);
 
-    /// <summary>CE skillGetValue for the player (normal difficulty, no perks), capped at 300.</summary>
+    private Special Adjusted(int strengthBonus, bool gains = false)
+    {
+        int gifted = Has(CharacterTrait.Gifted) ? 1 : 0;
+        int Gain(int perk) => gains && Perks.Has(perk) ? 1 : 0;
+        int Clamp(int v) => Math.Clamp(v, 1, 10);
+        return new(Clamp(Base.Strength + gifted + (Has(CharacterTrait.Bruiser) ? 2 : 0) + strengthBonus + Gain(Perk.GainStrength)),
+            Clamp(Base.Perception + gifted + Gain(Perk.GainPerception)), Clamp(Base.Endurance + gifted + Gain(Perk.GainEndurance)),
+            Clamp(Base.Charisma + gifted + Gain(Perk.GainCharisma)), Clamp(Base.Intelligence + gifted + Gain(Perk.GainIntelligence)),
+            Clamp(Base.Agility + gifted + (Has(CharacterTrait.SmallFrame) ? 1 : 0) + Gain(Perk.GainAgility)), Clamp(Base.Luck + gifted + Gain(Perk.GainLuck)));
+    }
+
+    // CE critterUpdateDerivedStats from the SPECIAL critterGetStat gives, then traitGetStatModifier, plus the perks' bonus
+    // stats (perkAddEffect); max HP alone takes the base SPECIAL with traits (critterGetBaseStatWithTraitModifier), so
+    // armor and Gain perks never change it.
+    public int BaseMaxHitPoints => 15 + Adjusted(0).Strength + 2 * Adjusted(0).Endurance;
+    public int MaxActionPoints => 5 + Effective.Agility / 2 - (Has(CharacterTrait.Bruiser) ? 2 : 0) + Perks.StatBonus(8);
+    public int ArmorClass => (Has(CharacterTrait.Kamikaze) ? 0 : Effective.Agility) + Perks.StatBonus(9);
+    public int MeleeDamage => Math.Max(Effective.Strength - 5, 1) + (Has(CharacterTrait.HeavyHanded) ? 4 : 0) + Perks.StatBonus(11);
+    public int CarryWeight => 25 + 25 * Effective.Strength - (Has(CharacterTrait.SmallFrame) ? 10 * Effective.Strength : 0) + Perks.StatBonus(12);
+    public int Sequence => 2 * Effective.Perception + (Has(CharacterTrait.Kamikaze) ? 5 : 0) + Perks.StatBonus(13);
+    public int HealingRate => Math.Max(Effective.Endurance / 3, 1) + (Has(CharacterTrait.FastMetabolism) ? 2 : 0) + Perks.StatBonus(14);
+    public int CriticalChance => Effective.Luck + (Has(CharacterTrait.Finesse) ? 10 : 0) + Perks.StatBonus(15);
+    /// <summary>CE STAT_BETTER_CRITICALS: Heavy Handed -30, the Better Criticals perk +20.</summary>
+    public int BetterCriticals => (Has(CharacterTrait.HeavyHanded) ? -30 : 0) + Perks.StatBonus(16);
+    /// <summary>The perks' bonus to a damage type's threshold (stat 17 + type) and resistance (stat 24 + type: Toughness).</summary>
+    public int ThresholdBonus(int damageType) => Perks.StatBonus(17 + damageType);
+    public int ResistanceBonus(int damageType) => Perks.StatBonus(24 + damageType);
+    // Fast Metabolism removes the base value only; the armor perk's bonus still counts, clamped to CE's 0–95.
+    public int RadiationResistance => Math.Clamp((Has(CharacterTrait.FastMetabolism) ? 0 : 2 * Effective.Endurance) + Armor.RadiationResistance + Perks.StatBonus(31), 0, 95);
+    public int PoisonResistance => Math.Clamp((Has(CharacterTrait.FastMetabolism) ? 0 : 5 * Effective.Endurance) + Perks.StatBonus(32), 0, 95);
+
+    /// <summary>CE skillGetValue for the player (normal difficulty, traits and perkGetSkillModifier), capped at 300.</summary>
     public int Skill(int index)
     {
         if (index is < 0 or >= CharacterSkill.Count) throw new ArgumentOutOfRangeException(nameof(index));
@@ -228,13 +250,19 @@ public sealed class PlayerCharacter
         if (Has(CharacterTrait.GoodNatured))
             value += index is CharacterSkill.FirstAid or CharacterSkill.Doctor or CharacterSkill.Speech or CharacterSkill.Barter ? 15
                 : index <= CharacterSkill.Throwing ? -10 : 0;
+        value += Perks.SkillModifier(index);
         return Math.Min(value, 300);
     }
     public int[] Skills => Enumerable.Range(0, CharacterSkill.Count).Select(Skill).ToArray();
 
-    // CE pcAddExperience / character editor: HP and skill points per level, perk interval.
-    public int HitPointsPerLevel => Effective.Endurance / 2 + 2;
-    public int SkillPointsPerLevel => 5 + 2 * Effective.Intelligence + (Has(CharacterTrait.Skilled) ? 5 : 0) - (Has(CharacterTrait.Gifted) ? 5 : 0);
+    // CE pcAddExperience / character editor: HP and skill points per level from the base EN and IN with traits (Gain perks
+    // and armor do not count), perk interval. Lifegiver and Educated add to the levels gained after they were chosen.
+    public int HitPointsPerLevel => Adjusted(0).Endurance / 2 + 2;
+    public int SkillPointsPerLevel => 5 + 2 * Adjusted(0).Intelligence + (Has(CharacterTrait.Skilled) ? 5 : 0) - (Has(CharacterTrait.Gifted) ? 5 : 0);
+    /// <summary>What reaching <paramref name="level"/> grants: HP per level plus 4 per Lifegiver rank chosen before it.</summary>
+    public int HitPointsForLevel(int level) => HitPointsPerLevel + 4 * Perks.RankBefore(Perk.Lifegiver, level);
+    /// <summary>Skill points reaching <paramref name="level"/> grants: per level plus 2 per Educated rank chosen before it (Gifted's floor at 0).</summary>
+    public int SkillPointsForLevel(int level) => Math.Max(0, SkillPointsPerLevel + 2 * Perks.RankBefore(Perk.Educated, level));
     public int PerkInterval => Has(CharacterTrait.Skilled) ? 4 : 3;
 }
 

@@ -50,8 +50,12 @@ public static class CharacterProgression
     }
 
     // The player's sheet: trait-adjusted SPECIAL, Skilled/Gifted skill points and the Skilled perk interval.
-    public static int MaxHitPoints(PlayerCharacter character, int level) =>
-        character.BaseMaxHitPoints + (CheckedLevel(level) - 1) * character.HitPointsPerLevel;
+    public static int MaxHitPoints(PlayerCharacter character, int level)
+    {
+        int hp = character.BaseMaxHitPoints + character.Perks.StatBonus(DerivedCombatStats.MaxHitPointsStat);
+        for (int l = 2; l <= CheckedLevel(level); l++) hp += character.HitPointsForLevel(l);
+        return hp;
+    }
     public static int UnspentSkillPoints(PlayerCharacter character, int level) =>
         Math.Min(MaxUnspentSkillPoints, (CheckedLevel(level) - 1) * character.SkillPointsPerLevel);
     public static int PerksAvailable(PlayerCharacter character, int level) => CheckedLevel(level) / character.PerkInterval;

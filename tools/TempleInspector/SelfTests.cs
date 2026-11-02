@@ -159,6 +159,7 @@ internal static class SelfTests
             AiTests.Run(Check);
             DuelRulesTests.Run(Check);
             ThrowTests.Run(Check);
+            PerkTests.Run(Check);
         WorldDrugTests.Run(Check);
         PlayerCharacterTests.Run(Check);
         TempleDuelTests.Run(Check);

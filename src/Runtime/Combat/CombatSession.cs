@@ -16,6 +16,8 @@ public sealed class CombatSession : ICombatSession
 {
     /// <summary>CE inventoryOpen in combat: 4 AP without Quick Pockets (the item used inside costs nothing more).</summary>
     public const int InventoryActionPoints = 4;
+    /// <summary>inventoryOpen: 4 - 2 x Quick Pockets AP.</summary>
+    public static int InventoryCost(CombatantState actor) => InventoryActionPoints - 2 * actor.Stats.Perks.Rank(FalloutRemake.Runtime.Perk.QuickPockets);
     private readonly List<CombatantState> _combatants;
     private readonly List<CombatEvent> _log = new();
     private readonly ICombatRandom _random;
@@ -131,12 +133,18 @@ public sealed class CombatSession : ICombatSession
     {
         bool aiming = attacker.IsPlayer ? location != HitLocation.Uncalled : location is not (HitLocation.Torso or HitLocation.Uncalled);
         int fastShot = attacker.IsPlayer && attacker.Stats.FastShot && Range(attacker) > 2 ? 1 : 0;
-        return Math.Max(1, attacker.Weapon.ActionPoints - fastShot + (aiming ? 1 : 0));
+        // Bonus HtH Attacks takes 1 AP off melee and unarmed blows, Bonus Rate of Fire off firearms (not throws).
+        var perks = attacker.Stats.Perks;
+        int perk = !attacker.IsPlayer ? 0 : attacker.Weapon.AttackType is FalloutRemake.Import.WeaponAttackType.Melee or FalloutRemake.Import.WeaponAttackType.Unarmed
+            ? (perks.Has(FalloutRemake.Runtime.Perk.BonusHtHAttacks) ? 1 : 0)
+            : attacker.Weapon.AttackType == FalloutRemake.Import.WeaponAttackType.Ranged && perks.Has(FalloutRemake.Runtime.Perk.BonusRateOfFire) ? 1 : 0;
+        return Math.Max(1, attacker.Weapon.ActionPoints - fastShot - perk + (aiming ? 1 : 0));
     }
 
     /// <summary>CE weaponGetRange: a thrown weapon reaches at most 3 x ST hexes (Heave Ho! is not modeled).</summary>
     public static int Range(CombatantState attacker) => attacker.Weapon.Throws
-        ? Math.Min(attacker.Weapon.Range, 3 * Math.Min(attacker.Stats.Special.Strength, 10)) : attacker.Weapon.Range;
+        ? Math.Min(attacker.Weapon.Range, 3 * Math.Min(attacker.Stats.Special.Strength + (attacker.IsPlayer ? 2 * attacker.Stats.Perks.Rank(FalloutRemake.Runtime.Perk.HeaveHo) : 0), 10))
+        : attacker.Weapon.Range;
 
     /// <summary>
     /// The player picks the active hand's other attack mode (the item button; free in FO2): only on its own turn, with a
@@ -177,7 +185,8 @@ public sealed class CombatSession : ICombatSession
                 if (hex == actor.Hex) return CombatActionPreview.Refused(CombatActionStatus.AlreadyThere, ap);
                 int[]? path = proposal.Path == null ? Movement.Path(actor, hex) : Movement.Follows(actor, proposal.Path) ? proposal.Path : null;
                 if (path == null) return CombatActionPreview.Refused(CombatActionStatus.Unreachable, ap);
-                int cost = path.Length * actor.ActionPointsPerHex;
+                // The Bonus Move perk's free hexes pay first (animation's actionPointsRequired - _combat_free_move).
+                int cost = Math.Max(0, path.Length * actor.ActionPointsPerHex - actor.FreeMove);
                 return new(cost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready, cost, ap - cost, path, null, null);
             case CombatActionKind.LeaveCombat:
                 if (!actor.IsPlayer) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
@@ -188,14 +197,14 @@ public sealed class CombatSession : ICombatSession
             case CombatActionKind.UseHealing:
                 if (actor.HealingDoses <= 0) return CombatActionPreview.Refused(CombatActionStatus.NoItem, ap);
                 // Taken through the inventory: opening it is the cost, already paid while it stays open.
-                int healCost = InventoryOpen ? 0 : InventoryActionPoints;
+                int healCost = InventoryOpen ? 0 : InventoryCost(actor);
                 return new(healCost > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready,
                     healCost, ap - healCost, Array.Empty<int>(), null, null);
             case CombatActionKind.OpenInventory:
                 if (!actor.IsPlayer) return CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
                 if (InventoryOpen) return new(CombatActionStatus.Ready, 0, ap, Array.Empty<int>(), null, null);
-                return new(InventoryActionPoints > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready,
-                    InventoryActionPoints, ap - InventoryActionPoints, Array.Empty<int>(), null, null);
+                int inventory = InventoryCost(actor);
+                return new(inventory > ap ? CombatActionStatus.NotEnoughActionPoints : CombatActionStatus.Ready, inventory, ap - inventory, Array.Empty<int>(), null, null);
             case CombatActionKind.CloseInventory:
                 return InventoryOpen ? new(CombatActionStatus.Ready, 0, ap, Array.Empty<int>(), null, null) : CombatActionPreview.Refused(CombatActionStatus.InvalidTarget, ap);
             case CombatActionKind.Attack:
@@ -251,6 +260,7 @@ public sealed class CombatSession : ICombatSession
                 int from = actor.Hex;
                 // The walk animation leaves the mover facing along its last step.
                 actor.Rotation = OriginalStraightPath.RotationTo(preview.Path.Length > 1 ? preview.Path[^2] : from, preview.Path[^1]);
+                actor.FreeMove = Math.Max(0, actor.FreeMove - preview.Path.Length * actor.ActionPointsPerHex);
                 actor.Hex = preview.Path[^1]; actor.ActionPoints -= preview.ActionPointCost;
                 _log.Add(new CombatantMoved(actor.Id, from, actor.Hex, (int[])preview.Path.Clone(), preview.ActionPointCost));
                 break;
@@ -283,6 +293,12 @@ public sealed class CombatSession : ICombatSession
                     needed = hit ? margin / 10 + actor.Stats.CriticalChance - CriticalRules.Penalty(location) : -margin / 10;
                     (critical, failure) = (hit && criticalRoll <= needed, !hit && criticalRoll <= needed);
                 }
+                // attackCompute: Slayer makes every melee or unarmed hit of the dude critical; Sniper a firearm hit on d10 <= LK.
+                if (hit && !critical && actor.IsPlayer && actor.Weapon.AddsMeleeDamage && actor.Stats.Perks.Has(FalloutRemake.Runtime.Perk.Slayer))
+                    (critical, criticalRoll, needed) = (true, 1, 100);
+                if (hit && !critical && actor.IsPlayer && actor.Weapon.AttackType == FalloutRemake.Import.WeaponAttackType.Ranged
+                    && actor.Stats.Perks.Has(FalloutRemake.Runtime.Perk.Sniper) && _random.Between(1, 10) <= actor.Stats.Special.Luck)
+                    (critical, criticalRoll, needed) = (true, 1, 100);
                 // attackCompute: a plain hit by the player's advanced unarmed blow turns critical on d100 <= its bonus, any day.
                 if (hit && !critical && actor.IsPlayer && actor.Weapon.AddsMeleeDamage && actor.Weapon.BonusCriticalChance != 0
                     && _random.Between(1, 100) is int bonusRoll && bonusRoll <= actor.Weapon.BonusCriticalChance)
@@ -297,7 +313,7 @@ public sealed class CombatSession : ICombatSession
                     int threshold = bypass ? DamageCalculator.Threshold(target, actor.Weapon, true) : preview.Damage!.Threshold;
                     int resistance = bypass ? DamageCalculator.Resistance(target, actor.Weapon, true) : preview.Damage!.Resistance;
                     damageRoll = _random.Between(preview.Damage!.MinRoll, preview.Damage.MaxRoll);
-                    damage = DamageCalculator.Apply(damageRoll, actor.Weapon, threshold, resistance, multiplier);
+                    damage = DamageCalculator.Apply(damageRoll, actor.Weapon, threshold, resistance, multiplier, DamageCalculator.RollBonus(actor), DamageCalculator.AfterBonus(actor, target));
                     target.HitPoints = Math.Max(0, target.HitPoints - damage);
                     // DAM_DEAD from the table kills whatever HP are left (_damage_object then critterKill).
                     if ((flags & DamageFlags.Dead) != 0) target.HitPoints = 0;
@@ -342,7 +358,8 @@ public sealed class CombatSession : ICombatSession
         if (struck.Combatant is not { Alive: true } victim) return;
         DamageEstimate estimate = DamageCalculator.Estimate(actor, victim);
         int damageRoll = _random.Between(estimate.MinRoll, estimate.MaxRoll);
-        int damage = DamageCalculator.Apply(damageRoll, actor.Weapon, estimate.Threshold, estimate.Resistance, DamageCalculator.NormalHitMultiplier);
+        int damage = DamageCalculator.Apply(damageRoll, actor.Weapon, estimate.Threshold, estimate.Resistance, DamageCalculator.NormalHitMultiplier,
+            DamageCalculator.RollBonus(actor), DamageCalculator.AfterBonus(actor, victim));
         victim.HitPoints = Math.Max(0, victim.HitPoints - damage);
         _log.Add(new StrayHit(actor.Id, victim.Id, damageRoll, damage, victim.HitPoints));
         AfterAttack(actor, victim, damage);
@@ -455,7 +472,9 @@ public sealed class CombatSession : ICombatSession
 
     private void StandUp(CombatantState combatant)
     {
-        int spent = Math.Min(CriticalRules.StandUpActionPoints, combatant.ActionPoints);
+        // Quick Recovery gets the dude up for 1 AP.
+        int cost = combatant.IsPlayer && combatant.Stats.Perks.Has(FalloutRemake.Runtime.Perk.QuickRecovery) ? 1 : CriticalRules.StandUpActionPoints;
+        int spent = Math.Min(cost, combatant.ActionPoints);
         combatant.ActionPoints -= spent;
         combatant.SetConditions(combatant.Conditions & ~DamageFlags.KnockedDown);
         _log.Add(new StoodUp(combatant.Id, spent));
@@ -542,6 +561,7 @@ public sealed class CombatSession : ICombatSession
                 continue;
             }
             StartTurn(next);
+            next.FreeMove = next.IsPlayer ? 2 * next.Stats.Perks.Rank(FalloutRemake.Runtime.Perk.BonusMove) : 0;
             if (next.Prone) StandUp(next);
             return;
         }

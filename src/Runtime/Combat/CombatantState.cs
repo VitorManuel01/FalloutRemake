@@ -33,7 +33,14 @@ public sealed class CombatantState
     /// CE critterGetStat(STAT_ARMOR_CLASS): whenever it is not this combatant's turn, its current AP count as AC. Every
     /// round starts by refilling everyone's AP (_combat_set_move_all), so one that has not acted yet defends with all of them.
     /// </summary>
-    public int BonusArmorClass => Acting ? 0 : ActionPoints;
+    public int BonusArmorClass => Acting ? 0 : HtHEvade ? 2 * ActionPoints + Stats.Skill(DerivedCombatStats.Unarmed) / 12 : ActionPoints;
+    /// <summary>
+    /// CE critterGetStat(AC) with the HtH Evade perk: the dude with no weapon in either hand (fist weapons have no weapon
+    /// animation) counts its AP twice, plus a twelfth of its Unarmed skill.
+    /// </summary>
+    private bool HtHEvade => IsPlayer && Stats.Perks.Has(FalloutRemake.Runtime.Perk.HtHEvade) && Weapon.AnimationCode == 0 && (AlternateWeapon?.AnimationCode ?? 0) == 0;
+    /// <summary>The Bonus Move perk's free hexes for this turn (CE _combat_free_move, 2 per rank): spent on walking before AP.</summary>
+    public int FreeMove { get; internal set; }
     /// <summary>It is this combatant's turn.</summary>
     public bool Acting { get; internal set; }
     /// <summary>Carried healing doses this combatant can take during the fight.</summary>
@@ -89,7 +96,7 @@ public sealed class CombatantState
     public bool Prone => (_conditions & (DamageFlags.KnockedOut | DamageFlags.KnockedDown)) != 0;
     public int ActionPointsPerHex => CriticalRules.ActionPointsPerHex(_conditions);
     /// <summary>Hexes of a path this combatant can walk with its AP (crippled legs make each one dearer).</summary>
-    public int StepsAffordable(int pathLength) => Math.Min(pathLength, ActionPoints / ActionPointsPerHex);
+    public int StepsAffordable(int pathLength) => Math.Min(pathLength, (ActionPoints + FreeMove) / ActionPointsPerHex);
 
     public CombatantState(string id, string name, int? pid, int team, bool isPlayer, int hex, int elevation, DerivedCombatStats stats,
         CombatWeapon weapon, int hitPoints, int experience = 0, int healingDoses = 0)

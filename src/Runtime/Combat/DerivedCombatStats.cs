@@ -34,6 +34,8 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
     public int BetterCriticals { get; init; }
     /// <summary>The player's Finesse trait: CE adds 30 to the target's DR on every hit that does not bypass armor.</summary>
     public bool Finesse { get; init; }
+    /// <summary>The player's chosen perks (combat rules read their ranks); none for critters.</summary>
+    public FalloutRemake.Runtime.PerkRanks Perks { get; init; } = FalloutRemake.Runtime.PerkRanks.None;
     /// <summary>The player's One Hander trait: CE attackDetermineToHit gives -40 with a two-handed weapon and +20 with any other.</summary>
     public bool OneHander { get; init; }
     /// <summary>The player's Fast Shot trait: no aimed attacks (critterCanAim) and 1 AP less with a weapon of range above 2.</summary>
@@ -71,11 +73,11 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
         int[] threshold = armor?.DamageThreshold ?? new int[7], resistance = armor?.DamageResistance ?? new int[7];
         return new(character.Effective, FalloutRemake.Runtime.CharacterProgression.MaxHitPoints(character, level), character.MaxActionPoints,
             character.ArmorClass + (armor?.ArmorClass ?? 0), character.MeleeDamage, character.Sequence, character.CriticalChance,
-            threshold.Select(v => Math.Clamp(v, 0, 999)).ToArray(), resistance.Select(v => Math.Clamp(v, 0, 100)).ToArray(),
-            character.Skills.Take(6).ToArray())
+            threshold.Select((v, i) => Math.Clamp(v + character.ThresholdBonus(i), 0, 999)).ToArray(),
+            resistance.Select((v, i) => Math.Clamp(v + character.ResistanceBonus(i), 0, 100)).ToArray(), character.Skills.Take(6).ToArray())
         {
-            // CE traitGetStatModifier: Heavy Handed -30 Better Criticals; attackComputeDamage: Finesse +30 target DR.
-            BetterCriticals = character.Has(FalloutRemake.Runtime.CharacterTrait.HeavyHanded) ? -30 : 0,
+            // CE traitGetStatModifier: Heavy Handed -30 Better Criticals (the perk adds 20); attackComputeDamage: Finesse +30 target DR.
+            BetterCriticals = character.BetterCriticals, Perks = character.Perks,
             Finesse = character.Has(FalloutRemake.Runtime.CharacterTrait.Finesse),
             OneHander = character.Has(FalloutRemake.Runtime.CharacterTrait.OneHander),
             FastShot = character.Has(FalloutRemake.Runtime.CharacterTrait.FastShot)
@@ -185,8 +187,11 @@ public sealed record CombatWeapon(string Name, int? Pid, WeaponAttackType Attack
         };
         return new(name, weapon.Pid, type, weapon.MinDamage, weapon.MaxDamage, (DamageType)weapon.DamageType,
             Math.Max(1, range), Math.Max(1, actionPoints), weapon.MinStrength, skill, ammo)
-        { CriticalFailureType = weapon.CriticalFailureType, TwoHanded = weapon.TwoHanded };
+        { CriticalFailureType = weapon.CriticalFailureType, TwoHanded = weapon.TwoHanded, AnimationCode = weapon.AnimationCode };
     }
+
+    /// <summary>The weapon PRO's animation code: 0 (WEAPON_ANIMATION_NONE) for bare hands and fist weapons (HtH Evade counts them as empty).</summary>
+    public int AnimationCode { get; init; }
 
     /// <summary>The weapon's second attack mode rather than its first.</summary>
     public bool IsSecondary { get; init; }

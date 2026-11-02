@@ -245,6 +245,8 @@ public sealed partial class WorldSession
         try { candidate.Character = checkpoint.Character == null ? PlayerCharacter.Neutral : PlayerCharacter.Restore(checkpoint.Character, premade); }
         catch (Exception error) when (error is IOException or ArgumentException or KeyNotFoundException)
         { throw new InvalidDataException("Checkpoint premade character source is unavailable.", error); }
+        // Perks change the level's HP bound too (Lifegiver); their levels are checked once XP is known.
+        candidate.RestorePerks(checkpoint.Skills?.Perks);
         var bodyLoot = new List<(WorldArea Area, TakenItem[] Rows)>();
         foreach (SavedArea saved in checkpoint.Areas)
         {
@@ -278,6 +280,7 @@ public sealed partial class WorldSession
             if (saved.Ground != null) candidate._areas[saved.Map].Items.RestoreGround(saved.Ground, allowed.Contains);
         candidate.RestoreTempleDuel(checkpoint.Duel);
         candidate.RestoreHands(checkpoint.Combat?.Hands);
+        candidate.ValidatePerks();
         candidate.RestoreSkills(checkpoint.Skills);
         candidate.ValidateTempleExit();
         candidate.ValidateUses();
