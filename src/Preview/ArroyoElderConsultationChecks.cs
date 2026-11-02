@@ -68,9 +68,65 @@ public partial class TemplePreview
         var selected=_selected!; ClearSelection(); OpenElderConsultation();
         if (_elderWindow!=null) throw new InvalidDataException("Elder conversation opened without the original actor selected.");
         SelectObject(selected);
+        await CheckArroyoElderQuestConsultation(action,text,Unchanged);
         await CheckArroyoElderDialogueCommit(action,text);
         foreach (var area in _campaign!.Areas) MapLayoutWriter.Verify(area.Map);
-        GD.Print("ARROYO_ELDER_CONSULTATION_OK: local original MSG/INT identity, 5 reply nodes including repeat Node004 (117), area-11 option 118 disabled for metarule(17,11)==0, supported choices and reaction-only text bridge, inventory/quest branches disabled, immediate (123) and Node013 (121->153) repeat exits to Node999, modal guard, cancel/restart/end, old revision/button/draft callbacks rejected including world K/R, transactional CommitElderDialogue with GVAR_TALKED_TO_ELDER(531)=1 and reaction locals, exact unchanged checkpoint/XP/items/globals/Temple/MAP.");
+        GD.Print("ARROYO_ELDER_CONSULTATION_OK: local original MSG/INT identity, 8 reply/closing nodes including repeat Node004 (117) and quest/reminder Node015 (159), Node007 (131) and Node016 (163), area-11 option 118 disabled for metarule(17,11)==0, Node009 options (120/133/161) disabled for out-of-range L10, supported choices and reaction-only text bridge, modal guard, cancel/restart/end, old revision/button/draft callbacks rejected including world K/R, transactional CommitElderDialogue and CommitElderQuestDialogue with GVAR_TALKED_TO_ELDER(531)=1, GVAR_DEN_VIC_KNOWN(452)=2, L7=1, 152 caps + PID 267 flask projection and reaction locals, exact unchanged checkpoint/XP/items/globals/Temple/MAP.");
+    }
+    private async Task CheckArroyoElderQuestConsultation(Button action,ArroyoElderText text,Action unchanged)
+    {
+        action.EmitSignal(Button.SignalName.Pressed);
+        await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
+        var window=_elderWindow ?? throw new InvalidDataException("Elder window did not open for quest consultation check.");
+        window.QuestModeToggleRequested!();
+        if (_elderConsultation is not {Repeat:false,QuestMode:true,QuestCompleted:false,Complete:false,Procedure:"Node001"}
+            || window.ReplyText!=text.Message(103)
+            || ((Button)window.FindChild("ElderChoice11836",true,false)).Disabled)
+            throw new InvalidDataException("Quest mode toggle did not enable first-talk Node015 acceptance (11836).");
+        window.ChoiceRequested!(11836);
+        if (_elderConsultation.Procedure!="Node015" || window.ReplyText!=text.Message(159)
+            || !((Button)window.FindChild("ElderChoice17902",true,false)).Disabled)
+            throw new InvalidDataException("Quest Node015 did not display message 159 or failed to disable Node009 (17902).");
+        window.ChoiceRequested!(17902);
+        if (_elderConsultation.Revision!=1) throw new InvalidDataException("Disabled Node009 choice 17902 advanced Node015.");
+        window.ChoiceRequested!(17870);
+        if (_elderConsultation.Procedure!="Node007" || window.ReplyText!=text.Message(131)
+            || !((Button)window.FindChild("ElderChoice15794",true,false)).Disabled)
+            throw new InvalidDataException("Quest reminder Node007 did not display message 131 or failed to disable Node009 (15794).");
+        window.ChoiceRequested!(15794);
+        if (_elderConsultation.Revision!=2) throw new InvalidDataException("Disabled Node009 choice 15794 advanced Node007.");
+        window.ChoiceRequested!(15826);
+        if (!_elderConsultation.Complete || _elderConsultation.Procedure!="Node016" || window.ReplyText!=text.Message(163))
+            throw new InvalidDataException("Quest closing Node016 did not display message 163 or mark completion.");
+        unchanged();
+        _hud.CommitElderDialogueRequested!();
+        if (_elderWindow!=null || InspectorOpen || _campaign!.TalkedToElder!=1 || _campaign.VicKnown!=2
+            || !_campaign.ElderQuestGranted || _campaign.ElderCapsTransferred!=152 || _campaign.ElderFlaskGranted!=1
+            || _campaign.ElderQuestDialogue is not {Complete:true,Procedure:"Node016",Reaction:22,ClosingMessage:163} firstQuest
+            || firstQuest.Local(3)!=-10 || firstQuest.Local(7)!=1 || firstQuest.Global(452)!=2 || firstQuest.Global(531)!=1)
+            throw new InvalidDataException("Confirmed quest consultation did not commit Node015/Node007/Node016 state to WorldSession.");
+        action.EmitSignal(Button.SignalName.Pressed);
+        await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
+        window=_elderWindow ?? throw new InvalidDataException("Elder window did not reopen in post-quest repeat mode.");
+        if (_elderConsultation is not {Repeat:true,QuestMode:true,QuestCompleted:true,Complete:false,Procedure:"Node004"}
+            || window.ReplyText!=text.Message(117)
+            || window.FindChild("ElderChoice13870",true,false)!=null
+            || window.FindChild("ElderChoice13902",true,false)!=null
+            || !((Button)window.FindChild("ElderChoice13942",true,false)).Disabled
+            || ((Button)window.FindChild("ElderChoice13974",true,false)).Disabled)
+            throw new InvalidDataException("Post-quest Node004 (L7=1) did not replace 119/121 with disabled 120 (Node009) and enabled 122 (Node007).");
+        window.ChoiceRequested!(13942);
+        if (_elderConsultation.Revision!=0) throw new InvalidDataException("Disabled post-quest Node009 option 13942 advanced Node004.");
+        window.ChoiceRequested!(13974); window.ChoiceRequested!(15826);
+        if (!_elderConsultation.Complete || _elderConsultation.Procedure!="Node016" || window.ReplyText!=text.Message(163))
+            throw new InvalidDataException("Post-quest reminder route 122->134 did not finish in Node016.");
+        _hud.CommitElderDialogueRequested!();
+        if (_elderWindow!=null || _campaign.ElderQuestRepeatDialogue is not {Complete:true,Procedure:"Node016",Reaction:12,CapsTransferred:152,FlaskGranted:1} repeatQuest
+            || repeatQuest.Local(3)!=-20 || repeatQuest.Local(7)!=1 || _campaign.ElderQuestState?.Reaction!=12)
+            throw new InvalidDataException("Confirmed post-quest repeat reminder did not update reaction to 12 while preserving single item grant.");
+        ResetWalker(); LoadCheckpoint();
+        SelectObject(_layout!.Objects.Single(o=>o.Source.Key==ArroyoElderSource.Match(_campaign.Current.Map)!.Key));
+        unchanged();
     }
     private async Task CheckArroyoElderDialogueCommit(Button action,ArroyoElderText text)
     {

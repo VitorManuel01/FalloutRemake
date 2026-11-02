@@ -19,6 +19,8 @@ internal static class ArroyoElderSourceChecks
         }
         foreach (string path in new[] {"scripts/ahelder.int","scripts/scripts.lst","data/vault13.gam"})
             Reject(path,()=>ArroyoElderStateProfile.Create(map,p=>p==path ? Changed(data.Read(p)) : data.Read(p)));
+        foreach (string path in new[] {"proto/items/00000041.pro","proto/items/00000267.pro"})
+            Reject(path,()=>ArroyoElderQuestProfile.Create(map,p=>p==path ? Changed(data.Read(p)) : data.Read(p)));
         var proto=map.Prototypes.Single(p=>p.Pid==16777229);byte[] original=proto.RawBytes.ToArray();
         var altered=proto.RawBytes.ToArray();altered[48]^=1;
         var candidate=map with {Prototypes=map.Prototypes.Select(p=>p==proto ? p with {RawBytes=altered} : p).ToArray()};

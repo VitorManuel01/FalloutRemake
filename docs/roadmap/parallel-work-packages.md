@@ -31,7 +31,8 @@ flowchart TD
         CONT03["CONT-003\nPersistência Checkpoint v10\n[Concluído]"]
         CONT04["CONT-004\nValidação Headless Completa\n[Concluído]"]
         CONT05["CONT-005\nPersistência da Conversa Repetida\n[Concluído]"]
-        CONT01 --> CONT02 --> CONT03 --> CONT04 --> CONT05
+        CONT06["CONT-006\nRamos de Missão e Lembrete (Node015/007/016)\n[Concluído]"]
+        CONT01 --> CONT02 --> CONT03 --> CONT04 --> CONT05 --> CONT06
     end
 
     subgraph FrenteB ["Frente B: Núcleo de Combate C# Puro"]
@@ -154,6 +155,34 @@ flowchart TD
   1. Conversas repetidas em `Node004` (`123` ou `121 → 17510`) podem ser aplicadas à `WorldSession` após o primeiro diálogo concluído.
   2. O validador de `ArroyoElderStateProfile` e `SavedElderState` reconhece e valida de forma determinística tanto projeções de 1º diálogo quanto projeções com conversas repetidas aplicadas, recusando adulterações.
   3. Checkpoint salva e restaura perfeitamente o estado pós-conversa repetida (incluindo redução adicional de `-20` de reação via `Node013`).
+- **Complexidade:** Média (1–2 dias).
+
+---
+
+#### [CONT-006] Ramos de Missão e Lembrete da Anciã (`Node015`, `Node007`, `Node016` e `Node004` Pós-Missão)
+- **Objetivo:** Auditar e habilitar os ramos de concessão da missão (`Node015`), lembrete (`Node007`), encerramento (`Node016`, `gsay_message` 163) e repetição pós-missão (`Node004` quando `L7 == 1`) em `scripts/ahelder.int`, com projeção auditada de `152` Caps (`PID 41`, offset `126820`), `1`x cantil de Vic (`PID 267`) e `GVAR_DEN_VIC_KNOWN (452) = 2`, recusando explicitamente `Node009` por leitura/escrita de `local_var(10)` fora dos `10` locais declarados em `scripts/scripts.lst`.
+- **Requisitos Cobertos:** `NARR-004`.
+- **Resultado Esperado:** Ensaio interativo, validação contra os binários reais, commit transacional em `WorldSession` (`CommitElderQuestDialogue` e `CommitElderQuestRepeatDialogue`) e persistência/restauração em `SavedElderState`.
+- **Classificação:** **Sequencial.** (Depende de `CONT-005`).
+- **Novos Arquivos:**
+  - `src/Runtime/ArroyoElderQuestProfile.cs`
+  - `tools/TempleInspector/ArroyoElderQuestAudit.cs`
+- **Arquivos Alterados:**
+  - `src/Runtime/ArroyoElderConsultation.cs`
+  - `src/Runtime/WorldSession.cs`
+  - `src/Runtime/WorldCheckpoint.cs`
+  - `src/Preview/ArroyoElderWindow.cs`
+  - `src/Preview/ArroyoElderConsultationPreview.cs`
+  - `src/Preview/ArroyoElderConsultationChecks.cs`
+  - `tools/TempleInspector/ArroyoElderAudit.cs`
+  - `tools/TempleInspector/ArroyoElderSourceChecks.cs`
+  - `tools/TempleInspector/ArroyoElderConsultationTests.cs`
+  - `tools/TempleInspector/ArroyoElderStateTests.cs`
+  - `tools/TempleInspector/CheckpointTests.cs`
+- **Critérios de Aceitação:**
+  1. `ArroyoElderQuestProfile.Create` valida os bytecodes de `Node007` (`15224..15762`), `Node015` (`17628..17838`) e `Node016` (`17962..18056`), os protótipos `PID 41` (`00000041.pro`) e `PID 267` (`00000267.pro`), e o inventário real da Anciã (`152`x `PID 41` em `126820` e `1`x `PID 4` em `126720`).
+  2. `Node015` grava `L7 = 1`, `GVAR 452 = 2` e projeta `152` Caps + `1`x cantil `PID 267` uma única vez; `Node004` pós-missão (`L7 == 1`) substitui `119`/`121` por `120` (desabilitada por `L10` fora de faixa em `Node009`) e permite lembrete via `122 → Node007 (-10) → Node016` sem duplicar itens.
+  3. Persistência e restauração completas em `SavedElderState` com testes sintéticos e validação headless aprovados.
 - **Complexidade:** Média (1–2 dias).
 
 ---

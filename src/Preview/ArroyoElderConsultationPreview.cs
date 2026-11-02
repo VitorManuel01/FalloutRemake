@@ -47,7 +47,8 @@ public partial class TemplePreview
             var profile=ArroyoElderConsultationProfile.Create(_campaign!.Current.Map,data.Read);
             var text=new ArroyoElderText(profile,MessageTextFile.Read(data.Read($"text/{_objectText!.Language}/dialog/ahelder.msg")),_objectText.Language);
             var world=_campaign; var position=world.Location; var token=world.TempleToken;
-            bool repeat=_elderRepeatToken==token || world.ElderDialogue!=null;
+            bool repeat=_elderRepeatToken==token || world.ElderDialogue!=null || world.ElderQuestDialogue!=null;
+            bool questMode=world.ElderQuestDialogue!=null;
             ClearRouteHover(); GetTree().Root.GuiEmbedSubwindows=true;
             var dialog=new ArroyoElderWindow {Size=new(800,570),Theme=_hud.GetChild<Control>(0).Theme};
             _elderWindow=dialog;
@@ -57,9 +58,15 @@ public partial class TemplePreview
             {
                 var current=_elderConsultation!; long revision=current.Revision;
                 if (current.Complete) _elderRepeatToken=token; else if (!repeat) _elderRepeatToken=null;
-                bool canCommit=current.Complete && (!current.Repeat
-                    ? world.ElderDialogue==null
-                    : world.ElderDialogue!=null && world.ElderRepeatDialogue==null);
+                bool canCommit=current.Complete && (current.QuestMode
+                    ? !current.Repeat
+                        ? world.ElderDialogue==null && world.ElderQuestDialogue==null
+                        : world.ElderQuestDialogue!=null && world.ElderQuestRepeatDialogue==null
+                    : !current.Repeat
+                        ? world.ElderDialogue==null && world.ElderQuestDialogue==null
+                        : world.ElderDialogue!=null && world.ElderRepeatDialogue==null);
+                bool canToggle=(world.ElderDialogue==null || world.ElderRepeatDialogue!=null)
+                    && (world.ElderQuestDialogue==null || world.ElderQuestRepeatDialogue!=null);
                 dialog.ChoiceRequested=offset=>
                 {
                     if (!Active() || _elderConsultation!=current || !current.Choose(offset,revision)) return;
@@ -68,10 +75,33 @@ public partial class TemplePreview
                 dialog.CommitElderDialogueRequested=()=>
                 {
                     if (!Active() || _elderConsultation!=current || !current.Complete) return;
-                    if (!current.Repeat && world.ElderDialogue!=null) return;
-                    if (current.Repeat && (world.ElderDialogue==null || world.ElderRepeatDialogue!=null)) return;
                     try
                     {
+                        if (current.QuestMode)
+                        {
+                            if (!current.Repeat && (world.ElderDialogue!=null || world.ElderQuestDialogue!=null)) return;
+                            if (current.Repeat && (world.ElderQuestDialogue==null || world.ElderQuestRepeatDialogue!=null)) return;
+                            var questProfile=ArroyoElderQuestProfile.Create(world.Current.Map,data.Read);
+                            if (!current.Repeat)
+                            {
+                                var projection=questProfile.ProjectFirst(current.Choices);
+                                var committed=world.CommitElderQuestDialogue(questProfile,projection,_walker?.Moving==true,world.SessionToken,token);
+                                _elderRepeatToken=token;
+                                CloseElderConsultation();
+                                NavigationStatus($"Missão da anciã aplicada na sessão · GVAR 452={committed.VicKnown} · L7={(committed.QuestGranted ? 1 : 0)}");
+                            }
+                            else
+                            {
+                                var projection=questProfile.ProjectRepeat(world.ElderQuestDialogue!,current.Choices);
+                                var committed=world.CommitElderQuestRepeatDialogue(questProfile,projection,_walker?.Moving==true,world.SessionToken,token);
+                                _elderRepeatToken=token;
+                                CloseElderConsultation();
+                                NavigationStatus($"Conversa repetida de missão aplicada · reação {committed.Reaction} · GVAR 452={committed.VicKnown}");
+                            }
+                            return;
+                        }
+                        if (!current.Repeat && (world.ElderDialogue!=null || world.ElderQuestDialogue!=null)) return;
+                        if (current.Repeat && (world.ElderDialogue==null || world.ElderRepeatDialogue!=null)) return;
                         var stateProfile=ArroyoElderStateProfile.Create(world.Current.Map,data.Read);
                         if (!current.Repeat)
                         {
@@ -96,14 +126,22 @@ public partial class TemplePreview
                         GD.Print("ELDER_COMMIT_REJECTED: "+error.Message);
                     }
                 };
-                dialog.Refresh(current,text,canCommit,world.ElderDialogue!=null);
+                dialog.Refresh(current,text,canCommit,world.ElderDialogue!=null || world.ElderQuestDialogue!=null,canToggle);
             }
             void Restart()
             {
                 if (!Active()) return;
-                _elderConsultation?.Cancel(); _elderConsultation=new(profile,repeat); Refresh();
+                _elderConsultation?.Cancel();
+                _elderConsultation=new(profile,repeat,questMode,world.ElderQuestState?.QuestGranted==true);
+                Refresh();
             }
             dialog.RestartRequested=Restart;
+            dialog.QuestModeToggleRequested=()=>
+            {
+                if (!Active()) return;
+                questMode=!questMode;
+                Restart();
+            };
             void Close() {if (_elderWindow==dialog) CloseElderConsultation();}
             dialog.Confirmed+=Close; dialog.Canceled+=Close; dialog.CloseRequested+=Close;
             _hud.AddChild(dialog); Restart(); dialog.PopupCenteredClamped(new(800,570),.92f); RefreshArroyoElderGuidance();

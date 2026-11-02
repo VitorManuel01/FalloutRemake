@@ -262,6 +262,85 @@ internal static class ArroyoElderStateTests
                 Assert(world.TalkedToElder==0 && world.ElderDialogue==null && world.ElderRepeatDialogue==null && world.ElderState==null);
             }
         });
+        check("elder quest profile projects Node015 Node007 and Node016 with L7=1 GVAR 452=2 152 caps and PID 267 flask",()=>
+        {
+            var profile=new ArroyoElderQuestProfile();
+            foreach (var (route,reaction,delta,band) in new[] {
+                (new[] {11836,17934},32,0,0),
+                (new[] {11836,17870,15826},22,-10,1),
+                (new[] {11804,14632,17934},32,0,0),
+                (new[] {11804,14632,17870,15826},22,-10,1),
+                (new[] {11804,14696,17542,17934},12,-20,1),
+                (new[] {11804,14696,17542,17870,15826},2,-30,0)})
+            {
+                var plan=profile.ProjectFirst(route);
+                Assert(plan.Complete && plan.Procedure=="Node016" && plan.Reaction==reaction
+                    && plan.VicKnown==2 && plan.QuestGranted && plan.CapsTransferred==152 && plan.FlaskGranted==1
+                    && plan.ClosingMessage==163 && plan.Local(0)==reaction && plan.Local(1)==band
+                    && plan.Local(2)==1 && plan.Local(3)==delta && plan.Local(4)==1 && plan.Local(7)==1
+                    && plan.Global(452)==2 && plan.Global(531)==1 && plan.Global(619)==1);
+                var validated=profile.ValidateFirst(plan);
+                Assert(validated.Reaction==reaction && validated.CapsTransferred==152 && validated.FlaskGranted==1);
+            }
+            foreach (var bad in new[] {
+                new[] {11836,17902},
+                new[] {11836,17870,15794},
+                new[] {11836,17934,17934},
+                new[] {15826},
+                new[] {1,2,3,4,5,6}})
+                Reject(()=>profile.ProjectFirst(bad));
+        });
+        check("elder repeat quest profile handles pre-quest Node015/Node007 acceptance and post-quest L7=1 reminder without duplicate item grants",()=>
+        {
+            var profile=new ArroyoElderQuestProfile();
+            var preQuest=profile.ProjectFirst(new[] {11868,16348});
+            Assert(preQuest.Complete && preQuest.Procedure=="Node999" && preQuest.Reaction==22
+                && !preQuest.QuestGranted && preQuest.VicKnown==0 && preQuest.CapsTransferred==0 && preQuest.FlaskGranted==0);
+            var reminderOnly=profile.ProjectRepeat(preQuest,new[] {13974,15826});
+            Assert(reminderOnly.Complete && reminderOnly.Procedure=="Node016" && reminderOnly.Reaction==12
+                && reminderOnly.Local(3)==-20 && reminderOnly.Local(7)==0 && !reminderOnly.QuestGranted
+                && reminderOnly.VicKnown==2 && reminderOnly.Global(452)==2
+                && reminderOnly.CapsTransferred==0 && reminderOnly.FlaskGranted==0 && reminderOnly.ClosingMessage==163);
+            var repeatAccept=profile.ProjectRepeat(preQuest,new[] {13870,17934});
+            Assert(repeatAccept.Complete && repeatAccept.Procedure=="Node016" && repeatAccept.Reaction==22
+                && repeatAccept.Local(3)==-10 && repeatAccept.Local(7)==1 && repeatAccept.QuestGranted
+                && repeatAccept.VicKnown==2 && repeatAccept.CapsTransferred==152 && repeatAccept.FlaskGranted==1);
+            var repeatNode013Reminder=profile.ProjectRepeat(preQuest,new[] {13902,17542,17870,15826});
+            Assert(repeatNode013Reminder.Complete && repeatNode013Reminder.Procedure=="Node016" && repeatNode013Reminder.Reaction==-8
+                && repeatNode013Reminder.Local(3)==-40 && repeatNode013Reminder.Local(1)==0 && repeatNode013Reminder.QuestGranted
+                && repeatNode013Reminder.CapsTransferred==152 && repeatNode013Reminder.FlaskGranted==1);
+            var postQuestFirst=profile.ProjectFirst(new[] {11836,17934});
+            var postQuestExit=profile.ProjectRepeat(postQuestFirst,new[] {14006});
+            var postQuestReminder=profile.ProjectRepeat(postQuestFirst,new[] {13974,15826});
+            Assert(postQuestExit.Complete && postQuestExit.Procedure=="Node999" && postQuestExit.Reaction==32
+                && postQuestExit.QuestGranted && postQuestExit.VicKnown==2
+                && postQuestExit.CapsTransferred==152 && postQuestExit.FlaskGranted==1 && postQuestExit.ClosingMessage==null);
+            Assert(postQuestReminder.Complete && postQuestReminder.Procedure=="Node016" && postQuestReminder.Reaction==22
+                && postQuestReminder.Local(3)==-10 && postQuestReminder.Local(1)==1 && postQuestReminder.Local(7)==1
+                && postQuestReminder.QuestGranted && postQuestReminder.VicKnown==2
+                && postQuestReminder.CapsTransferred==152 && postQuestReminder.FlaskGranted==1 && postQuestReminder.ClosingMessage==163);
+            foreach (var forbiddenAfterL7 in new[] {new[] {13870,17934},new[] {13902,17510},new[] {13942},new[] {13814},new[] {13974,15794}})
+                Reject(()=>profile.ProjectRepeat(postQuestFirst,forbiddenAfterL7));
+        });
+        check("WorldSession CommitElderQuestDialogue and CommitElderQuestRepeatDialogue persist quest and reminder projections and enforce single-session commits",()=>
+        {
+            var profile=new ArroyoElderQuestProfile();
+            var (world,_,_)=SessionFixture();
+            var firstCommitted=world.CommitElderQuestDialogue(new[] {11836,17934},false,world.SessionToken,world.TempleToken);
+            Assert(world.TalkedToElder==1 && world.VicKnown==2 && world.ElderQuestGranted
+                && world.ElderCapsTransferred==152 && world.ElderFlaskGranted==1
+                && firstCommitted.Procedure=="Node016" && firstCommitted.Reaction==32 && firstCommitted.ClosingMessage==163);
+            Reject(()=>world.CommitElderDialogue(new[] {11868,16348}));
+            Reject(()=>world.CommitElderQuestDialogue(new[] {11836,17934}));
+            Reject(()=>world.CommitElderQuestRepeatDialogue(new[] {13870,17934}));
+            var repeatCommitted=world.CommitElderQuestRepeatDialogue(new[] {13974,15826},false,world.SessionToken,world.TempleToken);
+            Assert(repeatCommitted.Procedure=="Node016" && repeatCommitted.Reaction==22 && repeatCommitted.Local(3)==-10
+                && world.ElderQuestState!.Reaction==22 && world.ElderCapsTransferred==152 && world.ElderFlaskGranted==1);
+            Reject(()=>world.CommitElderQuestRepeatDialogue(new[] {14006}));
+            world.Reset();
+            Assert(world.TalkedToElder==0 && world.VicKnown==0 && !world.ElderQuestGranted
+                && world.ElderCapsTransferred==0 && world.ElderFlaskGranted==0 && world.ElderQuestState==null);
+        });
     }
     private static void Assert(bool value) {if (!value) throw new Exception("Elder detached state assertion failed.");}
     private static void Reject(Action action) {try {action();} catch (InvalidDataException) {return;} throw new Exception("Invalid elder detached state path accepted.");}

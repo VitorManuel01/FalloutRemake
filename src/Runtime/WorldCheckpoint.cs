@@ -34,14 +34,57 @@ public sealed record SavedElderState(
     [property: JsonRequired] ScriptStateSnapshot Scripts,
     int[]? RepeatChoices = null)
 {
-    public int Local(int index) => ToProjection().Local(index);
-    public int Global(int index) => ToProjection().Global(index);
+    public int Local(int index)
+    {
+        var block = Scripts?.Blocks?.SingleOrDefault(b => b.Scope == ScriptVariableScope.ScriptLocal)
+            ?? throw new InvalidDataException("Missing elder local variable block.");
+        int slot = block.Indices != null ? Array.IndexOf(block.Indices, index) : -1;
+        return slot >= 0 && block.Values != null && slot < block.Values.Length
+            ? block.Values[slot]
+            : throw new InvalidDataException($"Elder local {index} is outside the bounded schema.");
+    }
+    public int Global(int index)
+    {
+        var block = Scripts?.Blocks?.SingleOrDefault(b => b.Scope == ScriptVariableScope.GameGlobal)
+            ?? throw new InvalidDataException("Missing elder global variable block.");
+        int slot = block.Indices != null ? Array.IndexOf(block.Indices, index) : -1;
+        return slot >= 0 && block.Values != null && slot < block.Values.Length
+            ? block.Values[slot]
+            : throw new InvalidDataException($"Elder global {index} is outside the bounded schema.");
+    }
     public ElderDetachedProjection ToProjection() => new(Profile, (RepeatChoices ?? Choices)?.ToArray()!, Procedure, Complete, Reaction, Scripts);
     public ElderDetachedProjection ToFirstProjection() => new(Profile, Choices?.ToArray()!, Procedure, Complete, Reaction, Scripts);
+    public ElderQuestProjection ToQuestProjection()
+    {
+        int l7 = Local(ArroyoElderQuestProfile.QuestLocal);
+        int g452 = Global(ArroyoElderQuestProfile.VicKnownGlobal);
+        int? closing = Procedure == "Node016" ? ArroyoElderQuestProfile.ClosingReplyMessage : null;
+        return new(Profile, (RepeatChoices ?? Choices)?.ToArray()!, Procedure, Complete, Reaction,
+            g452, l7 == 1, l7 == 1 ? ArroyoElderQuestProfile.ElderCapsAmount : 0,
+            l7 == 1 ? ArroyoElderQuestProfile.FlaskQuantity : 0, closing, Scripts);
+    }
+    public ElderQuestProjection ToQuestFirstProjection()
+    {
+        int l7 = Local(ArroyoElderQuestProfile.QuestLocal);
+        int g452 = Global(ArroyoElderQuestProfile.VicKnownGlobal);
+        int? closing = Procedure == "Node016" ? ArroyoElderQuestProfile.ClosingReplyMessage : null;
+        return new(Profile, Choices?.ToArray()!, Procedure, Complete, Reaction,
+            g452, l7 == 1, l7 == 1 ? ArroyoElderQuestProfile.ElderCapsAmount : 0,
+            l7 == 1 ? ArroyoElderQuestProfile.FlaskQuantity : 0, closing, Scripts);
+    }
     public static SavedElderState FromProjection(ElderDetachedProjection first, ElderDetachedProjection? repeat = null)
     {
         var profile = new ArroyoElderStateProfile();
         var clonedFirst = profile.Validate(first);
+        if (repeat == null)
+            return new(clonedFirst.Profile, clonedFirst.Choices, clonedFirst.Procedure, clonedFirst.Complete, clonedFirst.Reaction, clonedFirst.Scripts);
+        var clonedRepeat = profile.ValidateRepeat(clonedFirst, repeat);
+        return new(clonedRepeat.Profile, clonedFirst.Choices, clonedRepeat.Procedure, clonedRepeat.Complete, clonedRepeat.Reaction, clonedRepeat.Scripts, clonedRepeat.Choices);
+    }
+    public static SavedElderState FromQuestProjection(ElderQuestProjection first, ElderQuestProjection? repeat = null)
+    {
+        var profile = new ArroyoElderQuestProfile();
+        var clonedFirst = profile.ValidateFirst(first);
         if (repeat == null)
             return new(clonedFirst.Profile, clonedFirst.Choices, clonedFirst.Procedure, clonedFirst.Complete, clonedFirst.Reaction, clonedFirst.Scripts);
         var clonedRepeat = profile.ValidateRepeat(clonedFirst, repeat);

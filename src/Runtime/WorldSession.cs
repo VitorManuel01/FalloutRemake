@@ -162,14 +162,28 @@ public sealed partial class WorldSession
         return _areas[use.SourceMap].Items.Consume(id);
     }
     private readonly Func<MapDocument, ArroyoElderStateProfile>? _elderProfile;
+    private readonly Func<MapDocument, ArroyoElderQuestProfile>? _elderQuestProfile;
     private ElderDetachedProjection? _elderDialogue;
     private ElderDetachedProjection? _elderRepeatDialogue;
+    private ElderQuestProjection? _elderQuestDialogue;
+    private ElderQuestProjection? _elderQuestRepeatDialogue;
     public ElderDetachedProjection? ElderDialogue => _elderDialogue == null ? null : new ArroyoElderStateProfile().Validate(_elderDialogue);
     public ElderDetachedProjection? ElderRepeatDialogue => _elderDialogue == null || _elderRepeatDialogue == null ? null : new ArroyoElderStateProfile().ValidateRepeat(_elderDialogue, _elderRepeatDialogue);
     public ElderDetachedProjection? ElderState => ElderRepeatDialogue ?? ElderDialogue;
-    public SavedElderState? SavedElder => _elderDialogue == null ? null : SavedElderState.FromProjection(_elderDialogue, _elderRepeatDialogue);
-    public int TalkedToElder => _elderDialogue == null ? 0 : (_elderRepeatDialogue ?? _elderDialogue).Global(ArroyoElderStateProfile.TalkedToElderGlobal);
-    private ArroyoElderStateProfile ResolveElderProfile()
+    public ElderQuestProjection? ElderQuestDialogue => _elderQuestDialogue == null ? null : new ArroyoElderQuestProfile().ValidateFirst(_elderQuestDialogue);
+    public ElderQuestProjection? ElderQuestRepeatDialogue => _elderQuestDialogue == null || _elderQuestRepeatDialogue == null ? null : new ArroyoElderQuestProfile().ValidateRepeat(_elderQuestDialogue, _elderQuestRepeatDialogue);
+    public ElderQuestProjection? ElderQuestState => ElderQuestRepeatDialogue ?? ElderQuestDialogue;
+    public int VicKnown => ElderQuestState?.VicKnown ?? 0;
+    public bool ElderQuestGranted => ElderQuestState?.QuestGranted ?? false;
+    public int ElderCapsTransferred => ElderQuestState?.CapsTransferred ?? 0;
+    public int ElderFlaskGranted => ElderQuestState?.FlaskGranted ?? 0;
+    public SavedElderState? SavedElder => _elderQuestDialogue != null
+        ? SavedElderState.FromQuestProjection(_elderQuestDialogue, _elderQuestRepeatDialogue)
+        : _elderDialogue == null ? null : SavedElderState.FromProjection(_elderDialogue, _elderRepeatDialogue);
+    public int TalkedToElder => _elderQuestDialogue != null
+        ? (_elderQuestRepeatDialogue ?? _elderQuestDialogue).Global(ArroyoElderQuestProfile.TalkedToElderGlobal)
+        : _elderDialogue == null ? 0 : (_elderRepeatDialogue ?? _elderDialogue).Global(ArroyoElderStateProfile.TalkedToElderGlobal);
+    private void VerifyElderDialoguePosition()
     {
         if (CurrentMap != 4 || Location.Elevation != 0)
             throw new InvalidDataException("Elder dialogue requires map 4 at elevation 0.");
@@ -181,13 +195,22 @@ public sealed partial class WorldSession
         if (_arroyoGlobals != new ArroyoRewardProfile().EntryGlobals()
             || _arroyoReward is not { Experience: ArroyoRewardProfile.BaseExperience })
             throw new InvalidDataException("Elder dialogue requires verified neutral Arroyo entry globals.");
+    }
+    private ArroyoElderStateProfile ResolveElderProfile()
+    {
+        VerifyElderDialoguePosition();
         return _elderProfile != null ? _elderProfile(Current.Map) : new ArroyoElderStateProfile();
+    }
+    private ArroyoElderQuestProfile ResolveElderQuestProfile()
+    {
+        VerifyElderDialoguePosition();
+        return _elderQuestProfile != null ? _elderQuestProfile(Current.Map) : new ArroyoElderQuestProfile();
     }
     public ElderDetachedProjection CommitElderDialogue(ElderDetachedProjection projection, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
         => CommitElderDialogue(null, projection, moving, sessionToken, templeToken);
     public ElderDetachedProjection CommitElderDialogue(IEnumerable<int> choices, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
     {
-        if (_elderDialogue != null) throw new InvalidDataException("Elder dialogue was already committed in this session.");
+        if (_elderDialogue != null || _elderQuestDialogue != null) throw new InvalidDataException("Elder dialogue was already committed in this session.");
         if (sessionToken.HasValue && sessionToken.Value != SessionToken || templeToken.HasValue && templeToken.Value != TempleToken)
             throw new InvalidDataException("Elder dialogue commit token is stale.");
         if (moving) throw new InvalidDataException("Elder dialogue cannot be committed while moving.");
@@ -196,7 +219,7 @@ public sealed partial class WorldSession
     }
     public ElderDetachedProjection CommitElderDialogue(ArroyoElderStateProfile? profile, ElderDetachedProjection projection, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
     {
-        if (_elderDialogue != null) throw new InvalidDataException("Elder dialogue was already committed in this session.");
+        if (_elderDialogue != null || _elderQuestDialogue != null) throw new InvalidDataException("Elder dialogue was already committed in this session.");
         if (sessionToken.HasValue && sessionToken.Value != SessionToken || templeToken.HasValue && templeToken.Value != TempleToken)
             throw new InvalidDataException("Elder dialogue commit token is stale.");
         if (moving) throw new InvalidDataException("Elder dialogue cannot be committed while moving.");
@@ -235,12 +258,65 @@ public sealed partial class WorldSession
         TempleRevision++;
         return activeProfile.ValidateRepeat(_elderDialogue, validated);
     }
+    public ElderQuestProjection CommitElderQuestDialogue(ElderQuestProjection projection, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
+        => CommitElderQuestDialogue(null, projection, moving, sessionToken, templeToken);
+    public ElderQuestProjection CommitElderQuestDialogue(IEnumerable<int> choices, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
+    {
+        if (_elderDialogue != null || _elderQuestDialogue != null) throw new InvalidDataException("Elder dialogue was already committed in this session.");
+        if (sessionToken.HasValue && sessionToken.Value != SessionToken || templeToken.HasValue && templeToken.Value != TempleToken)
+            throw new InvalidDataException("Elder dialogue commit token is stale.");
+        if (moving) throw new InvalidDataException("Elder dialogue cannot be committed while moving.");
+        var profile = ResolveElderQuestProfile();
+        return CommitElderQuestDialogue(profile, profile.ProjectFirst(choices), moving, sessionToken, templeToken);
+    }
+    public ElderQuestProjection CommitElderQuestDialogue(ArroyoElderQuestProfile? profile, ElderQuestProjection projection, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
+    {
+        if (_elderDialogue != null || _elderQuestDialogue != null) throw new InvalidDataException("Elder dialogue was already committed in this session.");
+        if (sessionToken.HasValue && sessionToken.Value != SessionToken || templeToken.HasValue && templeToken.Value != TempleToken)
+            throw new InvalidDataException("Elder dialogue commit token is stale.");
+        if (moving) throw new InvalidDataException("Elder dialogue cannot be committed while moving.");
+        var activeProfile = ResolveElderQuestProfile();
+        if (profile != null && profile.Fingerprint != activeProfile.Fingerprint)
+            throw new InvalidDataException("Elder quest dialogue profile mismatch.");
+        var validated = activeProfile.ValidateFirst(projection);
+        _elderQuestDialogue = validated;
+        TempleRevision++;
+        return activeProfile.ValidateFirst(validated);
+    }
+    public ElderQuestProjection CommitElderQuestRepeatDialogue(ElderQuestProjection repeatProjection, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
+        => CommitElderQuestRepeatDialogue(null, repeatProjection, moving, sessionToken, templeToken);
+    public ElderQuestProjection CommitElderQuestRepeatDialogue(IEnumerable<int> repeatChoices, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
+    {
+        if (_elderQuestDialogue == null) throw new InvalidDataException("Elder repeat quest dialogue requires a committed first quest dialogue.");
+        if (_elderQuestRepeatDialogue != null) throw new InvalidDataException("Elder repeat quest dialogue was already committed in this session.");
+        if (sessionToken.HasValue && sessionToken.Value != SessionToken || templeToken.HasValue && templeToken.Value != TempleToken)
+            throw new InvalidDataException("Elder dialogue commit token is stale.");
+        if (moving) throw new InvalidDataException("Elder dialogue cannot be committed while moving.");
+        var profile = ResolveElderQuestProfile();
+        return CommitElderQuestRepeatDialogue(profile, profile.ProjectRepeat(_elderQuestDialogue, repeatChoices), moving, sessionToken, templeToken);
+    }
+    public ElderQuestProjection CommitElderQuestRepeatDialogue(ArroyoElderQuestProfile? profile, ElderQuestProjection repeatProjection, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
+    {
+        if (_elderQuestDialogue == null) throw new InvalidDataException("Elder repeat quest dialogue requires a committed first quest dialogue.");
+        if (_elderQuestRepeatDialogue != null) throw new InvalidDataException("Elder repeat quest dialogue was already committed in this session.");
+        if (sessionToken.HasValue && sessionToken.Value != SessionToken || templeToken.HasValue && templeToken.Value != TempleToken)
+            throw new InvalidDataException("Elder dialogue commit token is stale.");
+        if (moving) throw new InvalidDataException("Elder dialogue cannot be committed while moving.");
+        var activeProfile = ResolveElderQuestProfile();
+        if (profile != null && profile.Fingerprint != activeProfile.Fingerprint)
+            throw new InvalidDataException("Elder quest dialogue profile mismatch.");
+        var validated = activeProfile.ValidateRepeat(_elderQuestDialogue, repeatProjection);
+        _elderQuestRepeatDialogue = validated;
+        TempleRevision++;
+        return activeProfile.ValidateRepeat(_elderQuestDialogue, validated);
+    }
     public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
         Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
         Func<MapDocument, ArroyoElderStateProfile>? elderProfile = null,
-        Func<string, CharacterFile>? premade = null, IReadOnlyDictionary<int, AiPacket>? aiPackets = null)
+        Func<string, CharacterFile>? premade = null, IReadOnlyDictionary<int, AiPacket>? aiPackets = null,
+        Func<MapDocument, ArroyoElderQuestProfile>? elderQuestProfile = null)
     {
-        _load = load; _premade = premade; _aiPackets = aiPackets; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _arroyoProfile = arroyoProfile; _elderProfile = elderProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
+        _load = load; _premade = premade; _aiPackets = aiPackets; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _arroyoProfile = arroyoProfile; _elderProfile = elderProfile; _elderQuestProfile = elderQuestProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
         if (!_allowed.Contains(initialMap)) throw new ArgumentException("Initial map must belong to the supported area profile.");
         EnsureArea(initialMap); CurrentMap = initialMap;
         _enteredMaps.Add(initialMap);
@@ -304,7 +380,7 @@ public sealed partial class WorldSession
     }
     public void Reset()
     {
-        _templeProgress = null; _elderDialogue = null; _elderRepeatDialogue = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
+        _templeProgress = null; _elderDialogue = null; _elderRepeatDialogue = null; _elderQuestDialogue = null; _elderQuestRepeatDialogue = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
         _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat(); ResetTempleDuel(); ResetSkills(); ResetMedicine(); ResetFirearms();
         foreach (WorldArea area in _areas.Values) { area.Scenery.Reset(); area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
@@ -324,12 +400,29 @@ public sealed partial class WorldSession
     {
         _elderDialogue = null;
         _elderRepeatDialogue = null;
+        _elderQuestDialogue = null;
+        _elderQuestRepeatDialogue = null;
         if (saved == null) return;
         if (InitialMap != 3 || !_enteredMaps.Contains(4) || _templeProgress == null
             || _arroyoReward is not { Experience: ArroyoRewardProfile.BaseExperience }
             || _arroyoGlobals != new ArroyoRewardProfile().EntryGlobals()
             || !_areas.TryGetValue(4, out var village) || ArroyoElderSource.Match(village.Map) == null)
             throw new InvalidDataException("Checkpoint elder dialogue state requires verified Arroyo entry and actor identity.");
+        var questProfile = _elderQuestProfile != null ? _elderQuestProfile(village.Map) : new ArroyoElderQuestProfile();
+        if (saved.Profile == questProfile.Fingerprint)
+        {
+            if (saved.RepeatChoices == null)
+            {
+                _elderQuestDialogue = questProfile.ValidateFirst(saved.ToQuestFirstProjection());
+                return;
+            }
+            if (saved.Choices == null) throw new InvalidDataException("Checkpoint elder repeat quest state requires first-talk choices.");
+            var firstQuest = questProfile.ValidateFirst(questProfile.ProjectFirst(saved.Choices));
+            var repeatQuest = questProfile.ValidateRepeat(firstQuest, saved.ToQuestProjection());
+            _elderQuestDialogue = firstQuest;
+            _elderQuestRepeatDialogue = repeatQuest;
+            return;
+        }
         var profile = _elderProfile != null ? _elderProfile(village.Map) : new ArroyoElderStateProfile();
         if (saved.RepeatChoices == null)
         {
@@ -345,7 +438,8 @@ public sealed partial class WorldSession
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
         Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
         Func<MapDocument, ArroyoElderStateProfile>? elderProfile = null,
-        Func<string, CharacterFile>? premade = null, IReadOnlyDictionary<int, AiPacket>? aiPackets = null)
+        Func<string, CharacterFile>? premade = null, IReadOnlyDictionary<int, AiPacket>? aiPackets = null,
+        Func<MapDocument, ArroyoElderQuestProfile>? elderQuestProfile = null)
     {
         if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2"
             || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
@@ -370,7 +464,7 @@ public sealed partial class WorldSession
             || checkpoint.Areas.Select(a => a.Map).Distinct().Count() != checkpoint.Areas.Length
             || !checkpoint.Areas.Any(a => a.Map == initialMap) || !checkpoint.Areas.Any(a => a.Map == checkpoint.CurrentMap))
             throw new InvalidDataException("Checkpoint area set is invalid.");
-        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile,arroyoProfile, elderProfile, premade, aiPackets);
+        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile,arroyoProfile, elderProfile, premade, aiPackets, elderQuestProfile);
         // The character decides the level's HP bound checked by the combat block, so it comes first.
         try { candidate.Character = checkpoint.Character == null ? PlayerCharacter.Neutral : PlayerCharacter.Restore(checkpoint.Character, premade); }
         catch (Exception error) when (error is IOException or ArgumentException or KeyNotFoundException)

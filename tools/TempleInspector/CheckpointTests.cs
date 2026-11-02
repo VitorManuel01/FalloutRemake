@@ -360,6 +360,36 @@ internal static class CheckpointTests
                     Reject(() => RestoreElder(decoded with { Elder = bad }, load, templeProfile, elderProfile));
             }
         });
+        check("checkpoint JSON round-trips quest and reminder SavedElderState across first and post-quest repeat talks", () =>
+        {
+            var (world, load, templeProfile, elderProfile) = ElderSessionFixture();
+            world.CommitElderQuestDialogue(new[] { 11836, 17934 });
+            byte[] firstBytes = CheckpointFile.Encode(world.Capture("catalog"));
+            WorldCheckpoint firstDecoded = CheckpointFile.Decode(firstBytes);
+            Assert(firstDecoded.Elder != null && firstDecoded.Elder.Procedure == "Node016" && firstDecoded.Elder.Reaction == 32
+                && firstDecoded.Elder.Local(7) == 1 && firstDecoded.Elder.Global(452) == 2 && firstDecoded.Elder.Global(531) == 1);
+            var afterFirst = RestoreElder(firstDecoded, load, templeProfile, elderProfile);
+            Assert(firstBytes.SequenceEqual(CheckpointFile.Encode(afterFirst.Capture("catalog")))
+                && afterFirst.TalkedToElder == 1 && afterFirst.VicKnown == 2 && afterFirst.ElderQuestGranted
+                && afterFirst.ElderCapsTransferred == 152 && afterFirst.ElderFlaskGranted == 1
+                && afterFirst.ElderQuestDialogue!.Reaction == 32 && afterFirst.ElderQuestRepeatDialogue == null);
+            afterFirst.CommitElderQuestRepeatDialogue(new[] { 13974, 15826 });
+            byte[] repeatBytes = CheckpointFile.Encode(afterFirst.Capture("catalog"));
+            WorldCheckpoint repeatDecoded = CheckpointFile.Decode(repeatBytes);
+            var restored = RestoreElder(repeatDecoded, load, templeProfile, elderProfile);
+            Assert(repeatBytes.SequenceEqual(CheckpointFile.Encode(restored.Capture("catalog")))
+                && restored.TalkedToElder == 1 && restored.VicKnown == 2 && restored.ElderQuestGranted
+                && restored.ElderCapsTransferred == 152 && restored.ElderFlaskGranted == 1
+                && restored.ElderQuestDialogue!.Reaction == 32 && restored.ElderQuestRepeatDialogue!.Reaction == 22
+                && restored.ElderQuestState!.Procedure == "Node016" && restored.ElderQuestState.Local(3) == -10);
+            var elder = repeatDecoded.Elder!;
+            foreach (var bad in new[] {
+                elder with { Procedure = "Node999" },
+                elder with { Reaction = 32 },
+                elder with { RepeatChoices = new[] { 13870, 17934 } },
+                elder with { RepeatChoices = new[] { 13942 } } })
+                Reject(() => RestoreElder(repeatDecoded with { Elder = bad }, load, templeProfile, elderProfile));
+        });
     }
     private static void Reject(Action action) { try { action(); } catch (InvalidDataException) { return; } throw new Exception("Invalid checkpoint accepted."); }
     private static void Assert(bool condition) { if (!condition) throw new Exception("Checkpoint assertion failed."); }

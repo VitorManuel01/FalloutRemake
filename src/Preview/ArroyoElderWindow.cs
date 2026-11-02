@@ -10,10 +10,13 @@ public partial class ArroyoElderWindow : AcceptDialog
     private readonly VBoxContainer _choices=new() {Name="ElderChoices"};
     private readonly Label _status=new() {Name="ElderStatus",AutowrapMode=TextServer.AutowrapMode.WordSmart};
     private readonly Button _restart=new() {Name="ElderRestart",Text="Recomeçar consulta"};
+    private readonly Button _questMode=new() {Name="ElderQuestMode",Text="Ramos de missão (Node015/Node007)",
+        TooltipText="Alterna entre o subconjunto pré-missão e os ramos auditados de missão e lembrete (Node015, Node007 e Node016)."};
     private readonly Button _commit=new() {Name="ElderCommitWorld",Text="Aplicar à partida",Visible=false,
         TooltipText="Registra o fim da primeira conversa com a anciã na sessão ativa (GVAR_TALKED_TO_ELDER = 1 e reação)."};
     public Action<int>? ChoiceRequested;
     public Action? RestartRequested;
+    public Action? QuestModeToggleRequested;
     public Action? CommitElderDialogueRequested;
     public string ReplyText=>_reply.Text;
     public string StatusText=>_status.Text;
@@ -27,11 +30,12 @@ public partial class ArroyoElderWindow : AcceptDialog
         body.AddChild(new Label {Text="Consulta dos textos originais · não altera a partida, a reação da anciã ou seus itens. Algumas respostas ainda não estão disponíveis.",
             AutowrapMode=TextServer.AutowrapMode.WordSmart,Modulate=new Color("e8c78d")});
         body.AddChild(_reply); body.AddChild(_choices); body.AddChild(_status);
-        var actions=new HFlowContainer(); actions.AddChild(_restart); actions.AddChild(_commit); body.AddChild(actions);
+        var actions=new HFlowContainer(); actions.AddChild(_restart); actions.AddChild(_questMode); actions.AddChild(_commit); body.AddChild(actions);
         _restart.Pressed+=()=>RestartRequested?.Invoke();
+        _questMode.Pressed+=()=>{if (!_questMode.Disabled) QuestModeToggleRequested?.Invoke();};
         _commit.Pressed+=()=>{if (_commit.Visible && !_commit.Disabled) CommitElderDialogueRequested?.Invoke();};
     }
-    public void Refresh(ArroyoElderConsultation consultation,ArroyoElderText text,bool canCommit=false,bool committed=false)
+    public void Refresh(ArroyoElderConsultation consultation,ArroyoElderText text,bool canCommit=false,bool committed=false,bool canToggleQuestMode=true)
     {
         foreach (Node child in _choices.GetChildren()) {_choices.RemoveChild(child); child.QueueFree();}
         var node=consultation.Current; _reply.Text=text.Message(node.Reply);
@@ -41,23 +45,32 @@ public partial class ArroyoElderWindow : AcceptDialog
             var choose=ChoiceRequested;
             string tooltip=choice.Supported ? "Continuar a consulta"
                 : offset==13814 ? "Indisponível: Área 11 ainda não conhecida no mapa-múndi (metarule(17, 11) == 0)."
+                : offset is 13942 or 15794 or 17902 ? "Indisponível: Node009 lê/escreve local_var(10) fora do limite declarado (scripts.lst DeclaredLocals = 10)."
                 : "Este trecho ainda não está disponível.";
             var button=new Button {Name="ElderChoice"+offset,Text=text.Message(choice.Message),Disabled=consultation.Complete || !choice.Supported,
                 AutowrapMode=TextServer.AutowrapMode.WordSmart,Alignment=HorizontalAlignment.Left,CustomMinimumSize=new(0,48),
                 TooltipText=tooltip};
             _choices.AddChild(button); button.Pressed+=()=>{if (!button.Disabled) choose?.Invoke(offset);};
         }
+        _questMode.Disabled=!canToggleQuestMode;
+        _questMode.Text=consultation.QuestMode ? "Modo pré-missão" : "Ramos de missão (Node015/Node007)";
         _commit.Visible=canCommit; _commit.Disabled=!canCommit;
-        _commit.TooltipText=consultation.Repeat
-            ? "Registra o resultado da conversa repetida (Node004) na sessão ativa e atualiza a reação da anciã."
-            : "Registra o fim da primeira conversa com a anciã na sessão ativa (GVAR_TALKED_TO_ELDER = 1 e reação).";
+        _commit.TooltipText=consultation.QuestMode
+            ? "Registra o resultado de missão/lembrete (L7, GVAR 452, GVAR 531, reação e projeção de itens) na sessão ativa."
+            : consultation.Repeat
+                ? "Registra o resultado da conversa repetida (Node004) na sessão ativa e atualiza a reação da anciã."
+                : "Registra o fim da primeira conversa com a anciã na sessão ativa (GVAR_TALKED_TO_ELDER = 1 e reação).";
         _status.Text=consultation.Complete ? canCommit
-                ? consultation.Repeat
-                    ? "Consulta repetida concluída (Node999) · partida preservada · Aplicar à partida atualiza a reação da anciã"
-                    : "Consulta concluída (Node999) · partida preservada · Aplicar à partida grava GVAR 531=1"
-                : "Consulta concluída (Node999) · partida preservada"
+                ? consultation.QuestMode
+                    ? $"Consulta de missão concluída ({consultation.Procedure}) · partida preservada · Aplicar à partida grava o estado auditado"
+                    : consultation.Repeat
+                        ? "Consulta repetida concluída (Node999) · partida preservada · Aplicar à partida atualiza a reação da anciã"
+                        : "Consulta concluída (Node999) · partida preservada · Aplicar à partida grava GVAR 531=1"
+                : $"Consulta concluída ({consultation.Procedure}) · partida preservada"
             : consultation.Repeat ? committed
-                ? "Conversa repetida (Node004) · primeira conversa já aplicada na sessão (GVAR 531=1)."
+                ? consultation.QuestCompleted
+                    ? "Conversa repetida pós-missão (Node004, L7=1) · missão já concedida na sessão."
+                    : "Conversa repetida (Node004) · primeira conversa já aplicada na sessão (GVAR 531=1)."
                 : "Conversa repetida (Node004) · textos lidos da instalação original sem aplicar efeitos."
             : "Textos lidos da sua instalação original. Os efeitos da conversa não são aplicados.";
     }

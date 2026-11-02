@@ -46,6 +46,37 @@ internal static class ArroyoElderConsultationTests
             entries.Remove(104); Reject(()=>new ArroyoElderText(profile,file,"english"));
             Reject(()=>text.Message(999));
         });
+        check("elder quest consultation traverses Node015 Node007 and Node016 and enforces L7 post-quest Node004 and Node009 L10 boundaries",()=>
+        {
+            var profile=new ArroyoElderConsultationProfile();
+            var directAccept=new ArroyoElderConsultation(profile,repeat:false,questMode:true);
+            Assert(directAccept.QuestMode && !directAccept.QuestCompleted && directAccept.Current.Reply==103
+                && directAccept.Choose(11836,0) && directAccept.Procedure=="Node015" && directAccept.Current.Reply==159
+                && !directAccept.Choose(17902,1) && directAccept.Revision==1
+                && directAccept.Choose(17934,1) && directAccept.Complete && directAccept.Procedure=="Node016"
+                && directAccept.Current.Reply==163 && directAccept.Current.Choices.Length==0);
+            var acceptWithReminder=new ArroyoElderConsultation(profile,repeat:false,questMode:true);
+            Assert(acceptWithReminder.Choose(11804,0) && acceptWithReminder.Choose(14632,1)
+                && acceptWithReminder.Procedure=="Node015" && acceptWithReminder.Choose(17870,2)
+                && acceptWithReminder.Procedure=="Node007" && acceptWithReminder.Current.Reply==131
+                && !acceptWithReminder.Choose(15794,3) && acceptWithReminder.Revision==3
+                && acceptWithReminder.Choose(15826,3) && acceptWithReminder.Complete && acceptWithReminder.Procedure=="Node016"
+                && acceptWithReminder.Current.Reply==163);
+            var repeatPreQuest=new ArroyoElderConsultation(profile,repeat:true,questMode:true,questCompleted:false);
+            Assert(repeatPreQuest.Repeat && repeatPreQuest.QuestMode && !repeatPreQuest.QuestCompleted
+                && !repeatPreQuest.Choose(13814,0) && !repeatPreQuest.Choose(13942,0)
+                && repeatPreQuest.Choose(13902,0) && repeatPreQuest.Procedure=="Node013"
+                && repeatPreQuest.Choose(17542,1) && repeatPreQuest.Procedure=="Node015"
+                && repeatPreQuest.Choose(17870,2) && repeatPreQuest.Procedure=="Node007"
+                && repeatPreQuest.Choose(15826,3) && repeatPreQuest.Complete && repeatPreQuest.Procedure=="Node016");
+            var repeatPostQuest=new ArroyoElderConsultation(profile,repeat:true,questMode:true,questCompleted:true);
+            Assert(repeatPostQuest.Repeat && repeatPostQuest.QuestMode && repeatPostQuest.QuestCompleted
+                && repeatPostQuest.Current.Choices.Select(c=>c.Offset).SequenceEqual(new[] {13814,13942,13974,14006})
+                && !repeatPostQuest.Choose(13814,0) && !repeatPostQuest.Choose(13942,0) && !repeatPostQuest.Choose(13870,0) && !repeatPostQuest.Choose(13902,0)
+                && repeatPostQuest.Choose(13974,0) && repeatPostQuest.Procedure=="Node007" && repeatPostQuest.Current.Reply==131
+                && !repeatPostQuest.Choose(15794,1) && repeatPostQuest.Choose(15826,1)
+                && repeatPostQuest.Complete && repeatPostQuest.Procedure=="Node016" && repeatPostQuest.Current.Reply==163);
+        });
     }
     private static void Assert(bool value) {if (!value) throw new Exception("Elder consultation assertion failed.");}
     private static void Reject(Action action) {try {action();} catch (InvalidDataException) {return;} throw new Exception("Invalid elder consultation text accepted.");}

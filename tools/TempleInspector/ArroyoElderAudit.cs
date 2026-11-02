@@ -81,6 +81,7 @@ internal static class ArroyoElderAudit
                 Direct=stateProfile.Project(new[] {11868,16348}),Bridge=stateProfile.Project(new[] {11804,14664,16348}),
                 Alternative=stateProfile.Project(new[] {11804,14696,17510}),AppliedToWorld=false},
             RepeatOpening=ArroyoElderRepeatAudit.Create(data,program,stateProfile),
+            QuestReminder=ArroyoElderQuestAudit.Create(data,map,program),
             SourceRefusals=ArroyoElderSourceChecks.Run(data,map),
             RuntimeDialogueEnabled=false,SourceTextExported=false,OriginalReconstruction="verified" };
     }
