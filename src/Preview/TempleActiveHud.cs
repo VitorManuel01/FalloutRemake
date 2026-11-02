@@ -17,6 +17,7 @@ public partial class PreviewHud
     public Action? ArroyoElderRequested;
     private readonly Button _elderConsultation = new() {Name="ElderConsultationAction",Text="Anciã · conversa em consulta",Visible=false};
     public Action? ElderConsultationRequested;
+    public Action? CommitElderDialogueRequested;
     private readonly Button _templeStep = new() { Name = "TempleWorldStep", Text = "Um passo" },
         _templeLeg = new() { Name = "TempleWorldLeg", Text = "Próxima parada" },
         _templeWait = new() { Name = "TempleWorldWait", Text = "Esperar", TooltipText = "Avançar até o evento pendente, sem iniciar o próximo trecho" },

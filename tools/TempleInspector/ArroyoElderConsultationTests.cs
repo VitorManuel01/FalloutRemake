@@ -16,6 +16,13 @@ internal static class ArroyoElderConsultationTests
             Assert(other.Choose(11804,0) && other.Choose(14696,1) && other.Current.Reply==152
                 && !other.Choose(17542,2) && other.Choose(17510,2) && other.Complete);
             var direct=new ArroyoElderConsultation(profile); Assert(direct.Choose(11868,0) && direct.Current.Reply==135);
+            var repeatDirect=new ArroyoElderConsultation(profile,true);
+            Assert(repeatDirect.Repeat && repeatDirect.Procedure=="Node004" && repeatDirect.Current.Reply==117
+                && !repeatDirect.Choose(13814,0) && !repeatDirect.Choose(13870,0) && !repeatDirect.Choose(13974,0) && !repeatDirect.Choose(13942,0)
+                && repeatDirect.Revision==0 && repeatDirect.Choose(14006,0) && repeatDirect.Complete && repeatDirect.Procedure=="Node999");
+            var repeatNode013=new ArroyoElderConsultation(profile,true);
+            Assert(repeatNode013.Choose(13902,0) && repeatNode013.Procedure=="Node013" && repeatNode013.Current.Reply==152
+                && !repeatNode013.Choose(17542,1) && repeatNode013.Choose(17510,1) && repeatNode013.Complete && repeatNode013.Procedure=="Node999");
         });
         check("elder consultation refuses stale revisions closed drafts foreign choices and mutation of returned metadata",()=>
         {

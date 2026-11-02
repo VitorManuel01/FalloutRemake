@@ -120,10 +120,56 @@ public sealed partial class WorldSession
         if (use.Allocation.RemainingTicks != 0) return ItemUseStatus.InvalidState;
         return _areas[use.SourceMap].Items.Consume(id);
     }
-    public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
-        Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null)
+    private readonly Func<MapDocument, ArroyoElderStateProfile>? _elderProfile;
+    private ElderDetachedProjection? _elderDialogue;
+    public ElderDetachedProjection? ElderDialogue => _elderDialogue == null ? null : new ArroyoElderStateProfile().Validate(_elderDialogue);
+    public ElderDetachedProjection? ElderState => ElderDialogue;
+    public SavedElderState? SavedElder => _elderDialogue == null ? null : SavedElderState.FromProjection(_elderDialogue);
+    public int TalkedToElder => _elderDialogue == null ? 0 : _elderDialogue.Global(ArroyoElderStateProfile.TalkedToElderGlobal);
+    private ArroyoElderStateProfile ResolveElderProfile()
     {
-        _load = load; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _arroyoProfile = arroyoProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
+        if (CurrentMap != 4 || Location.Elevation != 0)
+            throw new InvalidDataException("Elder dialogue requires map 4 at elevation 0.");
+        var source = ArroyoElderSource.Match(Current.Map)
+            ?? throw new InvalidDataException("Original Arroyo elder actor is unavailable on the current map.");
+        if (FalloutGrid.Distance(Location.Hex, source.Header.Tile) != 1 || !Current.Travel.CanArrive(Location)
+            || Current.Doors.Navigation(0).IsExit(Location.Hex))
+            throw new InvalidDataException("Player must stand on a walkable non-exit hex adjacent to the Arroyo elder.");
+        if (_arroyoGlobals != new ArroyoRewardProfile().EntryGlobals()
+            || _arroyoReward is not { Experience: ArroyoRewardProfile.BaseExperience })
+            throw new InvalidDataException("Elder dialogue requires verified neutral Arroyo entry globals.");
+        return _elderProfile != null ? _elderProfile(Current.Map) : new ArroyoElderStateProfile();
+    }
+    public ElderDetachedProjection CommitElderDialogue(ElderDetachedProjection projection, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
+        => CommitElderDialogue(null, projection, moving, sessionToken, templeToken);
+    public ElderDetachedProjection CommitElderDialogue(IEnumerable<int> choices, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
+    {
+        if (_elderDialogue != null) throw new InvalidDataException("Elder dialogue was already committed in this session.");
+        if (sessionToken.HasValue && sessionToken.Value != SessionToken || templeToken.HasValue && templeToken.Value != TempleToken)
+            throw new InvalidDataException("Elder dialogue commit token is stale.");
+        if (moving) throw new InvalidDataException("Elder dialogue cannot be committed while moving.");
+        var profile = ResolveElderProfile();
+        return CommitElderDialogue(profile, profile.Project(choices), moving, sessionToken, templeToken);
+    }
+    public ElderDetachedProjection CommitElderDialogue(ArroyoElderStateProfile? profile, ElderDetachedProjection projection, bool moving = false, Guid? sessionToken = null, Guid? templeToken = null)
+    {
+        if (_elderDialogue != null) throw new InvalidDataException("Elder dialogue was already committed in this session.");
+        if (sessionToken.HasValue && sessionToken.Value != SessionToken || templeToken.HasValue && templeToken.Value != TempleToken)
+            throw new InvalidDataException("Elder dialogue commit token is stale.");
+        if (moving) throw new InvalidDataException("Elder dialogue cannot be committed while moving.");
+        var activeProfile = ResolveElderProfile();
+        if (profile != null && profile.Fingerprint != activeProfile.Fingerprint)
+            throw new InvalidDataException("Elder dialogue profile mismatch.");
+        var validated = activeProfile.Validate(projection);
+        _elderDialogue = validated;
+        TempleRevision++;
+        return activeProfile.Validate(validated);
+    }
+    public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
+        Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
+        Func<MapDocument, ArroyoElderStateProfile>? elderProfile = null)
+    {
+        _load = load; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _arroyoProfile = arroyoProfile; _elderProfile = elderProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
         if (!_allowed.Contains(initialMap)) throw new ArgumentException("Initial map must belong to the supported area profile.");
         EnsureArea(initialMap); CurrentMap = initialMap;
         _enteredMaps.Add(initialMap);
@@ -184,7 +230,7 @@ public sealed partial class WorldSession
     }
     public void Reset()
     {
-        _templeProgress = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
+        _templeProgress = null; _elderDialogue = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
         _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat();
         foreach (WorldArea area in _areas.Values) { area.Scenery.Reset(); area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
@@ -197,10 +243,23 @@ public sealed partial class WorldSession
         return new(10, "neutral-v10", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
                 DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray(), _templeProgress?.Capture(),CaptureEntries(),
-            CaptureCombat());
+            CaptureCombat(), SavedElder);
+    }
+    private void RestoreElderDialogue(SavedElderState? saved)
+    {
+        _elderDialogue = null;
+        if (saved == null) return;
+        if (InitialMap != 3 || !_enteredMaps.Contains(4) || _templeProgress == null
+            || _arroyoReward is not { Experience: ArroyoRewardProfile.BaseExperience }
+            || _arroyoGlobals != new ArroyoRewardProfile().EntryGlobals()
+            || !_areas.TryGetValue(4, out var village) || ArroyoElderSource.Match(village.Map) == null)
+            throw new InvalidDataException("Checkpoint elder dialogue state requires verified Arroyo entry and actor identity.");
+        var profile = _elderProfile != null ? _elderProfile(village.Map) : new ArroyoElderStateProfile();
+        _elderDialogue = profile.Validate(saved.ToProjection());
     }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
-        Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null)
+        Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
+        Func<MapDocument, ArroyoElderStateProfile>? elderProfile = null)
     {
         if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2"
             || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
@@ -209,6 +268,7 @@ public sealed partial class WorldSession
             || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9" || checkpoint.Version == 10 && checkpoint.Profile == "neutral-v10")
             || checkpoint.CatalogHash != catalogHash
             || checkpoint.Version < 10 && checkpoint.Combat != null || checkpoint.Version >= 10 && checkpoint.Combat == null
+            || checkpoint.Version < 10 && checkpoint.Elder != null
             || checkpoint.Version < 6 && checkpoint.Temple != null
             || checkpoint.Version < 8 && checkpoint.Entries != null
             || checkpoint.Version < 9 && checkpoint.Entries?.ArroyoGlobals != null
@@ -219,7 +279,7 @@ public sealed partial class WorldSession
             || checkpoint.Areas.Select(a => a.Map).Distinct().Count() != checkpoint.Areas.Length
             || !checkpoint.Areas.Any(a => a.Map == initialMap) || !checkpoint.Areas.Any(a => a.Map == checkpoint.CurrentMap))
             throw new InvalidDataException("Checkpoint area set is invalid.");
-        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile,arroyoProfile);
+        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile,arroyoProfile,elderProfile);
         foreach (SavedArea saved in checkpoint.Areas)
         {
             WorldArea area = candidate.EnsureArea(saved.Map);
@@ -238,6 +298,7 @@ public sealed partial class WorldSession
         foreach (var scene in scenes) scene.Area.Scenery.ApplyPrepared(ScenerySession.Prepare(scene.Records));
         candidate.RestoreTempleProgress(checkpoint.Temple);
         candidate.RestoreEntries(checkpoint);
+        candidate.RestoreElderDialogue(checkpoint.Elder);
         candidate.RestoreCombat(checkpoint.Combat);
         candidate.ValidateTempleExit();
         candidate.ValidateUses();

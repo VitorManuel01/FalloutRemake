@@ -40,7 +40,8 @@ public partial class TemplePreview
             var catalog = new MapCatalog(data.Read("data/maps.txt"));
             var runtimePrototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
             WorldSession restored = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 }, saved, catalog.Source.Sha256, runtimePrototype: runtimePrototypes.Get,
-                templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read));
+                templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read),
+                elderProfile: map => ArroyoElderStateProfile.Create(map,data.Read));
             bool walking = _walkMode; string? selectedKey = _selected?.Source.Key;
             _campaign = restored; _mapCatalog = catalog; _skills.Reset(); BindCurrentArea();
             ChangeElevation(_travel!.Location.Elevation); if (walking != _walkMode) ToggleWalkMode();

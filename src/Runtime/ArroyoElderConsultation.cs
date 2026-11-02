@@ -19,6 +19,9 @@ public sealed class ArroyoElderConsultationProfile
         _nodes=new[] {
             new ElderTextNode("Node001",103,new[] {new ElderTextChoice(11804,104,"Node006","Node006",51),
                 new(11836,105,null,"Node015",49),new(11868,106,"Node008","Node008",50)}),
+            new ElderTextNode("Node004",117,new[] {new ElderTextChoice(13814,118,null,"Node005",50),
+                new(13870,119,null,"Node015",50),new(13902,121,"Node013","Node013",51),
+                new(13974,122,null,"Node007",51),new(14006,123,"End","Node999",50)}),
             new ElderTextNode("Node006",127,new[] {new ElderTextChoice(14632,128,null,"Node015",50),
                 new(14664,129,"Node008","Node006a",51),new(14696,130,"Node013","Node013",51)}),
             new ElderTextNode("Node008",135,new[] {new ElderTextChoice(16348,136,"End","Node999",50)}),
@@ -55,10 +58,17 @@ public sealed class ArroyoElderConsultationProfile
                 && code[pair.index-1].Opcode==0xC001 && code[pair.index-1].OperandBits==node.Reply))
                 throw new InvalidDataException("Elder consultation reply changed.");
         }
-        // Node006a adjusts reaction then calls Node008; only the text continuation is traversed here.
-        var span=program.Instructions.Where(i=>i.Offset>=15174).Take(5).Select(i=>(i.Opcode,i.OperandBits));
-        if (!span.SequenceEqual(new (ushort,int?)[] {(0xC001,15196),(0x800D,null),(0xC001,0),(0xC001,24),(0x8005,null)}))
-            throw new InvalidDataException("Elder reaction-only text bridge changed.");
+        // Node006a adjusts reaction then calls Node008; Node004 guards option 118 by metarule(17,11) and 119/121 by L7==0.
+        void Span(int start,params (ushort,int?)[] expected)
+        {
+            var found=program.Instructions.Where(i=>i.Offset>=start).Take(expected.Length).ToArray();
+            if (found.FirstOrDefault()?.Offset!=start || !found.Select(i=>(i.Opcode,i.OperandBits)).SequenceEqual(expected))
+                throw new InvalidDataException("Elder reaction-only text bridge changed.");
+        }
+        Span(15174,(0xC001,15196),(0x800D,null),(0xC001,0),(0xC001,24),(0x8005,null));
+        Span(13754,(0xC001,13816),(0xC001,17),(0xC001,11),(0x810B,null),(0xC001,0),(0x8034,null),(0x802F,null));
+        Span(13816,(0xC001,13912),(0xC001,7),(0x80C1,null),(0xC001,0),(0x8033,null),(0x802F,null));
+        Span(13904,(0xC001,13944),(0x8004,null));
         return profile;
     }
 }
@@ -66,17 +76,23 @@ public sealed class ArroyoElderConsultationProfile
 public sealed class ArroyoElderConsultation
 {
     private readonly ArroyoElderConsultationProfile _profile;
-    private string _node="Node001";
+    private readonly List<int> _choices=new();
+    private string _node;
+    public bool Repeat {get;}
     public long Revision {get;private set;}
     public bool Closed {get;private set;}
     public bool Complete {get;private set;}
+    public string Procedure=>Complete ? "Node999" : _node;
+    public int[] Choices=>_choices.ToArray();
     public ElderTextNode Current=>_profile.Node(_node);
-    public ArroyoElderConsultation(ArroyoElderConsultationProfile profile)=>_profile=profile;
+    public ArroyoElderConsultation(ArroyoElderConsultationProfile profile,bool repeat=false)
+    { _profile=profile; Repeat=repeat; _node=repeat ? "Node004" : "Node001"; }
     public bool Choose(int offset,long revision)
     {
         if (Closed || Complete || revision!=Revision) return false;
         var choice=Current.Choices.SingleOrDefault(c=>c.Offset==offset);
         if (choice?.Next==null) return false;
+        _choices.Add(offset);
         if (choice.Next=="End") Complete=true; else _node=choice.Next;
         Revision++; return true;
     }

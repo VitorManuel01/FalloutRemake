@@ -1,9 +1,42 @@
 using System.Text.Json;
+using FalloutRemake.Geometry;
+using FalloutRemake.Import;
 using FalloutRemake.Runtime;
 
 internal static class ArroyoElderStateTests
 {
     private static int Local(ElderDetachedProjection plan,int index)=>plan.Scripts.Blocks.Single(b=>b.Scope==ScriptVariableScope.ScriptLocal).Values[index];
+    private static (WorldSession World,int AdjacentHex,int ExitHex) SessionFixture()
+    {
+        var (temple,profile,original)=WorldTempleSpeechTests.Fixture();
+        var exit=WorldTests.Map(3,4).ObjectLayers[0].Objects[0];
+        exit=exit with {Key=temple.Source.Sha256+":422028",ContainerElevation=2,Header=exit.Header with {Tile=13326,Elevation=2},
+            State=new Dictionary<string,int> {["destinationMap"]=4,["destinationElevation"]=0,["destinationTile"]=20517,["destinationRotation"]=0}};
+        temple=temple with {ObjectLayers=temple.ObjectLayers.Select(l=>l.Elevation==2 ? l with {Objects=l.Objects.Append(exit).ToArray()} : l).ToArray()};
+        var village=WorldTests.Map(4,3);
+        var template=village.ObjectLayers[0].Objects[0];
+        var elder=template with {Key=ArroyoRewardProfile.MapHash+":126588",Offset=126588,State=new Dictionary<string,int>(),
+            Header=template.Header with {Id=20,Pid=16777229,Fid=16777247,Tile=18915,Elevation=0,Rotation=2,Sid=67108867,ScriptIndex=10,Flags=536870912}};
+        village=village with {
+            Source=village.Source with {Path="maps/arvillag.map",Size=216200,Sha256=ArroyoRewardProfile.MapHash},
+            Prefix=village.Prefix with {Header=village.Prefix.Header with {ScriptIndex=27,EnteringTile=20517}},
+            MapProgram=new("scripts/arvillag.int","synthetic verified profile",5188,ArroyoRewardProfile.ProgramHash),
+            ObjectLayers=village.ObjectLayers.Select((l,i)=>l with {Objects=l.Objects.Select(o=>(o.Header.Pid>>24)!=5 ? o : o with {
+                Header=o.Header with {Tile=20517},
+                State=new Dictionary<string,int> {["destinationMap"]=3,["destinationElevation"]=2,["destinationTile"]=13326,["destinationRotation"]=0}})
+                .Concat(i==0 ? new[] {elder} : Array.Empty<MapObject>()).ToArray()}).ToArray(),
+            ScriptBindings=new[] {new ScriptBinding(67108867,10,new("scripts/ahelder.int","synthetic",20658,ArroyoElderSource.ProgramHash))}};
+        var world=new WorldSession(id=>id==3 ? temple : id==4 ? village : WorldTests.Map(126,3),new[] {3,4,126},
+            templeProfile:_=>profile,arroyoProfile:_=>new ArroyoRewardProfile(),elderProfile:_=>new ArroyoElderStateProfile());
+        world.Current.Travel.Arrive(original.Location);
+        world.CommitTempleSpeech(WorldTempleSpeechTests.Plan(world,profile),false);
+        world.Current.Travel.Arrive(new(3,2,13326,0));
+        Assert(world.UseExit(false).Status==ExitStatus.Ready && world.CurrentMap==4);
+        var nav=world.Current.Doors.Navigation(0);
+        int adjacent=Enumerable.Range(0,6).Select(d=>FalloutGrid.Neighbor(18915,d)!.Value).First(h=>nav.Walkable(h) && !nav.IsExit(h));
+        world.Current.Travel.Arrive(new(4,0,adjacent,0));
+        return (world,adjacent,20517);
+    }
     public static void Run(Action<string,Action> check)
     {
         check("detached elder opening writes only its bounded source locals and talk flag with neutral post-entry globals",()=>
@@ -102,6 +135,89 @@ internal static class ArroyoElderStateTests
             string before=JsonSerializer.Serialize(profile.ProjectRepeat(direct,choices));
             choices[0]=13814; repeatPlan.Choices[0]=-1; repeatPlan.Scripts.Blocks[0].Values[0]=999;
             Assert(before==JsonSerializer.Serialize(profile.ProjectRepeat(direct,new[] {13902,17510})));
+        });
+        check("WorldSession CommitElderDialogue sets GVAR_TALKED_TO_ELDER 531 to 1 records actor reaction locals and owns committed snapshots",()=>
+        {
+            var profile=new ArroyoElderStateProfile();
+            foreach (var (route,reaction,delta) in new[] {
+                (new[] {11868,16348},22,-10),
+                (new[] {11804,14664,16348},12,-20),
+                (new[] {11804,14696,17510},12,-20)})
+            {
+                var (world,_,_)=SessionFixture();
+                Assert(world.TalkedToElder==0 && world.ElderDialogue==null && world.ElderState==null);
+                long rev=world.TempleRevision;
+                var committed=world.CommitElderDialogue(profile.Project(route),false,world.SessionToken,world.TempleToken);
+                Assert(world.TalkedToElder==1 && world.TempleRevision==rev+1
+                    && committed.Complete && committed.Procedure=="Node999" && committed.Reaction==reaction
+                    && committed.Global(ArroyoElderStateProfile.TalkedToElderGlobal)==1
+                    && committed.Local(0)==reaction && committed.Local(1)==1 && committed.Local(2)==1
+                    && committed.Local(3)==delta && committed.Local(4)==1 && committed.Local(7)==0);
+                string expected=JsonSerializer.Serialize(world.ElderDialogue);
+                committed.Choices[0]=-1; committed.Scripts.Blocks[0].Values[0]=999;
+                var readBack=world.ElderDialogue!; readBack.Choices[0]=-1; readBack.Scripts.Blocks[0].Values[0]=999;
+                Assert(JsonSerializer.Serialize(world.ElderDialogue)==expected);
+                world.Reset();
+                Assert(world.TalkedToElder==0 && world.ElderDialogue==null);
+            }
+        });
+        check("WorldSession CommitElderDialogue allows only one commit per session and rejects contradictory or violated session states atomically",()=>
+        {
+            var profile=new ArroyoElderStateProfile();
+            var direct=profile.Project(new[] {11868,16348});
+            var bridge=profile.Project(new[] {11804,14664,16348});
+            var (world,adjacent,exitHex)=SessionFixture();
+            byte[] baseline=CheckpointFile.Encode(world.Capture("catalog"));
+            void Unchanged()
+            {
+                Assert(world.TalkedToElder==0 && world.ElderDialogue==null
+                    && baseline.SequenceEqual(CheckpointFile.Encode(world.Capture("catalog"))));
+            }
+            var tamperedGlobal=profile.Project(new[] {11868,16348});
+            var globalBlock=tamperedGlobal.Scripts.Blocks.Single(b=>b.Scope==ScriptVariableScope.GameGlobal);
+            globalBlock.Values[Array.IndexOf(globalBlock.Indices,531)]=0;
+            var tamperedLocal=profile.Project(new[] {11868,16348});
+            tamperedLocal.Scripts.Blocks.Single(b=>b.Scope==ScriptVariableScope.ScriptLocal).Values[0]=32;
+            foreach (var invalid in new ElderDetachedProjection?[] {
+                null,
+                profile.Project(Array.Empty<int>()),
+                profile.Project(new[] {11804}),
+                profile.ProjectRepeat(direct,new[] {14006}),
+                direct with {Profile="foreign"},
+                direct with {Procedure="Node001"},
+                direct with {Complete=false},
+                direct with {Reaction=12},
+                direct with {Choices=new[] {11804,14664,16348}},
+                tamperedGlobal,
+                tamperedLocal})
+            {
+                Reject(()=>world.CommitElderDialogue(invalid!));
+                Unchanged();
+            }
+            Reject(()=>world.CommitElderDialogue(new[] {11804})); Unchanged();
+            Reject(()=>world.CommitElderDialogue(direct,moving:true)); Unchanged();
+            Reject(()=>world.CommitElderDialogue(direct,sessionToken:Guid.NewGuid())); Unchanged();
+            Reject(()=>world.CommitElderDialogue(direct,templeToken:Guid.NewGuid())); Unchanged();
+            world.Current.Travel.Arrive(new(4,0,exitHex,0));
+            Reject(()=>world.CommitElderDialogue(direct));
+            Assert(world.UseExit(false).Status==ExitStatus.Ready && world.CurrentMap==3);
+            Reject(()=>world.CommitElderDialogue(direct));
+            Assert(world.UseExit(false).Status==ExitStatus.Ready && world.CurrentMap==4);
+            world.Current.Travel.Arrive(new(4,0,20100,0));
+            Reject(()=>world.CommitElderDialogue(direct));
+            world.Current.Travel.Arrive(new(4,0,adjacent,0)); Unchanged();
+            var unverified=new WorldSession(_=>world.Current.Map,new[] {4},initialMap:4);
+            unverified.Current.Travel.Arrive(new(4,0,adjacent,0));
+            Reject(()=>unverified.CommitElderDialogue(direct));
+            Assert(unverified.TalkedToElder==0 && unverified.ElderDialogue==null);
+            world.CommitElderDialogue(direct);
+            string committedState=JsonSerializer.Serialize(world.ElderDialogue);
+            long committedRev=world.TempleRevision;
+            Reject(()=>world.CommitElderDialogue(direct));
+            Reject(()=>world.CommitElderDialogue(bridge));
+            Reject(()=>world.CommitElderDialogue(new[] {11868,16348}));
+            Assert(world.TalkedToElder==1 && world.TempleRevision==committedRev
+                && JsonSerializer.Serialize(world.ElderDialogue)==committedState);
         });
     }
     private static void Assert(bool value) {if (!value) throw new Exception("Elder detached state assertion failed.");}

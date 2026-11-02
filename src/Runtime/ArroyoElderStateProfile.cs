@@ -4,15 +4,43 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
-public sealed record ElderDetachedProjection(string Profile,int[] Choices,string Procedure,bool Complete,int Reaction,ScriptStateSnapshot Scripts);
+public sealed record ElderDetachedProjection(
+    [property:JsonRequired] string Profile,
+    [property:JsonRequired] int[] Choices,
+    [property:JsonRequired] string Procedure,
+    [property:JsonRequired] bool Complete,
+    [property:JsonRequired] int Reaction,
+    [property:JsonRequired] ScriptStateSnapshot Scripts)
+{
+    public int Local(int index)
+    {
+        var block=Scripts?.Blocks?.SingleOrDefault(b=>b.Scope==ScriptVariableScope.ScriptLocal)
+            ?? throw new InvalidDataException("Missing elder local variable block.");
+        int slot=block.Indices!=null ? Array.IndexOf(block.Indices,index) : -1;
+        return slot>=0 && block.Values!=null && slot<block.Values.Length
+            ? block.Values[slot]
+            : throw new InvalidDataException($"Elder local {index} is outside the bounded schema.");
+    }
+    public int Global(int index)
+    {
+        var block=Scripts?.Blocks?.SingleOrDefault(b=>b.Scope==ScriptVariableScope.GameGlobal)
+            ?? throw new InvalidDataException("Missing elder global variable block.");
+        int slot=block.Indices!=null ? Array.IndexOf(block.Indices,index) : -1;
+        return slot>=0 && block.Values!=null && slot<block.Values.Length
+            ? block.Values[slot]
+            : throw new InvalidDataException($"Elder global {index} is outside the bounded schema.");
+    }
+}
 
-/// <summary>Fresh, detached neutral first-talk and repeat-talk state for the supported paths. Never owns or commits a WorldSession.</summary>
+/// <summary>Fresh, detached neutral first-talk and repeat-talk state for the supported paths, plus validation for WorldSession commits.</summary>
 public sealed class ArroyoElderStateProfile
 {
+    public const int TalkedToElderGlobal=531;
     public const string PrototypeHash="782FEACF76511BBE415789C4BF8DB9F01C8B126122BC7BF4E7937E1AE3DB3876";
     public string ActorKey=>ArroyoRewardProfile.MapHash+":126588";
     public string Fingerprint {get;}
@@ -21,7 +49,7 @@ public sealed class ArroyoElderStateProfile
         CreateInitial().SchemaHash+"|"+TempleInitialGateProfile.ListHash+"|"+PrototypeHash+"|elder-neutral-first-talk-detached-v1")));
     public BoundedScriptState CreateInitial()
     {
-        int[] indices=new[] {0,1,10,11}.Concat(Enumerable.Range(37,9)).Concat(new[] {47,531,619}).ToArray();
+        int[] indices=new[] {0,1,10,11}.Concat(Enumerable.Range(37,9)).Concat(new[] {47,TalkedToElderGlobal,619}).ToArray();
         int Value(int index)=>index switch {0=>15,10=>2,41=>1,47=>65,619=>1,_=>0};
         return new(new[] {
             new ScriptVariableBlock(ScriptVariableScope.ScriptLocal,ActorKey,ArroyoElderSource.ProgramHash,Enumerable.Range(0,10).ToArray(),new int[10]),
@@ -36,16 +64,27 @@ public sealed class ArroyoElderStateProfile
     {
         var candidate=CreateInitial();
         var writes=Enumerable.Range(0,10).Select(i=>new ScriptVariableWrite(ScriptVariableScope.ScriptLocal,ActorKey,i,locals[i]))
-            .Append(new(ScriptVariableScope.GameGlobal,GameKey,531,1)).ToArray();
+            .Append(new(ScriptVariableScope.GameGlobal,GameKey,TalkedToElderGlobal,1)).ToArray();
         if (candidate.Apply(writes,candidate.SessionToken,0)!=ScriptWriteStatus.Ready)
             throw new InvalidDataException("Elder detached state projection failed.");
         return new(Fingerprint,route.ToArray(),procedure,complete,locals[0],candidate.Capture());
     }
-    private static bool SameScripts(ScriptStateSnapshot a,ScriptStateSnapshot b)=>a.Blocks!=null && b.Blocks!=null
-        && a.Blocks.Length==b.Blocks.Length && a.Blocks.Zip(b.Blocks).All(pair=>pair.First.Scope==pair.Second.Scope
+    private static bool SameScripts(ScriptStateSnapshot a,ScriptStateSnapshot b)=>a!=null && b!=null
+        && a.Version==b.Version && a.SchemaHash==b.SchemaHash && a.Blocks!=null && b.Blocks!=null
+        && a.Blocks.Length==b.Blocks.Length && a.Blocks.Zip(b.Blocks).All(pair=>pair.First!=null && pair.Second!=null
+        && pair.First.Scope==pair.Second.Scope
         && pair.First.Key==pair.Second.Key && pair.First.SourceHash==pair.Second.SourceHash
         && pair.First.Indices!=null && pair.Second.Indices!=null && pair.First.Values!=null && pair.Second.Values!=null
         && pair.First.Indices.SequenceEqual(pair.Second.Indices) && pair.First.Values.SequenceEqual(pair.Second.Values));
+    public ElderDetachedProjection Validate(ElderDetachedProjection? projection)
+    {
+        if (projection==null || projection.Choices==null || projection.Profile!=Fingerprint || !projection.Complete || projection.Procedure!="Node999")
+            throw new InvalidDataException("Elder dialogue requires a completed neutral first-talk projection.");
+        var expected=Project(projection.Choices);
+        if (!expected.Complete || expected.Procedure!="Node999" || expected.Reaction!=projection.Reaction || !SameScripts(expected.Scripts,projection.Scripts))
+            throw new InvalidDataException("Elder dialogue projection contradicts its audited script state.");
+        return expected;
+    }
     public ElderDetachedProjection Project(IEnumerable<int> choices)
     {
         if (choices==null) throw new InvalidDataException("Missing elder rehearsal choices.");
@@ -68,11 +107,8 @@ public sealed class ArroyoElderStateProfile
     }
     public ElderDetachedProjection ProjectRepeat(ElderDetachedProjection first,IEnumerable<int> choices)
     {
-        if (first==null || choices==null || first.Choices==null || first.Profile!=Fingerprint || !first.Complete || first.Procedure!="Node999")
-            throw new InvalidDataException("Elder repeat talk requires a completed neutral first talk.");
-        var baseline=Project(first.Choices);
-        if (!baseline.Complete || baseline.Reaction!=first.Reaction || !SameScripts(baseline.Scripts,first.Scripts))
-            throw new InvalidDataException("Elder repeat talk requires an unmodified first-talk snapshot.");
+        if (choices==null) throw new InvalidDataException("Elder repeat talk requires a completed neutral first talk.");
+        var baseline=Validate(first);
         var locals=baseline.Scripts.Blocks.Single(b=>b.Scope==ScriptVariableScope.ScriptLocal).Values.ToArray();
         if (locals[2]!=1 || locals[4]!=1 || locals[5]!=0 || locals[7]!=0 || locals[1]<0)
             throw new InvalidDataException("Elder repeat talk guards are not satisfied.");

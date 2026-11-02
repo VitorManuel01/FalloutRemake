@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -9,9 +10,27 @@ namespace FalloutRemake.Runtime;
 
 public sealed record SavedArea(int Map, string SourceHash, string DependenciesHash, ActorLocation Location, SavedDoorSession Session, TakenItem[]? Taken = null, ItemUseAllocation[]? Uses = null, SceneryReplacement[]? Replacements = null);
 public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null, SavedWorldEntries? Entries = null,
-    SavedCombat? Combat = null);
+    SavedCombat? Combat = null, SavedElderState? Elder = null);
 /// <summary>v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>
 public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defeated, [property: JsonRequired] int Experience, int? PlayerHitPoints);
+/// <summary>v10: committed Arroyo elder dialogue state (choices, reaction and audited local/global variables).</summary>
+public sealed record SavedElderState(
+    [property: JsonRequired] string Profile,
+    [property: JsonRequired] int[] Choices,
+    [property: JsonRequired] string Procedure,
+    [property: JsonRequired] bool Complete,
+    [property: JsonRequired] int Reaction,
+    [property: JsonRequired] ScriptStateSnapshot Scripts)
+{
+    public int Local(int index) => ToProjection().Local(index);
+    public int Global(int index) => ToProjection().Global(index);
+    public ElderDetachedProjection ToProjection() => new(Profile, Choices?.ToArray()!, Procedure, Complete, Reaction, Scripts);
+    public static SavedElderState FromProjection(ElderDetachedProjection projection)
+    {
+        var cloned = new ArroyoElderStateProfile().Validate(projection);
+        return new(cloned.Profile, cloned.Choices, cloned.Procedure, cloned.Complete, cloned.Reaction, cloned.Scripts);
+    }
+}
 
 /// <summary>Small project-local checkpoint, not an original Fallout SAV and never an asset archive.</summary>
 public static class CheckpointFile
@@ -42,6 +61,8 @@ public static class CheckpointFile
                 throw new InvalidDataException("Checkpoint v9 requires explicit ArroyoGlobals entry state.");
             if (checkpoint.Version >= 10 && (!document.RootElement.TryGetProperty("Combat", out var combat) || combat.ValueKind != JsonValueKind.Object))
                 throw new InvalidDataException("Checkpoint v10 requires an explicit Combat object.");
+            if (checkpoint.Version >= 10 && !document.RootElement.TryGetProperty("Elder", out _))
+                throw new InvalidDataException("Checkpoint v10 requires an explicit Elder field.");
             return checkpoint;
         }
         catch (JsonException error) { throw new InvalidDataException("Malformed checkpoint JSON.", error); }
