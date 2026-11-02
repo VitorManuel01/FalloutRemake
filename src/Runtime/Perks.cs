@@ -171,7 +171,7 @@ public static class PerkCatalog
         Perk.Sharpshooter, Perk.Educated, Perk.BetterCriticals, Perk.Slayer, Perk.ActionBoy, Perk.Lifegiver, Perk.Dodger, Perk.Snakeater,
         Perk.MasterThief, Perk.HeaveHo, Perk.QuickPockets, Perk.GainStrength, Perk.GainPerception, Perk.GainEndurance, Perk.GainCharisma,
         Perk.GainIntelligence, Perk.GainAgility, Perk.GainLuck, Perk.HtHEvade, Perk.LivingAnatomy, Perk.PackRat, Perk.QuickRecovery,
-        Perk.Thief, Perk.WeaponHandling, Perk.Tag
+        Perk.Thief, Perk.WeaponHandling, Perk.Tag, Perk.Mutate, Perk.HereAndNow
     };
     // Perks whose rule is on the sheet with no system using it yet.
     private static readonly HashSet<int> SheetPerks = new()
@@ -184,11 +184,12 @@ public static class PerkCatalog
 }
 
 /// <summary>
-/// A perk the player chose, with the level it was chosen at (Lifegiver and Educated add again at every later level) and,
-/// for Tag!, the fourth skill it tags (CE gTaggedSkills[3]).
+/// A perk the player chose, with the level it was chosen at (Lifegiver and Educated add again at every later level) and
+/// what some perks decide: Tag!'s fourth skill (CE gTaggedSkills[3]), the trait Mutate! takes away (none without traits)
+/// and the one it gives, and the experience Here and Now granted.
 /// </summary>
 public sealed record ChosenPerk([property: System.Text.Json.Serialization.JsonRequired] int Perk, [property: System.Text.Json.Serialization.JsonRequired] int Level,
-    int? Skill = null);
+    int? Skill = null, int? TraitLost = null, int? TraitGained = null, int? Experience = null);
 
 /// <summary>The player's perks in the order chosen: ranks, the CE stat and skill bonuses, and the per-level history.</summary>
 public sealed class PerkRanks
@@ -216,6 +217,10 @@ public sealed class PerkRanks
     public PerkRanks With(ChosenPerk chosen) => new(_chosen.Append(chosen));
     /// <summary>The skill Tag! tagged, if chosen.</summary>
     public int? TagSkill => _chosen.FirstOrDefault(c => c.Perk == Perk.Tag)?.Skill;
+    /// <summary>Mutate!'s trait swap, if chosen.</summary>
+    public ChosenPerk? Mutation => _chosen.FirstOrDefault(c => c.Perk == Perk.Mutate);
+    /// <summary>Experience Here and Now granted.</summary>
+    public int Experience => _chosen.Sum(c => c.Experience ?? 0);
 
     /// <summary>perkAddEffect: the per-rank modifier of every chosen perk on one CE stat.</summary>
     public int StatBonus(int stat) => _chosen.Select(c => PerkCatalog.Get(c.Perk)).Where(d => d.Stat == stat).Sum(d => d.StatModifier);
@@ -261,7 +266,7 @@ public sealed class PerkRanks
     }
 }
 
-public enum PerkChoiceStatus { Ready, NoPerkAvailable, Unknown, NotSelectable, MaxRank, Level, Requirement, Special, NotModeled, InCombat, SkillChoice }
+public enum PerkChoiceStatus { Ready, NoPerkAvailable, Unknown, NotSelectable, MaxRank, Level, Requirement, Special, NotModeled, InCombat, SkillChoice, TraitChoice }
 
 /// <summary>CE perkCanAdd for the player, against its current sheet (critterGetStat SPECIAL, skillGetValue) and level.</summary>
 public static class PerkRules

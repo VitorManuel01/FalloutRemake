@@ -10,7 +10,8 @@ public enum SkillCommitStatus { Ready, Unchanged, Stale, InCombat }
 
 /// <summary>Level-up skill spending (checkpoint v13): base points bought per skill and the unspent pool.</summary>
 /// <summary>Perks (optional, inside v13): the perks chosen, in order, with the level each was chosen at; absent when none.</summary>
-public sealed record SavedSkills([property: JsonRequired] int[] Raises, [property: JsonRequired] int Unspent, ChosenPerk[]? Perks = null);
+/// <summary>FreePerk: whether a perk waits to be chosen (written by every save that knows it; older saves leave it out).</summary>
+public sealed record SavedSkills([property: JsonRequired] int[] Raises, [property: JsonRequired] int Unspent, ChosenPerk[]? Perks = null, bool? FreePerk = null);
 
 /// <summary>CE skill.cc rules for spending skill points.</summary>
 public static class SkillSpendingRules
@@ -131,9 +132,9 @@ public sealed partial class WorldSession
         return SkillCommitStatus.Ready;
     }
 
-    private void ResetSkills() { _skillRaises = new int[CharacterSkill.Count]; _unspentSkillPoints = 0; _skillPointLevel = 1; _skillRevision++; _perks = PerkRanks.None; }
+    private void ResetSkills() { _skillRaises = new int[CharacterSkill.Count]; _unspentSkillPoints = 0; _skillPointLevel = 1; _skillRevision++; _perks = PerkRanks.None; ResetFreePerk(); }
 
-    private SavedSkills CaptureSkills() => new(_skillRaises.ToArray(), UnspentSkillPoints, _perks.Count == 0 ? null : _perks.Chosen.ToArray());
+    private SavedSkills CaptureSkills() => new(_skillRaises.ToArray(), UnspentSkillPoints, _perks.Count == 0 ? null : _perks.Chosen.ToArray(), PerksAvailable > 0);
 
     // Runs after the XP sources are restored. The unspent pool plus what the raises cost can never exceed what the levels
     // granted; less is possible, since the 99 cap drops points that were not spent in time.
@@ -141,6 +142,7 @@ public sealed partial class WorldSession
     {
         PerkRanks perks = _perks;
         ResetSkills(); _perks = perks;
+        RestoreFreePerk(saved?.FreePerk);
         if (saved == null) return;
         if (saved.Raises is not { Length: CharacterSkill.Count } raises || raises.Any(r => r is < 0 or > PlayerCharacter.MaxSkill)
             || saved.Unspent is < 0 or > CharacterProgression.MaxUnspentSkillPoints)

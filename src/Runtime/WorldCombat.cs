@@ -40,8 +40,7 @@ public sealed partial class WorldSession
     public int Level => CharacterProgression.Level(Experience);
     public int MaxHitPoints => CharacterProgression.MaxHitPoints(Character.WithPerks(_perks), Level);
     public int HitPoints => MaxHitPoints - _playerDamage;
-    /// <summary>Perks earned by the level (one every third, fourth with Skilled) and not chosen yet.</summary>
-    public int PerksAvailable => Math.Max(0, CharacterProgression.PerksAvailable(Character, Level) - _perks.Count);
+
     /// <summary>Player HP when hurt; null means unhurt. Healing comes from level-ups and drugs (<see cref="UseDrug"/>).</summary>
     public int? PlayerHitPoints => _playerDamage == 0 ? null : HitPoints;
     public bool HasCombatOutcome => _defeated.Count != 0 || _survivors.Count != 0 || _playerDamage != 0 || _poison.Active || _playerCrippled != DamageFlags.None;

@@ -93,7 +93,13 @@ public sealed class PlayerCharacter
     public PlayerCharacter Creation { get => _creation ?? this; private init => _creation = value; }
     private PlayerCharacter? _creation;
 
-    public bool Has(CharacterTrait trait) => _traits.Contains(trait);
+    /// <summary>The traits it has now: the character's, with Mutate!'s swap once chosen (CE traitsSetSelected).</summary>
+    public bool Has(CharacterTrait trait) => HasAt(trait, int.MaxValue);
+    public IReadOnlyList<CharacterTrait> CurrentTraits => TraitsAt(int.MaxValue);
+    // The traits a level-up to <paramref name="level"/> saw: Mutate! chosen at level L changes the levels after L.
+    private CharacterTrait[] TraitsAt(int level) => Perks.Mutation is not { } mutation || level <= mutation.Level ? _traits
+        : _traits.Where(t => (int)t != mutation.TraitLost).Append((CharacterTrait)mutation.TraitGained!.Value).ToArray();
+    private bool HasAt(CharacterTrait trait, int level) => TraitsAt(level).Contains(trait);
     /// <summary>CE skillIsTagged: the three tags of the character, and the fourth the Tag! perk adds.</summary>
     public bool IsTagged(int skill) => _tags.Contains(skill) || Perks.TagSkill == skill;
     /// <summary>Tagged when the character was made (Tag!'s fourth tag excluded).</summary>
@@ -211,15 +217,15 @@ public sealed class PlayerCharacter
     // point for each Gain perk, then clamps SPECIAL to 1–10.
     public Special Effective => Adjusted(Armor.Strength, gains: true);
 
-    private Special Adjusted(int strengthBonus, bool gains = false)
+    private Special Adjusted(int strengthBonus, bool gains = false, int level = int.MaxValue)
     {
-        int gifted = Has(CharacterTrait.Gifted) ? 1 : 0;
+        int gifted = HasAt(CharacterTrait.Gifted, level) ? 1 : 0;
         int Gain(int perk) => gains && Perks.Has(perk) ? 1 : 0;
         int Clamp(int v) => Math.Clamp(v, 1, 10);
-        return new(Clamp(Base.Strength + gifted + (Has(CharacterTrait.Bruiser) ? 2 : 0) + strengthBonus + Gain(Perk.GainStrength)),
+        return new(Clamp(Base.Strength + gifted + (HasAt(CharacterTrait.Bruiser, level) ? 2 : 0) + strengthBonus + Gain(Perk.GainStrength)),
             Clamp(Base.Perception + gifted + Gain(Perk.GainPerception)), Clamp(Base.Endurance + gifted + Gain(Perk.GainEndurance)),
             Clamp(Base.Charisma + gifted + Gain(Perk.GainCharisma)), Clamp(Base.Intelligence + gifted + Gain(Perk.GainIntelligence)),
-            Clamp(Base.Agility + gifted + (Has(CharacterTrait.SmallFrame) ? 1 : 0) + Gain(Perk.GainAgility)), Clamp(Base.Luck + gifted + Gain(Perk.GainLuck)));
+            Clamp(Base.Agility + gifted + (HasAt(CharacterTrait.SmallFrame, level) ? 1 : 0) + Gain(Perk.GainAgility)), Clamp(Base.Luck + gifted + Gain(Perk.GainLuck)));
     }
 
     // CE critterUpdateDerivedStats from the SPECIAL critterGetStat gives, then traitGetStatModifier, plus the perks' bonus
@@ -263,11 +269,14 @@ public sealed class PlayerCharacter
     // and armor do not count), perk interval. Lifegiver and Educated add to the levels gained after they were chosen.
     public int HitPointsPerLevel => Adjusted(0).Endurance / 2 + 2;
     public int SkillPointsPerLevel => 5 + 2 * Adjusted(0).Intelligence + (Has(CharacterTrait.Skilled) ? 5 : 0) - (Has(CharacterTrait.Gifted) ? 5 : 0);
-    /// <summary>What reaching <paramref name="level"/> grants: HP per level plus 4 per Lifegiver rank chosen before it.</summary>
-    public int HitPointsForLevel(int level) => HitPointsPerLevel + 4 * Perks.RankBefore(Perk.Lifegiver, level);
-    /// <summary>Skill points reaching <paramref name="level"/> grants: per level plus 2 per Educated rank chosen before it (Gifted's floor at 0).</summary>
-    public int SkillPointsForLevel(int level) => Math.Max(0, SkillPointsPerLevel + 2 * Perks.RankBefore(Perk.Educated, level));
+    /// <summary>What reaching <paramref name="level"/> grants: HP per level (the traits of then) plus 4 per Lifegiver rank chosen before it.</summary>
+    public int HitPointsForLevel(int level) => Adjusted(0, level: level).Endurance / 2 + 2 + 4 * Perks.RankBefore(Perk.Lifegiver, level);
+    /// <summary>Skill points reaching <paramref name="level"/> grants: per level (the traits of then) plus 2 per Educated rank chosen before it (Gifted's floor at 0).</summary>
+    public int SkillPointsForLevel(int level) => Math.Max(0, 5 + 2 * Adjusted(0, level: level).Intelligence + (HasAt(CharacterTrait.Skilled, level) ? 5 : 0)
+        - (HasAt(CharacterTrait.Gifted, level) ? 5 : 0) + 2 * Perks.RankBefore(Perk.Educated, level));
     public int PerkInterval => Has(CharacterTrait.Skilled) ? 4 : 3;
+    /// <summary>characterEditorUpdateLevel: reaching <paramref name="level"/> earns a perk when it divides by 3, or 4 with Skilled then.</summary>
+    public bool PerkLevel(int level) => level % (HasAt(CharacterTrait.Skilled, level) ? 4 : 3) == 0;
 }
 
 internal static class SavedCharacterComparison

@@ -141,7 +141,7 @@ internal static class PerkTests
         {
             var tagger = PlayerCharacter.Create("Marcador", new Special(6, 6, 6, 6, 6, 5, 5), Array.Empty<CharacterTrait>(), new[] { 0, 1, 2 }, 25, 0);
             var world = SkillSpendingTests.Leveled(SkillSpendingTests.Map(78000), tagger);
-            Assert(world.Level == 13 && world.PerksAvailable == 4, "Level 13: four perks.");
+            Assert(world.Level == 13 && world.PerksAvailable == 1, "Level 13: one free perk (the editor's flag, however many perk levels were crossed).");
             int lockpick = world.Sheet.Skill(CharacterSkill.Lockpick);
             Assert(world.CanChoosePerk(Perk.Tag) == PerkChoiceStatus.SkillChoice && world.CanChoosePerk(Perk.Tag, CharacterSkill.SmallGuns) == PerkChoiceStatus.SkillChoice
                 && world.CanChoosePerk(Perk.Thief, CharacterSkill.Lockpick) == PerkChoiceStatus.SkillChoice, "Tag! wants an untagged skill; no other perk takes one.");
@@ -150,8 +150,7 @@ internal static class PerkTests
             Assert(world.CommitSkillSpending(spending) == SkillCommitStatus.Ready && world.Sheet.Skill(CharacterSkill.Lockpick) == lockpick + 5, "Five points in Lockpick.");
             Assert(world.ChoosePerk(Perk.Tag, CharacterSkill.Lockpick) == PerkChoiceStatus.Ready && world.Sheet.IsTagged(CharacterSkill.Lockpick)
                 && world.Sheet.Skill(CharacterSkill.Lockpick) == lockpick + 10, "Tagged by Tag!: the five points count twice, no +20.");
-            int unspent = world.UnspentSkillPoints;
-            Assert(world.ChoosePerk(Perk.Educated) == PerkChoiceStatus.Ready && world.UnspentSkillPoints == Math.Min(99, unspent + 2), "Educated: 2 points at once.");
+            Assert(world.PerksAvailable == 0 && world.ChoosePerk(Perk.Educated) == PerkChoiceStatus.NoPerkAvailable, "The flag is spent.");
             var saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
             WorldSession Load(WorldCheckpoint checkpoint) => WorldSession.Restore(_ => SkillSpendingTests.Map(78000), new[] { 3, 126 }, checkpoint, "catalog");
             var loaded = Load(saved);
@@ -160,8 +159,64 @@ internal static class PerkTests
             foreach (ChosenPerk bad in new[] { tag with { Skill = null }, tag with { Skill = CharacterSkill.SmallGuns }, tag with { Skill = 18 } })
                 try { Load(saved with { Skills = saved.Skills with { Perks = saved.Skills.Perks!.Select(c => c.Perk == Perk.Tag ? bad : c).ToArray() } }); throw new Exception($"Forged Tag! accepted: {bad}."); }
                 catch (InvalidDataException) { }
-            try { Load(saved with { Skills = saved.Skills with { Perks = saved.Skills.Perks!.Select(c => c.Perk == Perk.Educated ? c with { Skill = 3 } : c).ToArray() } }); throw new Exception("A skill on another perk accepted."); }
+        });
+        check("CE's free-perk flag: crossing perk levels without choosing earns one perk, not one each; it survives the checkpoint and a forged flag is refused", () =>
+        {
+            var smart = PlayerCharacter.Create("Estudioso", new Special(6, 6, 6, 6, 6, 5, 5), Array.Empty<CharacterTrait>(), new[] { 0, 1, 2 }, 25, 0);
+            var world = SkillSpendingTests.Leveled(SkillSpendingTests.Map(21000), smart);
+            Assert(world.Level == 7 && world.PerksAvailable == 1, "Levels 3 and 6 crossed: one perk.");
+            int unspent = world.UnspentSkillPoints;
+            Assert(world.ChoosePerk(Perk.Educated) == PerkChoiceStatus.Ready && world.UnspentSkillPoints == Math.Min(99, unspent + 2) && world.PerksAvailable == 0,
+                "Educated: 2 points at once; the flag is down.");
+            WorldSession Load(WorldCheckpoint checkpoint) => WorldSession.Restore(_ => SkillSpendingTests.Map(21000), new[] { 3, 126 }, checkpoint, "catalog");
+            var saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
+            Assert(saved.Skills!.FreePerk == false && Load(saved).PerksAvailable == 0, "No perk waiting after the choice.");
+            try { Load(saved with { Skills = saved.Skills with { FreePerk = true } }); throw new Exception("A forged free perk was accepted."); }
             catch (InvalidDataException) { }
+            try { Load(saved with { Skills = saved.Skills with { Perks = saved.Skills.Perks!.Select(c => c with { Skill = 3 }).ToArray() } }); throw new Exception("A skill on another perk accepted."); }
+            catch (InvalidDataException) { }
+            var fresh = SkillSpendingTests.Leveled(SkillSpendingTests.Map(21000), smart);
+            var waiting = CheckpointFile.Decode(CheckpointFile.Encode(fresh.Capture("catalog")));
+            Assert(waiting.Skills!.FreePerk == true && Load(waiting).PerksAvailable == 1 && Load(waiting with { Skills = waiting.Skills with { FreePerk = null } }).PerksAvailable == 1,
+                "Waiting, saved and restored; an older save without the flag keeps its earned perk.");
+        });
+        check("Here and Now (CE perkAddEffect) grants the experience left to the next level, which brings its HP and skill points; saved with the perk", () =>
+        {
+            var world = SkillSpendingTests.Leveled(SkillSpendingTests.Map(3000));
+            int hp = world.MaxHitPoints, unspent = world.UnspentSkillPoints;
+            Assert(world.Level == 3 && world.ChoosePerk(Perk.HereAndNow) == PerkChoiceStatus.Ready && world.Experience == 6000 && world.Level == 4
+                && world.MaxHitPoints == hp + world.Sheet.HitPointsForLevel(4) && world.UnspentSkillPoints == unspent + world.Sheet.SkillPointsForLevel(4)
+                && world.PerksAvailable == 0, "3000 more XP: level 4, its HP and points, no perk at 4.");
+            WorldSession Load(WorldCheckpoint checkpoint) => WorldSession.Restore(_ => SkillSpendingTests.Map(3000), new[] { 3, 126 }, checkpoint, "catalog");
+            var saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
+            Assert(saved.Skills!.Perks is [{ Perk: Perk.HereAndNow, Level: 3, Experience: 3000 }] && Load(saved).Experience == 6000 && Load(saved).Level == 4, "Restored at level 4.");
+            foreach (int? xp in new int?[] { null, 0, 3001 })
+                try { Load(saved with { Skills = saved.Skills with { Perks = new[] { saved.Skills.Perks![0] with { Experience = xp } } } }); throw new Exception($"Forged Here and Now XP {xp} accepted."); }
+                catch (InvalidDataException) { }
+        });
+        check("Mutate! (CE perkDialogHandleMutatePerk) trades one trait for one the character never had; later levels follow the new traits", () =>
+        {
+            var skilled = PlayerCharacter.Create("Mutante", Special.Neutral with { Luck = 10 }, new[] { CharacterTrait.Skilled, CharacterTrait.Gifted }, new[] { 0, 1, 2 }, 25, 0);
+            var world = SkillSpendingTests.Leveled(SkillSpendingTests.Map(36000), skilled);
+            Assert(world.Level == 9 && world.PerksAvailable == 1 && world.Sheet.PerkInterval == 4, "Skilled: perk levels 4 and 8, one flag.");
+            Assert(world.CanChoosePerk(Perk.Mutate) == PerkChoiceStatus.TraitChoice && world.CanChoosePerk(Perk.Mutate, lose: CharacterTrait.Bruiser, gain: CharacterTrait.Kamikaze) == PerkChoiceStatus.TraitChoice
+                && world.CanChoosePerk(Perk.Mutate, lose: CharacterTrait.Skilled, gain: CharacterTrait.Gifted) == PerkChoiceStatus.TraitChoice
+                && world.CanChoosePerk(Perk.Thief, lose: CharacterTrait.Skilled) == PerkChoiceStatus.TraitChoice, "Lose one it has, gain one it lacks; no other perk swaps traits.");
+            int hp = world.MaxHitPoints;
+            Assert(world.ChoosePerk(Perk.Mutate, lose: CharacterTrait.Skilled, gain: CharacterTrait.Kamikaze) == PerkChoiceStatus.Ready
+                && !world.Sheet.Has(CharacterTrait.Skilled) && world.Sheet.Has(CharacterTrait.Kamikaze) && world.Sheet.ArmorClass == 0 && world.MaxHitPoints == hp,
+                "Skilled out, Kamikaze in: AC 0 now; past levels keep their HP.");
+            Assert(world.Sheet.PerkLevel(12) && world.Sheet.PerkLevel(8) && world.Sheet.SkillPointsForLevel(10) == world.Sheet.SkillPointsForLevel(9) - 5,
+                "From level 10 on: perks every third level, 5 fewer skill points (level 8 stays a Skilled perk level).");
+            WorldSession Load(WorldCheckpoint checkpoint) => WorldSession.Restore(_ => SkillSpendingTests.Map(36000), new[] { 3, 126 }, checkpoint, "catalog");
+            var saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
+            Assert(Load(saved).Sheet.Has(CharacterTrait.Kamikaze) && !Load(saved).Sheet.Has(CharacterTrait.Skilled) && Load(saved).Character.Has(CharacterTrait.Skilled)
+                && Load(saved).Character.Traits.Contains(CharacterTrait.Skilled), "The swap comes back; the saved character keeps its original traits.");
+            ChosenPerk mutation = saved.Skills!.Perks!.Single();
+            foreach (ChosenPerk bad in new[] { mutation with { TraitLost = (int)CharacterTrait.Bruiser }, mutation with { TraitGained = (int)CharacterTrait.Gifted },
+                mutation with { TraitGained = null }, mutation with { TraitGained = 16 } })
+                try { Load(saved with { Skills = saved.Skills with { Perks = new[] { bad } } }); throw new Exception($"Forged Mutate! accepted: {bad}."); }
+                catch (InvalidDataException) { }
         });
         check("in the world a perk is chosen once the level earns it, joins the sheet and the checkpoint, and forged choices are refused", () =>
         {
