@@ -141,6 +141,9 @@ public sealed class CombatSession : ICombatSession
         return Math.Max(1, attacker.Weapon.ActionPoints - fastShot - perk + (aiming ? 1 : 0));
     }
 
+    /// <summary>The player in this fight is Jinxed (CE traitIsSelected(TRAIT_JINXED) || perkHasRank(gDude, PERK_JINXED)).</summary>
+    public bool Jinxed => _combatants.Any(c => c.IsPlayer && c.Stats.Jinxed);
+
     /// <summary>CE weaponGetRange: a thrown weapon reaches at most 3 x ST hexes (Heave Ho! is not modeled).</summary>
     public static int Range(CombatantState attacker) => attacker.Weapon.Throws
         ? Math.Min(attacker.Weapon.Range, 3 * Math.Min(attacker.Stats.Special.Strength + (attacker.IsPlayer ? 2 * attacker.Stats.Perks.Rank(FalloutRemake.Runtime.Perk.HeaveHo) : 0), 10))
@@ -293,6 +296,9 @@ public sealed class CombatSession : ICombatSession
                     needed = hit ? margin / 10 + actor.Stats.CriticalChance - CriticalRules.Penalty(location) : -margin / 10;
                     (critical, failure) = (hit && criticalRoll <= needed, !hit && criticalRoll <= needed);
                 }
+                // attackCompute: with the dude Jinxed (trait or perk), a plain miss by anyone turns into a critical failure on a coin
+                // flip, on any day (the dude's own failure then still waits for day 6, as attackComputeCriticalFailure does).
+                if (!hit && !failure && Jinxed && _random.Between(0, 1) == 1) (failure, criticalRoll, needed) = (true, 0, 0);
                 // attackCompute: Slayer makes every melee or unarmed hit of the dude critical; Sniper a firearm hit on d10 <= LK.
                 if (hit && !critical && actor.IsPlayer && actor.Weapon.AddsMeleeDamage && actor.Stats.Perks.Has(FalloutRemake.Runtime.Perk.Slayer))
                     (critical, criticalRoll, needed) = (true, 1, 100);

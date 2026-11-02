@@ -62,11 +62,11 @@ internal static class PerkTests
             Assert(DerivedCombatStats.ForPlayer(sheet).DamageResistance[0] == 20 && DerivedCombatStats.ForPlayer(sheet).BetterCriticals == 20, "The fight reads them.");
             Assert(ReferenceEquals(sheet.Creation, bare) && sheet.Capture().Special.SequenceEqual(bare.Capture().Special), "Never saved with the character.");
         });
-        check("Lifegiver and Educated count only for the levels gained after they were chosen (CE pcAddExperience, character editor)", () =>
+        check("Lifegiver and Educated give at once when chosen (character editor) and again at every later level (pcAddExperience)", () =>
         {
             PlayerCharacter bare = PlayerCharacter.Neutral, life = bare.WithPerks(new PerkRanks(new[] { new ChosenPerk(Perk.Lifegiver, 12) }));
-            Assert(CharacterProgression.MaxHitPoints(life, 12) == CharacterProgression.MaxHitPoints(bare, 12)
-                && CharacterProgression.MaxHitPoints(life, 14) == CharacterProgression.MaxHitPoints(bare, 14) + 8, "Levels 13 and 14 get +4 each.");
+            Assert(CharacterProgression.MaxHitPoints(life, 12) == CharacterProgression.MaxHitPoints(bare, 12) + 4
+                && CharacterProgression.MaxHitPoints(life, 14) == CharacterProgression.MaxHitPoints(bare, 14) + 12, "+4 at once, +4 at levels 13 and 14.");
             PlayerCharacter educated = bare.WithPerks(new PerkRanks(new[] { new ChosenPerk(Perk.Educated, 6), new ChosenPerk(Perk.Educated, 9) }));
             Assert(educated.SkillPointsForLevel(6) == bare.SkillPointsPerLevel && educated.SkillPointsForLevel(7) == bare.SkillPointsPerLevel + 2
                 && educated.SkillPointsForLevel(10) == bare.SkillPointsPerLevel + 4, "Educated: +2 per rank from the next level on.");
@@ -116,6 +116,52 @@ internal static class PerkTests
             var duel = new CombatSession(new[] { killer, AntAt(Centre + 200) }, new HexNavigation(Array.Empty<MapObject>(), 0), new CombatTests.Scripted(1, 50, 5), "player");
             duel.Execute(CombatActionProposal.Attack("player", "ant"));
             Assert(!CriticalRules.CriticalsAllowed(duel.GameTime) && duel.Log.OfType<CriticalHit>().Any(c => c.AttackerId == "player"), "Day 0, still critical.");
+        });
+        check("Jinxed (CE attackCompute): with the player Jinxed, half of anyone's plain misses turn into critical failures; the player's still wait for day 6", () =>
+        {
+            DerivedCombatStats jinxed = DerivedCombatStats.ForCharacter(Special.Neutral) with { Jinxed = true };
+            var player = PlayerCharacter.Create("Azarado", Special.Neutral with { Luck = 10 }, new[] { CharacterTrait.Jinxed }, new[] { 0, 1, 2 }, 25, 0);
+            Assert(DerivedCombatStats.ForPlayer(player).Jinxed && !DerivedCombatStats.ForPlayer(PlayerCharacter.Neutral).Jinxed
+                && DerivedCombatStats.ForPlayer(PlayerCharacter.Neutral.WithPerks(Ranks(Perk.Jinxed))).Jinxed, "The trait or the perk.");
+            // The ant misses (roll 100), the coin falls on 1: a critical failure on day 6 (failure table of a natural attack).
+            CombatantState hero = Hero(Spear(), jinxed), ant = AntAt(Centre + 200);
+            long day6 = 6 * CriticalRules.TicksPerDay;
+            var fight = new CombatSession(new[] { hero, ant }, new HexNavigation(Array.Empty<MapObject>(), 0), new CombatTests.Scripted(100, 50, 1, 50), "ant", day6);
+            Assert(fight.Jinxed, "The fight knows.");
+            fight.Execute(CombatActionProposal.Attack("ant", "player"));
+            Assert(fight.Log.OfType<CriticalFailure>().Single() is { AttackerId: "ant" }, "The ant's miss became a critical failure.");
+            var calm = new CombatSession(new[] { Hero(Spear(), Stats()), AntAt(Centre + 200) }, new HexNavigation(Array.Empty<MapObject>(), 0), new CombatTests.Scripted(100, 50), "ant", day6);
+            calm.Execute(CombatActionProposal.Attack("ant", "player"));
+            Assert(!calm.Jinxed && !calm.Log.OfType<CriticalFailure>().Any(), "Without Jinxed, a plain miss (and the second d100 above the needed) stays a miss.");
+            var early = new CombatSession(new[] { Hero(Spear(), jinxed), AntAt(Centre + 200) }, new HexNavigation(Array.Empty<MapObject>(), 0), new CombatTests.Scripted(100, 1), "player");
+            early.Execute(CombatActionProposal.Attack("player", "ant"));
+            Assert(!early.Log.OfType<CriticalFailure>().Any(), "Day 0: the player's own failure does nothing yet.");
+        });
+        check("Tag! (CE perkDialogHandleTagPerk, skillGetValue): a fourth skill not yet tagged doubles its points but gets no +20; saved with the perk", () =>
+        {
+            var tagger = PlayerCharacter.Create("Marcador", new Special(6, 6, 6, 6, 6, 5, 5), Array.Empty<CharacterTrait>(), new[] { 0, 1, 2 }, 25, 0);
+            var world = SkillSpendingTests.Leveled(SkillSpendingTests.Map(78000), tagger);
+            Assert(world.Level == 13 && world.PerksAvailable == 4, "Level 13: four perks.");
+            int lockpick = world.Sheet.Skill(CharacterSkill.Lockpick);
+            Assert(world.CanChoosePerk(Perk.Tag) == PerkChoiceStatus.SkillChoice && world.CanChoosePerk(Perk.Tag, CharacterSkill.SmallGuns) == PerkChoiceStatus.SkillChoice
+                && world.CanChoosePerk(Perk.Thief, CharacterSkill.Lockpick) == PerkChoiceStatus.SkillChoice, "Tag! wants an untagged skill; no other perk takes one.");
+            SkillSpending spending = world.BeginSkillSpending();
+            for (int i = 0; i < 5; i++) spending.Add(CharacterSkill.Lockpick);
+            Assert(world.CommitSkillSpending(spending) == SkillCommitStatus.Ready && world.Sheet.Skill(CharacterSkill.Lockpick) == lockpick + 5, "Five points in Lockpick.");
+            Assert(world.ChoosePerk(Perk.Tag, CharacterSkill.Lockpick) == PerkChoiceStatus.Ready && world.Sheet.IsTagged(CharacterSkill.Lockpick)
+                && world.Sheet.Skill(CharacterSkill.Lockpick) == lockpick + 10, "Tagged by Tag!: the five points count twice, no +20.");
+            int unspent = world.UnspentSkillPoints;
+            Assert(world.ChoosePerk(Perk.Educated) == PerkChoiceStatus.Ready && world.UnspentSkillPoints == Math.Min(99, unspent + 2), "Educated: 2 points at once.");
+            var saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
+            WorldSession Load(WorldCheckpoint checkpoint) => WorldSession.Restore(_ => SkillSpendingTests.Map(78000), new[] { 3, 126 }, checkpoint, "catalog");
+            var loaded = Load(saved);
+            Assert(loaded.Perks.TagSkill == CharacterSkill.Lockpick && loaded.Sheet.Skill(CharacterSkill.Lockpick) == lockpick + 10, "Tag! comes back with its skill.");
+            ChosenPerk tag = saved.Skills!.Perks!.Single(c => c.Perk == Perk.Tag);
+            foreach (ChosenPerk bad in new[] { tag with { Skill = null }, tag with { Skill = CharacterSkill.SmallGuns }, tag with { Skill = 18 } })
+                try { Load(saved with { Skills = saved.Skills with { Perks = saved.Skills.Perks!.Select(c => c.Perk == Perk.Tag ? bad : c).ToArray() } }); throw new Exception($"Forged Tag! accepted: {bad}."); }
+                catch (InvalidDataException) { }
+            try { Load(saved with { Skills = saved.Skills with { Perks = saved.Skills.Perks!.Select(c => c.Perk == Perk.Educated ? c with { Skill = 3 } : c).ToArray() } }); throw new Exception("A skill on another perk accepted."); }
+            catch (InvalidDataException) { }
         });
         check("in the world a perk is chosen once the level earns it, joins the sheet and the checkpoint, and forged choices are refused", () =>
         {

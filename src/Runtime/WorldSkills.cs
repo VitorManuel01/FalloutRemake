@@ -145,7 +145,7 @@ public sealed partial class WorldSession
         if (saved.Raises is not { Length: CharacterSkill.Count } raises || raises.Any(r => r is < 0 or > PlayerCharacter.MaxSkill)
             || saved.Unspent is < 0 or > CharacterProgression.MaxUnspentSkillPoints)
             throw new InvalidDataException("Checkpoint skill spending is malformed.");
-        int granted = Enumerable.Range(2, Math.Max(0, Level - 1)).Sum(Character.WithPerks(_perks).SkillPointsForLevel);
+        int granted = Enumerable.Range(2, Math.Max(0, Level - 1)).Sum(Character.WithPerks(_perks).SkillPointsForLevel) + 2 * _perks.Rank(Perk.Educated);
         if (SkillSpendingRules.CostOf(Character, raises) + saved.Unspent > granted)
             throw new InvalidDataException("Checkpoint skill spending exceeds the points its levels grant.");
         _skillRaises = raises.ToArray(); _unspentSkillPoints = saved.Unspent; _skillPointLevel = Level;

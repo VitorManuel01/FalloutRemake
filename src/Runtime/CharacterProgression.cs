@@ -52,7 +52,8 @@ public static class CharacterProgression
     // The player's sheet: trait-adjusted SPECIAL, Skilled/Gifted skill points and the Skilled perk interval.
     public static int MaxHitPoints(PlayerCharacter character, int level)
     {
-        int hp = character.BaseMaxHitPoints + character.Perks.StatBonus(DerivedCombatStats.MaxHitPointsStat);
+        // The character editor adds 4 at once for every Lifegiver rank chosen; later levels add 4 more each.
+        int hp = character.BaseMaxHitPoints + character.Perks.StatBonus(DerivedCombatStats.MaxHitPointsStat) + 4 * character.Perks.Rank(Perk.Lifegiver);
         for (int l = 2; l <= CheckedLevel(level); l++) hp += character.HitPointsForLevel(l);
         return hp;
     }

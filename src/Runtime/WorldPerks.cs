@@ -14,20 +14,26 @@ public sealed partial class WorldSession
     private PerkRanks _perks = PerkRanks.None;
     public PerkRanks Perks => _perks;
 
-    public PerkChoiceStatus CanChoosePerk(int perk)
+    /// <param name="skill">Tag!'s fourth skill (perkDialogHandleTagPerk: one not tagged yet); null for every other perk.</param>
+    public PerkChoiceStatus CanChoosePerk(int perk, int? skill = null)
     {
         if (InCombat) return PerkChoiceStatus.InCombat;
         if (PerksAvailable <= 0) return PerkChoiceStatus.NoPerkAvailable;
-        return PerkRules.CanAdd(perk, Sheet, Level, _perks);
+        PerkChoiceStatus status = PerkRules.CanAdd(perk, Sheet, Level, _perks);
+        if (status != PerkChoiceStatus.Ready) return status;
+        return perk == Perk.Tag ? skill is int tag && tag is >= 0 and < CharacterSkill.Count && !Sheet.IsTagged(tag) ? status : PerkChoiceStatus.SkillChoice
+            : skill == null ? status : PerkChoiceStatus.SkillChoice;
     }
 
-    public PerkChoiceStatus ChoosePerk(int perk)
+    public PerkChoiceStatus ChoosePerk(int perk, int? skill = null)
     {
-        PerkChoiceStatus status = CanChoosePerk(perk);
+        PerkChoiceStatus status = CanChoosePerk(perk, skill);
         if (status != PerkChoiceStatus.Ready) return status;
-        // The levels already reached grant their skill points before the perk (Educated only counts for later ones).
-        _ = UnspentSkillPoints;
-        _perks = _perks.With(new ChosenPerk(perk, Level)); _skillRevision++;
+        // The levels already reached grant their skill points before the perk; Educated then adds 2 at once (character
+        // editor), and 2 more at each later level.
+        int unspent = UnspentSkillPoints;
+        _perks = _perks.With(new ChosenPerk(perk, Level, skill)); _skillRevision++;
+        if (perk == Perk.Educated) _unspentSkillPoints = Math.Min(CharacterProgression.MaxUnspentSkillPoints, unspent + 2);
         return PerkChoiceStatus.Ready;
     }
 
@@ -43,7 +49,8 @@ public sealed partial class WorldSession
             if (row == null || row.Perk is < 0 or >= PerkCatalog.Count || row.Level < previous || row.Level > CharacterProgression.MaxLevel)
                 throw new InvalidDataException("Checkpoint perk is malformed.");
             PerkDefinition d = PerkCatalog.Get(row.Perk);
-            if (!d.Selectable || PerkCatalog.Effect(row.Perk) == PerkEffect.NotModeled || row.Level < d.MinLevel || ++ranks[row.Perk] > d.MaxRank)
+            if (!d.Selectable || PerkCatalog.Effect(row.Perk) == PerkEffect.NotModeled || row.Level < d.MinLevel || ++ranks[row.Perk] > d.MaxRank
+                || (row.Perk == Perk.Tag ? row.Skill is not (>= 0 and < CharacterSkill.Count) || Character.IsCreationTag(row.Skill.Value) : row.Skill != null))
                 throw new InvalidDataException("Checkpoint perk could not have been chosen.");
             previous = row.Level;
         }

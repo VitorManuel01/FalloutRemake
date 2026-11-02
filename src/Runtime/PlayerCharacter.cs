@@ -94,7 +94,10 @@ public sealed class PlayerCharacter
     private PlayerCharacter? _creation;
 
     public bool Has(CharacterTrait trait) => _traits.Contains(trait);
-    public bool IsTagged(int skill) => _tags.Contains(skill);
+    /// <summary>CE skillIsTagged: the three tags of the character, and the fourth the Tag! perk adds.</summary>
+    public bool IsTagged(int skill) => _tags.Contains(skill) || Perks.TagSkill == skill;
+    /// <summary>Tagged when the character was made (Tag!'s fourth tag excluded).</summary>
+    public bool IsCreationTag(int skill) => _tags.Contains(skill);
     public int SpentSpecial => Base.ToArray().Sum();
     /// <summary>
     /// Speech tag as the Temple dialogue checks it (TempleSpeechDraft: IN 4+ and Speech tagged). The neutral test profile
@@ -245,7 +248,8 @@ public sealed class PlayerCharacter
         if (index is < 0 or >= CharacterSkill.Count) throw new ArgumentOutOfRangeException(nameof(index));
         var rule = CharacterSkill.Rules[index]; int[] stats = Effective.ToArray(); int points = _skillPoints[index] + _raises[index];
         int value = rule.Default + rule.Multiplier * (stats[rule.Stat1] + (rule.Stat2 < 0 ? 0 : stats[rule.Stat2])) + points;
-        if (IsTagged(index)) value += points + 20;
+        // skillGetValue: a tagged skill doubles its points and adds 20, except Tag!'s fourth skill, which only doubles them.
+        if (IsTagged(index)) value += points + (_tags.Contains(index) ? 20 : 0);
         if (Has(CharacterTrait.Gifted)) value -= 10;
         if (Has(CharacterTrait.GoodNatured))
             value += index is CharacterSkill.FirstAid or CharacterSkill.Doctor or CharacterSkill.Speech or CharacterSkill.Barter ? 15

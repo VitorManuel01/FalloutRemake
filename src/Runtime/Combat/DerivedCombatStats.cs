@@ -34,6 +34,8 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
     public int BetterCriticals { get; init; }
     /// <summary>The player's Finesse trait: CE adds 30 to the target's DR on every hit that does not bypass armor.</summary>
     public bool Finesse { get; init; }
+    /// <summary>The player's Jinxed trait or perk: CE turns half of every plain miss in the fight, anyone's, into a critical failure.</summary>
+    public bool Jinxed { get; init; }
     /// <summary>The player's chosen perks (combat rules read their ranks); none for critters.</summary>
     public FalloutRemake.Runtime.PerkRanks Perks { get; init; } = FalloutRemake.Runtime.PerkRanks.None;
     /// <summary>The player's One Hander trait: CE attackDetermineToHit gives -40 with a two-handed weapon and +20 with any other.</summary>
@@ -78,6 +80,7 @@ public sealed record DerivedCombatStats(Special Special, int MaxHitPoints, int M
         {
             // CE traitGetStatModifier: Heavy Handed -30 Better Criticals (the perk adds 20); attackComputeDamage: Finesse +30 target DR.
             BetterCriticals = character.BetterCriticals, Perks = character.Perks,
+            Jinxed = character.Has(FalloutRemake.Runtime.CharacterTrait.Jinxed) || character.Perks.Has(FalloutRemake.Runtime.Perk.Jinxed),
             Finesse = character.Has(FalloutRemake.Runtime.CharacterTrait.Finesse),
             OneHander = character.Has(FalloutRemake.Runtime.CharacterTrait.OneHander),
             FastShot = character.Has(FalloutRemake.Runtime.CharacterTrait.FastShot)

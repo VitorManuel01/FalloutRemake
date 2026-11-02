@@ -171,7 +171,7 @@ public static class PerkCatalog
         Perk.Sharpshooter, Perk.Educated, Perk.BetterCriticals, Perk.Slayer, Perk.ActionBoy, Perk.Lifegiver, Perk.Dodger, Perk.Snakeater,
         Perk.MasterThief, Perk.HeaveHo, Perk.QuickPockets, Perk.GainStrength, Perk.GainPerception, Perk.GainEndurance, Perk.GainCharisma,
         Perk.GainIntelligence, Perk.GainAgility, Perk.GainLuck, Perk.HtHEvade, Perk.LivingAnatomy, Perk.PackRat, Perk.QuickRecovery,
-        Perk.Thief, Perk.WeaponHandling
+        Perk.Thief, Perk.WeaponHandling, Perk.Tag
     };
     // Perks whose rule is on the sheet with no system using it yet.
     private static readonly HashSet<int> SheetPerks = new()
@@ -183,8 +183,12 @@ public static class PerkCatalog
     public static PerkEffect Effect(int perk) => AppliedPerks.Contains(perk) ? PerkEffect.Applied : SheetPerks.Contains(perk) ? PerkEffect.SheetOnly : PerkEffect.NotModeled;
 }
 
-/// <summary>A perk the player chose, with the level it was chosen at (Lifegiver and Educated only count for later levels).</summary>
-public sealed record ChosenPerk([property: System.Text.Json.Serialization.JsonRequired] int Perk, [property: System.Text.Json.Serialization.JsonRequired] int Level);
+/// <summary>
+/// A perk the player chose, with the level it was chosen at (Lifegiver and Educated add again at every later level) and,
+/// for Tag!, the fourth skill it tags (CE gTaggedSkills[3]).
+/// </summary>
+public sealed record ChosenPerk([property: System.Text.Json.Serialization.JsonRequired] int Perk, [property: System.Text.Json.Serialization.JsonRequired] int Level,
+    int? Skill = null);
 
 /// <summary>The player's perks in the order chosen: ranks, the CE stat and skill bonuses, and the per-level history.</summary>
 public sealed class PerkRanks
@@ -210,6 +214,8 @@ public sealed class PerkRanks
     /// <summary>Ranks chosen at a level below <paramref name="level"/> (the ones a level-up to it counts).</summary>
     public int RankBefore(int perk, int level) => _chosen.Count(c => c.Perk == perk && c.Level < level);
     public PerkRanks With(ChosenPerk chosen) => new(_chosen.Append(chosen));
+    /// <summary>The skill Tag! tagged, if chosen.</summary>
+    public int? TagSkill => _chosen.FirstOrDefault(c => c.Perk == Perk.Tag)?.Skill;
 
     /// <summary>perkAddEffect: the per-rank modifier of every chosen perk on one CE stat.</summary>
     public int StatBonus(int stat) => _chosen.Select(c => PerkCatalog.Get(c.Perk)).Where(d => d.Stat == stat).Sum(d => d.StatModifier);
@@ -255,7 +261,7 @@ public sealed class PerkRanks
     }
 }
 
-public enum PerkChoiceStatus { Ready, NoPerkAvailable, Unknown, NotSelectable, MaxRank, Level, Requirement, Special, NotModeled, InCombat }
+public enum PerkChoiceStatus { Ready, NoPerkAvailable, Unknown, NotSelectable, MaxRank, Level, Requirement, Special, NotModeled, InCombat, SkillChoice }
 
 /// <summary>CE perkCanAdd for the player, against its current sheet (critterGetStat SPECIAL, skillGetValue) and level.</summary>
 public static class PerkRules

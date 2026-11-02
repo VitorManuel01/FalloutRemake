@@ -24,7 +24,7 @@ public partial class TemplePreview
         _perkWindow = dialog; _hud.AddChild(dialog);
         dialog.Confirmed += ClosePerkWindow; dialog.Canceled += ClosePerkWindow; dialog.CloseRequested += ClosePerkWindow;
         Guid sessionToken = _campaign.SessionToken;
-        dialog.ChooseRequested = perk => { if (_perkWindow == dialog && _campaign?.SessionToken == sessionToken) ChoosePerk(perk); };
+        dialog.ChooseRequested = (perk, skill) => { if (_perkWindow == dialog && _campaign?.SessionToken == sessionToken) ChoosePerk(perk, skill); };
         RefreshPerkWindow();
         dialog.PopupCenteredClamped(new Vector2I(880, 680), .94f);
     }
@@ -35,16 +35,16 @@ public partial class TemplePreview
         int interval = _campaign.Character.PerkInterval, next = (_campaign.Level / interval + 1) * interval;
         // Each perk shows its own reason (level, SPECIAL, skills, not modeled); one it would allow waits for an earned perk.
         PlayerCharacter sheet = _campaign.Sheet; int level = _campaign.Level; PerkRanks ranks = _campaign.Perks;
-        Func<int, PerkChoiceStatus> status = _campaign.PerksAvailable > 0 ? _campaign.CanChoosePerk
-            : perk => PerkRules.CanAdd(perk, sheet, level, ranks) is var s && s == PerkChoiceStatus.Ready ? PerkChoiceStatus.NoPerkAvailable : s;
+        Func<int, int?, PerkChoiceStatus> status = _campaign.PerksAvailable > 0 ? _campaign.CanChoosePerk
+            : (perk, _) => PerkRules.CanAdd(perk, sheet, level, ranks) is var s && s == PerkChoiceStatus.Ready ? PerkChoiceStatus.NoPerkAvailable : s;
         _perkWindow.Refresh(_campaign.PerksAvailable, next <= CharacterProgression.MaxLevel ? next : 0, _campaign.Perks, status,
-            _characterTexts.Perk, _characterTexts.PerkDescription, _characterTexts.Stat, _characterTexts.Skill);
+            _characterTexts.Perk, _characterTexts.PerkDescription, _characterTexts.Stat, _characterTexts.Skill, sheet.IsTagged);
     }
 
-    private void ChoosePerk(int perk)
+    private void ChoosePerk(int perk, int? skill)
     {
-        PerkChoiceStatus status = _campaign!.ChoosePerk(perk);
-        NavigationStatus(status == PerkChoiceStatus.Ready ? $"Perk escolhido: {_characterTexts!.Perk(perk)} · {PerkWindow.EffectText(PerkCatalog.Effect(perk))}"
+        PerkChoiceStatus status = _campaign!.ChoosePerk(perk, skill);
+        NavigationStatus(status == PerkChoiceStatus.Ready ? $"Perk escolhido: {_characterTexts!.Perk(perk)}{(skill is int s ? $" ({_characterTexts.Skill(s)})" : "")} · {PerkWindow.EffectText(PerkCatalog.Effect(perk))}"
             : $"Perk recusado · {PerkWindow.StatusText(status)}");
         RefreshPerkWindow(); RefreshBag(); RefreshDoorAction();
     }
@@ -68,10 +68,15 @@ public partial class TemplePreview
                 throw new InvalidDataException("Quick Pockets lacks its original text or requirement: " + _perkWindow.DetailText);
             if (!_perkWindow.Select(Perk.Awareness) || !_perkWindow.DetailText.Contains("não modelado") || !_perkWindow.DetailText.Contains("Agora: nível insuficiente"))
                 throw new InvalidDataException("Awareness is not marked as not modeled, waiting for level 3: " + _perkWindow.DetailText);
+            // Tag! asks for its fourth skill among those not tagged yet.
+            if (!_perkWindow.Select(Perk.Tag) || !_perkWindow.TagSkillVisible || !_perkWindow.SelectTagSkill(CharacterSkill.Lockpick)
+                || !_perkWindow.DetailText.Contains("Tag!") || _perkWindow.ChooseEnabled)
+                throw new InvalidDataException("Tag! does not offer its skill choice: " + _perkWindow.DetailText);
+            _perkWindow.Select(Perk.Awareness);
             if (_capture != null) await Capture(Path.ChangeExtension(_capture, "perks.png"));
             using (var y = new InputEventKey { Pressed = true, PhysicalKeycode = Key.Y }) _UnhandledInput(y);
             if (_perkWindow != null) throw new InvalidDataException("Y did not close the perk window.");
-            GD.Print($"PERK_OK: Y opened the perk list with the original perk.msg texts; at level 1 nothing is chosen and the next perk comes at level 3; Quick Pockets shows its level requirement and Awareness is marked not modeled.");
+            GD.Print($"PERK_OK: Y opened the perk list with the original perk.msg texts; at level 1 nothing is chosen and the next perk comes at level 3; Quick Pockets shows its level requirement, Awareness is marked not modeled and Tag! offers its skill choice.");
         }
         finally { ClosePerkWindow(); _checkingNavigation = checking; }
     }
