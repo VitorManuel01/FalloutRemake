@@ -24,7 +24,7 @@ public partial class TemplePreview
         using var resources = new ResourceScope();
         _committedRoute = Array.Empty<int>();
         ClearRouteHover(); _hoverLine = null; _hoverTarget = null;
-        _walker = null; _navigation = null; _reachable = null; _walkerNode = null;
+        _walker = null; _navigation = null; _reachable = null; _walkerNode = null; _navigationStale = false;
         _navigationOverlay = null; _routeVisual = null; _walkMode = false;
         ApplyDoorVisuals();
         if (_map == null || _layout == null || _travel == null || _elevation != _travel.Location.Elevation)
@@ -108,7 +108,7 @@ public partial class TemplePreview
         if (_campaign == null) return;
         DiscardCombat();
         SetCameraFollow(false);
-        _campaign.Reset(); _skills.Reset(); BindCurrentArea();
+        _campaign.Reset(); _skills.Reset(); BindCurrentArea(); RefreshDoorAction();
         ChangeElevation(_travel!.Location.Elevation); FocusEntry();
         NavigationStatus($"Marcador reiniciado · {_reachable!.Count} hexes alcançáveis");
     }
@@ -127,7 +127,8 @@ public partial class TemplePreview
         if (_walker == null || _navigation == null) return new(RouteStatus.OutsideGrid, Array.Empty<int>());
         if (CombatRefuses("caminhar livremente")) return new(RouteStatus.Busy, Array.Empty<int>());
         ClearRouteHover();
-        HexRoute route = _walker.WalkTo(target);
+        RebuildWalkerNavigation();
+        HexRoute route = _walker!.WalkTo(target);
         string message = route.Status switch
         {
             RouteStatus.Ready => $"Caminhando até hex {target} · {route.Tiles.Length - 1} passos",
@@ -181,7 +182,7 @@ public partial class TemplePreview
         if (!_walker.Moving)
         {
             ClearRouteVisual();
-            RefreshReachability();
+            if (_navigationStale) RebuildWalkerNavigation(); else RefreshReachability();
             if (_selected?.Kind == PreviewKind.Door) SelectObject(_selected);
             RefreshDoorAction();
             NavigationStatus(_navigation!.IsExit(_walker.CurrentHex)

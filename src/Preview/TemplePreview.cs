@@ -71,9 +71,12 @@ public partial class TemplePreview : Node3D
 			_hud.WalkModeRequested = ToggleWalkMode; _hud.ResetWalkerRequested = ResetWalker;
 			_hud.DoorUseRequested = UseSelectedDoor;
 			_hud.LockpickRequested = UseSelectedLockpick;
+			_hud.RestRequested = OpenRestWindow;
+			_hud.MedicalRequested = OpenMedicalWindow;
+			_hud.ReloadRequested = ReloadActiveWeapon;
 			_hud.ExitRequested = UseExit;
 			_hud.SaveRequested = SaveCheckpoint; _hud.LoadRequested = LoadCheckpoint;
-			_hud.CharacterFocusRequested = FocusCharacter;
+			_hud.CharacterFocusRequested = FocusCharacter; _hud.CharacterSheetRequested = OpenCharacterWindow; _hud.SkillSheetRequested = OpenSkillSheet;
 			_hud.OriginalFloorRequested = ChangeOriginalFloor;
 			_hud.NatureModelsRequested = ChangeNatureModels;
 			_hud.StopRequested = StopWalking;
@@ -86,6 +89,7 @@ public partial class TemplePreview : Node3D
 			_hud.UseClockRequested = OpenUseClock;
 			_hud.ContainerLocateRequested = LocateContainer;
 			_hud.CombatEndTurnRequested = EndCombatTurn;
+			_hud.CombatLeaveRequested = LeaveCombat;
 			string[] args = OS.GetCmdlineUserArgs();
 			for (int i = 0; i < args.Length; i++)
 			{
@@ -108,6 +112,8 @@ public partial class TemplePreview : Node3D
 			if (_directory != null) LoadMap(_directory);
 			else _hud.Status("Escolha a pasta de idioma do Fallout 2 para começar.");
 			if (preferencesNotice != null) NavigationStatus(preferencesNotice);
+			// A person starts by choosing a character; automated runs keep the neutral test profile.
+			if (_map != null && !_test && _capture == null) OpenCharacterWindow();
 			if (_test || _capture != null)
 			{
 				if (_map == null) throw new InvalidDataException("Preview test requires valid game data.");
@@ -122,10 +128,23 @@ public partial class TemplePreview : Node3D
 				if (_test) await CheckNavigation();
 				if (_test) await CheckDoors();
 				if (_test) await CheckCombat();
+				if (_test) await CheckCombatLeave();
+				if (_test) await CheckPoison();
+				if (_test) await CheckWander();
+				if (_test) await CheckCriticals();
+				if (_test) await CheckHand();
+				if (_test) await CheckCombatBag();
+				if (_test) await CheckCalledShot();
+				if (_test) await CheckThrow();
+				if (_test) await CheckPerkWindow();
+				if (_test) await CheckRestWindow();
+				if (_test) await CheckMedicalWindow();
+				if (_test) await CheckReload();
 				if (_test) await CheckLockpick();
 				if (_test) await CheckTravel();
 				if (_test) await CheckWorldTravel();
 				if (_test) await CheckCheckpoint();
+				if (_test) await CheckCharacterCreation();
 				if (_test) await CheckCharacterCamera();
 				if (_test) await CheckOriginalFloor();
 				if (_test) await CheckStopWalking();
@@ -170,13 +189,14 @@ public partial class TemplePreview : Node3D
 		var runtimePrototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
 		var campaign = new WorldSession(id => catalog.Load(data, id), new[] { 3, 4, 126 }, runtimePrototype: runtimePrototypes.Get,
 			templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read),
-			elderProfile: map => ArroyoElderStateProfile.Create(map,data.Read));
+			elderProfile: map => ArroyoElderStateProfile.Create(map,data.Read),
+			premade: path => CharacterFile.Read(data.Read(path)), aiPackets: _aiPackets = AiPacketCatalog.Read(data.Read("data/ai.txt").Bytes));
 		_campaign = campaign; _mapCatalog = catalog; _directory = directory;
 		_floorArt = new FloorArtCatalog(data.Read); _artLists = new ResourceCatalog(data.Read);
 		_inventoryArt = new InventoryArtCatalog(data.Read); _unavailableItemArt.Clear();
-		LoadObjectText(data);
+		LoadObjectText(data); LoadCharacters(data);
 		BindCurrentArea();
-		_skills.Reset();
+		BindCharacter();
 		_elevation = _map!.Prefix.Header.EnteringElevation; _hud.Elevation(_elevation);
 		BuildWorld(); FocusEntry();
 	}
@@ -200,7 +220,7 @@ public partial class TemplePreview : Node3D
 		_worldLabels.Clear();
 		ResetNpcRouteView();
 		using var resources = new ResourceScope();
-		_placedUseLayer = null; _placedUseNodes.Clear();
+		_placedUseLayer = null; _placedUseNodes.Clear(); _groundLayer = null; _groundNodes.Clear();
 		_replacementNodes.Clear();
 		_containerVisuals.Clear(); _containerVisualRevision = -1;
 		RemoveChild(_world); _world.QueueFree(); _world = new Node3D { Name = "SourceMap" }; AddChild(_world);
@@ -258,6 +278,7 @@ public partial class TemplePreview : Node3D
 		BuildNavigation();
 		SetOriginalFloor(_useOriginalFloor);
 		RefreshPlacedUses();
+		RefreshGroundItems();
 		RefreshContainerVisuals(true);
 		BuildAppliedSceneryVisuals();
 	}
@@ -329,6 +350,9 @@ public partial class TemplePreview : Node3D
 		if (InspectorOpen) return;
 		AdvanceTemplePlayback(delta);
 		AdvanceWalker(delta);
+		// Automated checks run game time themselves (poison, wandering, criticals): the clock is part of the checkpoint, so
+		// frames between two captures must not move it.
+		if (!_test) AdvanceGameTime(delta);
 		if (!_checkingNavigation) UpdateCombat(delta);
 		float x = (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
 		float z = (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0);
@@ -353,6 +377,9 @@ public partial class TemplePreview : Node3D
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.I }) CloseInventory();
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.J }) CloseLoot();
 			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.B }) CloseBag();
+			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.N }) CloseCharacterWindow();
+			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.H }) CloseSkillSheet();
+			if (input is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Y }) ClosePerkWindow();
 			return;
 		}
 		if (HandleCombatInput(input)) return;
@@ -369,15 +396,20 @@ public partial class TemplePreview : Node3D
 			if (key.PhysicalKeycode == Key.K) SaveCheckpoint();
 			if (key.PhysicalKeycode == Key.R) LoadCheckpoint();
 			if (key.PhysicalKeycode == Key.C) FocusCharacter();
+			if (key.PhysicalKeycode == Key.N) OpenCharacterWindow();
+			if (key.PhysicalKeycode == Key.H) OpenSkillSheet();
+			if (key.PhysicalKeycode == Key.Y) OpenPerkWindow();
 			if (key.PhysicalKeycode == Key.O) ChangeOriginalFloor(!_useOriginalFloor);
 			if (key.PhysicalKeycode == Key.Escape) StopWalking();
 			if (key.PhysicalKeycode == Key.V) ChangeRevealActor(!_revealActor);
 			if (key.PhysicalKeycode == Key.I) OpenInventory();
 			if (key.PhysicalKeycode == Key.G) ChangeNavigationGrid(!_showNavigationGrid);
 			if (key.PhysicalKeycode == Key.T) FrameRoute();
-			if (key.PhysicalKeycode == Key.J) OpenLoot();
+			if (key.PhysicalKeycode == Key.J && !PickUpGroundItem()) OpenLoot();
+			if (key.PhysicalKeycode == Key.Z) ToggleAttackMode();
 			if (key.PhysicalKeycode == Key.B) OpenBag();
 			if (key.PhysicalKeycode == Key.P) SetArchitecture(!_architectureEnabled);
+			if (key.PhysicalKeycode == Key.X) SwitchUnarmedHand();
 			UpdateCamera();
 		}
 		if (_hud.MouseOverPanel) return;
@@ -623,6 +655,7 @@ public partial class TemplePreview : Node3D
 		_floorArtworkMaterials.Clear(); _floorArtworkMesh = null;
 		_entityMeshes.Clear(); _entityMaterials.Clear(); _entityShapes.Clear(); _containerVisuals.Clear(); _worldLabels.Clear();
 		_placedUseNodes.Clear(); _placedUseLayer = null; _placedUseMesh = null; _placedUseMaterial = null;
+		_groundNodes.Clear(); _groundLayer = null; _groundMesh = null; _groundMaterial = null;
 		_replacementNodes.Clear(); _replacementMesh = null; _replacementMaterial = null;
 		GC.Collect(); GC.WaitForPendingFinalizers();
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);

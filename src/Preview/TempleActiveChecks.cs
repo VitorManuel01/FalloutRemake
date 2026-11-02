@@ -104,6 +104,7 @@ public partial class TemplePreview
             foreach (var area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
             await CheckTemplePlayback(stepped,CheckPose);
             await CheckTempleVillageGuidance();
+            await CheckSkillSheet();
             GD.Print("TEMPLE_ACTIVE_SPEECH_OK: explicit world acceptance, v6 K/R, projected mesh/picking/blocker/approach, open gate retained, occupied/busy/stale action guards, partial event restoration and corrupt-file rollback, three route legs, hidden final state, original MAP/items/25 XP preserved.");
         }
         finally

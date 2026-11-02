@@ -36,17 +36,17 @@ internal static class CombatTests
 
     // Giant Ant layout from the shipped PRO: base stats derived from SPECIAL plus the creature's bonus block.
     static CritterPrototypeData Ant(int unarmedPoints = 25) => CritterPrototypeData.Read(AntPrototype(unarmedPoints));
-    internal static Prototype AntPrototype(int unarmedPoints = 25, int experience = 25)
+    internal static Prototype AntPrototype(int unarmedPoints = 25, int experience = 25, int pid = 0x0100017E)
     {
         var bytes = new byte[416];
         void Put(int offset, int value) => BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(offset, 4), value);
-        Put(0, 0x0100017E); Put(28, -1); Put(40, 1);
+        Put(0, pid); Put(28, -1); Put(40, 1);
         int[] special = { 1, 2, 1, 1, 1, 4, 1 };
         for (int i = 0; i < 7; i++) Put(48 + 4 * i, special[i]);
         Put(48 + 4 * 7, 18); Put(48 + 4 * 8, 7); Put(48 + 4 * 9, 4); Put(48 + 4 * 11, 1); Put(48 + 4 * 13, 4); Put(48 + 4 * 15, 1);
         Put(188 + 4 * 7, -12); Put(188 + 4 * 8, -2); Put(188 + 4 * 11, 1); Put(188 + 4 * 13, 5); Put(188 + 4 * 29, 500);
         Put(328 + 4 * 3, unarmedPoints); Put(404, experience); Put(412, 0);
-        return PrototypeCatalog.Read(new GameResource("proto/critters/00000382.pro", "synthetic", bytes), 0x0100017E);
+        return PrototypeCatalog.Read(new GameResource($"proto/critters/{pid & 0xFFFFFF:D8}.pro", "synthetic", bytes), pid);
     }
 
     internal static MapObject Critter(int tile, int pid, int hp, int team, string key) => new(key, tile, 0, 0, 0,
@@ -156,7 +156,7 @@ internal static class CombatTests
             var player = Player(Tile(100, 100)); var ant = AntAt(Tile(100, 101));
             var melee = CombatResolver.ToHit(player, ant);
             Assert(melee.Skill == 40 && melee.SkillIndex == DerivedCombatStats.MeleeWeapons && melee.TargetArmorClass == 4 && melee.Raw == 36 && melee.Chance == 36, "Spear vs ant 40-4.");
-            ant.BonusArmorClass = 3; Assert(CombatResolver.ToHit(player, ant).Raw == 33, "Unspent AP raise AC."); ant.BonusArmorClass = 0;
+            ant.ActionPoints = 3; Assert(CombatResolver.ToHit(player, ant).Raw == 33, "AP held outside its turn raise AC."); ant.ActionPoints = 0;
             var pistol = CombatWeapon.Primary("Pistola", WeaponPrototypeData.Read(Pistol()));
             Assert(pistol.SkillIndex == DerivedCombatStats.SmallGuns && pistol.IsRanged && pistol.Range == 25, "Pistol profile.");
             var shooter = Player(Tile(100, 90), pistol);
@@ -195,13 +195,14 @@ internal static class CombatTests
         check("combat COM-003 session resolves hits and misses with preview parity, kills award PRO XP once and end the fight", () =>
         {
             var player = Player(Tile(100, 100)); var ant = AntAt(Tile(100, 101));
-            var random = new Scripted(36, 5, 90, 30, 8);
+            var random = new Scripted(31, 5, 90, 30, 8);
             var session = new CombatSession(new[] { player, ant }, Open(), random, initiatorId: "player");
             var preview = session.Preview(CombatActionProposal.Attack("player", "ant"));
-            Assert(preview.Status == CombatActionStatus.Ready && preview.ActionPointCost == 4 && preview.ToHit!.Chance == 36 && preview.Damage!.MaxDamage == 11, "Attack preview.");
+            Assert(preview.Status == CombatActionStatus.Ready && preview.ActionPointCost == 4 && preview.ToHit!.Chance == 31 && preview.Damage!.MaxDamage == 11,
+                "Attack preview: 40 - AC 4 - the 5 AP the ant holds before its turn (CE _combat_set_move_all).");
             var hit = session.Execute(CombatActionProposal.Attack("player", "ant"));
             var resolved = (AttackResolved)hit.Events.Single();
-            Assert(resolved.Hit && resolved.Roll == 36 && resolved.Chance == preview.ToHit!.Chance && resolved.DamageRoll == 5 && resolved.Damage == 5
+            Assert(resolved.Hit && resolved.Roll == 31 && resolved.Chance == preview.ToHit!.Chance && resolved.DamageRoll == 5 && resolved.Damage == 5
                 && ant.HitPoints == 1 && player.ActionPoints == 3, "Hit for 5.");
             Assert(session.Preview(CombatActionProposal.Attack("player", "ant")).Status == CombatActionStatus.NotEnoughActionPoints, "3 AP left for a 4 AP thrust.");
             session.Execute(CombatActionProposal.EndTurn("player"));
@@ -211,7 +212,8 @@ internal static class CombatTests
             Assert(biteResult.Chance == 65 - 8 && !biteResult.Hit && biteResult.Roll == 90 && player.HitPoints == 30, "Ant misses vs AC 5+3.");
             Assert(session.Execute(CombatActionProposal.Attack("ant", "player")).Status == CombatActionStatus.NotEnoughActionPoints, "Second bite needs 3 AP of 2.");
             session.Execute(CombatActionProposal.EndTurn("ant"));
-            Assert(session.Turn.Round == 2 && session.Active == player && player.BonusArmorClass == 0 && ant.BonusArmorClass == 2, "Round 2 re-sorted: player Seq 10 > ant 9.");
+            Assert(session.Turn.Round == 2 && session.Active == player && player.BonusArmorClass == 0 && ant.BonusArmorClass == 5,
+                "Round 2 re-sorted (player Seq 10 > ant 9); the ant's AP were refilled.");
             var kill = session.Execute(CombatActionProposal.Attack("player", "ant"));
             Assert(kill.Events.Length == 3 && kill.Events[1] is CombatantDied { Experience: 25, KillerId: "player" } && kill.Events[2] is CombatEnded { WinningTeam: 0, ExperienceAwarded: 25 }
                 && !ant.Alive && ant.HitPoints == 0 && session.Turn.Over && session.Active == null && random.Left == 0, "Kill, XP, end.");

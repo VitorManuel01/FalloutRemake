@@ -26,15 +26,35 @@ public sealed partial class WorldSession
     public int CurrentMap { get; private set; }
     public WorldArea Current => _areas[CurrentMap];
     public ActorLocation Location => Current.Travel.Location;
-    public int Experience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0) + (_arroyoReward?.Experience ?? 0) + _combatExperience;
+    public int Experience => BaseExperience + _swiftExperience;
+    // Every XP source but Swift Learner's share.
+    private int BaseExperience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0) + (_arroyoReward?.Experience ?? 0) + _combatExperience + _perks.Experience + _medicalExperience;
     public IReadOnlyList<WorldArea> Areas => _areas.OrderBy(p => p.Key).Select(p => p.Value).ToArray();
     public CarriedItem[] Carried => Areas.SelectMany(a => a.Items.Carried).ToArray();
     public WorldItemUse[] ItemUses => Areas.SelectMany(a => a.Items.CaptureUses().Select(u => new WorldItemUse(a.Map.Prefix.Header.MapIndex, u))).ToArray();
     public WorldItemUse[] DueItemUses => ItemUses.Where(u => u.Allocation.Phase == ItemUsePhase.Placed && u.Allocation.RemainingTicks == 0).ToArray();
     public long CarriedCount => Carried.Sum(i => (long)i.Quantity);
-    public int CarryCapacity => CarryWeight.TestCapacity;
-    public long? UnitWeight(int sourceMap, MapObject item) => _areas.TryGetValue(sourceMap, out WorldArea? area)
-        && area.Map.Prototypes.FirstOrDefault(p => p.Pid == item.Header.Pid) is Prototype prototype ? CarryWeight.UnitWeight(prototype, item) : null;
+    public int CarryCapacity => Sheet.CarryWeight;
+    /// <summary>Who plays: a premade, a created character or the neutral test profile of earlier milestones.</summary>
+    public PlayerCharacter Character { get; private set; } = PlayerCharacter.Neutral;
+    private readonly Func<string, CharacterFile>? _premade;
+    // data/ai.txt packets; without them creatures keep the provisional melee behavior.
+    private readonly IReadOnlyDictionary<int, AiPacket>? _aiPackets;
+    /// <summary>New game with this character: the whole world returns to its start. Reset keeps the character.</summary>
+    public void StartNewGame(PlayerCharacter character)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        if (character.Kind == CharacterKind.Draft) throw new ArgumentException("An unfinished character cannot start a game.", nameof(character));
+        Reset(); Character = character;
+    }
+    /// <summary>One unit's weight (CE itemGetWeight); a weapon's loaded rounds weigh as the boxes they would fill.</summary>
+    public long? UnitWeight(int sourceMap, MapObject item)
+    {
+        if (!_areas.TryGetValue(sourceMap, out WorldArea? area) || area.Map.Prototypes.FirstOrDefault(p => p.Pid == item.Header.Pid) is not Prototype prototype) return null;
+        if (prototype is not { Type: 0, Subtype: WeaponPrototypeData.Subtype }) return CarryWeight.UnitWeight(prototype, item);
+        var load = WeaponLoad(sourceMap, item);
+        return CarryWeight.UnitWeight(prototype, item, load, load.Rounds > 0 ? ItemPrototype(sourceMap, load.AmmoPid) : null);
+    }
     public long? CarriedWeight => CarryWeight.Total(Carried.Select(item => (UnitWeight(item.Map, item.Source), item.Quantity)));
     public ItemTakeStatus CanTakeItem(string ownerKey, string itemKey, int quantity, bool moving)
     {
@@ -49,7 +69,10 @@ public sealed partial class WorldSession
     public ItemTakeStatus TakeItem(string ownerKey, string itemKey, int quantity, bool moving)
     {
         ItemTakeStatus status = CanTakeItem(ownerKey, itemKey, quantity, moving);
-        return status == ItemTakeStatus.Ready ? Current.Items.Take(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : status;
+        if (status != ItemTakeStatus.Ready) return status;
+        status = Current.Items.Take(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving);
+        if (status == ItemTakeStatus.Ready) AmmoTaken(CurrentMap, ownerKey, Current.Items.Carried.Single(c => c.Source.Key == itemKey).Source);
+        return status;
     }
     public ItemTakeStatus CanTakeAllItems(string ownerKey, bool moving)
     {
@@ -64,16 +87,34 @@ public sealed partial class WorldSession
     public ItemTakeStatus TakeAllItems(string ownerKey, bool moving)
     {
         ItemTakeStatus status = CanTakeAllItems(ownerKey, moving);
-        return status == ItemTakeStatus.Ready ? Current.Items.TakeAll(ownerKey, Location, Current.Doors.Navigation(Location.Elevation), moving) : status;
+        if (status != ItemTakeStatus.Ready) return status;
+        MapObject[] taken = Current.Items.Contents(ownerKey).Where(i => i.Quantity > 0).Select(i => i.Source).ToArray();
+        status = Current.Items.TakeAll(ownerKey, Location, Current.Doors.Navigation(Location.Elevation), moving);
+        if (status == ItemTakeStatus.Ready) foreach (MapObject source in taken) AmmoTaken(CurrentMap, ownerKey, source);
+        return status;
     }
     public ItemTakeStatus CanReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap
         ? Current.Items.CanReturn(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
     public ItemTakeStatus CanReturnAllItems(int sourceMap, string ownerKey, bool moving) => sourceMap == CurrentMap
         ? Current.Items.CanReturnAll(ownerKey, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
-    public ItemTakeStatus ReturnAllItems(int sourceMap, string ownerKey, bool moving) => sourceMap == CurrentMap
-        ? Current.Items.ReturnAll(ownerKey, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
-    public ItemTakeStatus ReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving) => sourceMap == CurrentMap
-        ? Current.Items.Return(ownerKey, itemKey, quantity, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Unavailable;
+    public ItemTakeStatus ReturnAllItems(int sourceMap, string ownerKey, bool moving)
+    {
+        ItemTakeStatus status = CanReturnAllItems(sourceMap, ownerKey, moving);
+        if (status != ItemTakeStatus.Ready) return status;
+        // Ammunition first hands its partial box over; a box the merge leaves empty is used up, and what is left goes back.
+        foreach (CarriedItem item in Current.Items.Carried.Where(c => c.OwnerKey == ownerKey).ToArray())
+            AmmoReturning(CurrentMap, ownerKey, item.Source, item.Quantity);
+        return Current.Items.Carried.Any(c => c.OwnerKey == ownerKey)
+            ? Current.Items.ReturnAll(ownerKey, Location, Current.Doors.Navigation(Location.Elevation), moving) : ItemTakeStatus.Ready;
+    }
+    public ItemTakeStatus ReturnItem(int sourceMap, string ownerKey, string itemKey, int quantity, bool moving)
+    {
+        ItemTakeStatus status = CanReturnItem(sourceMap, ownerKey, itemKey, quantity, moving);
+        if (status != ItemTakeStatus.Ready) return status;
+        MapObject source = Current.Items.Carried.Single(c => c.OwnerKey == ownerKey && c.Source.Key == itemKey).Source;
+        int going = AmmoReturning(CurrentMap, ownerKey, source, quantity);
+        return going == 0 ? ItemTakeStatus.Ready : Current.Items.Return(ownerKey, itemKey, going, Location, Current.Doors.Navigation(Location.Elevation), moving);
+    }
     public ExplosiveCommitResult CommitExplosiveUse(ExplosiveUsePlan? plan, bool moving)
     {
         if (plan == null || plan.Source?.Source == null || plan.Id == Guid.Empty || plan.Quantity != 1 || plan.ActivePid != ExplosiveUseProposal.ActivePid
@@ -167,9 +208,10 @@ public sealed partial class WorldSession
     }
     public WorldSession(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
         Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
-        Func<MapDocument, ArroyoElderStateProfile>? elderProfile = null)
+        Func<MapDocument, ArroyoElderStateProfile>? elderProfile = null,
+        Func<string, CharacterFile>? premade = null, IReadOnlyDictionary<int, AiPacket>? aiPackets = null)
     {
-        _load = load; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _arroyoProfile = arroyoProfile; _elderProfile = elderProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
+        _load = load; _premade = premade; _aiPackets = aiPackets; _runtimePrototype = runtimePrototype; _templeProfile = templeProfile; _arroyoProfile = arroyoProfile; _elderProfile = elderProfile; _allowed = allowedMaps.ToHashSet(); InitialMap = initialMap;
         if (!_allowed.Contains(initialMap)) throw new ArgumentException("Initial map must belong to the supported area profile.");
         EnsureArea(initialMap); CurrentMap = initialMap;
         _enteredMaps.Add(initialMap);
@@ -184,7 +226,10 @@ public sealed partial class WorldSession
         var scenery = new ScenerySession(); doors.IsSceneryReplaced = scenery.Replaces;
         doors.ProjectObject = source => EffectiveObject(id, source); doors.ProjectDoor = key => TempleGate(id, key);
         doors.AllowTempleExitUse = key => id == 3 && CanUseTempleExit(key);
-        area = new WorldArea(map, doors, new TempleTravel(map, doors), new ItemTransferSession(map), scenery);
+        var items = new ItemTransferSession(map) { CorpseHex = key => _defeated.TryGetValue((id, key), out DefeatedCritter? dead) ? dead.Hex : null };
+        items.Changed += ReleaseHands;
+        doors.ExperienceGained += GainExperience;
+        area = new WorldArea(map, doors, new TempleTravel(map, doors), items, scenery);
         _areas.Add(id, area); return area;
     }
     public ExitOption InspectExit(bool moving)
@@ -225,13 +270,13 @@ public sealed partial class WorldSession
         { return option with { Status = ExitStatus.UnavailableMap }; }
         target.Travel.Arrive(destination); CurrentMap = destination.Map;
         _enteredMaps.Add(destination.Map);
-        if (reward is { } entry) { _arroyoReward = entry.Reward; _arroyoGlobals = entry.Globals; }
+        if (reward is { } entry) { _arroyoReward = entry.Reward; _arroyoGlobals = entry.Globals; GainExperience(entry.Reward.Experience); }
         return option;
     }
     public void Reset()
     {
         _templeProgress = null; _elderDialogue = null; TempleToken = Guid.NewGuid(); TempleRevision = 0;
-        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat();
+        _enteredMaps.Clear(); _enteredMaps.Add(InitialMap); _arroyoReward = null; _arroyoGlobals = null; ResetCombat(); ResetTempleDuel(); ResetSkills(); ResetMedicine(); ResetFirearms();
         foreach (WorldArea area in _areas.Values) { area.Scenery.Reset(); area.Doors.Reset(); area.Travel.Reset(); area.Items.Reset(); }
         CurrentMap = InitialMap;
     }
@@ -240,10 +285,11 @@ public sealed partial class WorldSession
     public WorldCheckpoint Capture(string catalogHash)
     {
         ValidateScenery(Areas.Select(a => (a, a.Scenery.Capture()))); ValidateUses(); ValidateTempleExit();
-        return new(10, "neutral-v10", catalogHash, InitialMap, CurrentMap,
+        return new(13, "neutral-v13", catalogHash, InitialMap, CurrentMap,
             Areas.Select(a => new SavedArea(a.Map.Prefix.Header.MapIndex, a.Map.Source.Sha256,
-                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture())).ToArray(), _templeProgress?.Capture(),CaptureEntries(),
-            CaptureCombat(), SavedElder);
+                DependenciesHash(a.Map), a.Travel.Location, a.Doors.Capture(), a.Items.Capture(), a.Items.CaptureUses(), a.Scenery.Capture(), a.Items.CaptureConsumed(),
+                a.Items.CaptureGround() is { Length: > 0 } ground ? ground : null)).ToArray(), _templeProgress?.Capture(),CaptureEntries(),
+            CaptureCombat(), Character.Capture(), CaptureTempleDuel(), CaptureSkills(), CaptureFirearms(), SavedElder);
     }
     private void RestoreElderDialogue(SavedElderState? saved)
     {
@@ -259,16 +305,22 @@ public sealed partial class WorldSession
     }
     public static WorldSession Restore(Func<int, MapDocument> load, IEnumerable<int> allowedMaps, WorldCheckpoint checkpoint, string catalogHash, int initialMap = 3, Func<int, Prototype>? runtimePrototype = null,
         Func<MapDocument, TempleNpcDepartureProfile>? templeProfile = null, Func<MapDocument,ArroyoRewardProfile>? arroyoProfile = null,
-        Func<MapDocument, ArroyoElderStateProfile>? elderProfile = null)
+        Func<MapDocument, ArroyoElderStateProfile>? elderProfile = null,
+        Func<string, CharacterFile>? premade = null, IReadOnlyDictionary<int, AiPacket>? aiPackets = null)
     {
         if (checkpoint == null || !(checkpoint.Version == 1 && checkpoint.Profile == "neutral-v1" || checkpoint.Version == 2 && checkpoint.Profile == "neutral-v2"
             || checkpoint.Version == 3 && checkpoint.Profile == "neutral-v3" || checkpoint.Version == 4 && checkpoint.Profile == "neutral-v4"
             || checkpoint.Version == 5 && checkpoint.Profile == "neutral-v5" || checkpoint.Version == 6 && checkpoint.Profile == "neutral-v6"
             || checkpoint.Version == 7 && checkpoint.Profile == "neutral-v7" || checkpoint.Version == 8 && checkpoint.Profile == "neutral-v8"
-            || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9" || checkpoint.Version == 10 && checkpoint.Profile == "neutral-v10")
+            || checkpoint.Version == 9 && checkpoint.Profile == "neutral-v9" || checkpoint.Version == 10 && checkpoint.Profile == "neutral-v10" || checkpoint.Version == 11 && checkpoint.Profile == "neutral-v11"
+            || checkpoint.Version == 12 && checkpoint.Profile == "neutral-v12" || checkpoint.Version == 13 && checkpoint.Profile == "neutral-v13")
+            || checkpoint.Version < 13 && checkpoint.Skills != null || checkpoint.Version >= 13 && checkpoint.Skills == null
+            || checkpoint.Version < 12 && checkpoint.Character != null || checkpoint.Version >= 12 && checkpoint.Character == null
+            || checkpoint.Version < 12 && checkpoint.Duel != null || checkpoint.Version >= 12 && checkpoint.Duel == null
             || checkpoint.CatalogHash != catalogHash
             || checkpoint.Version < 10 && checkpoint.Combat != null || checkpoint.Version >= 10 && checkpoint.Combat == null
             || checkpoint.Version < 10 && checkpoint.Elder != null
+            || checkpoint.Version < 13 && checkpoint.Firearms != null
             || checkpoint.Version < 6 && checkpoint.Temple != null
             || checkpoint.Version < 8 && checkpoint.Entries != null
             || checkpoint.Version < 9 && checkpoint.Entries?.ArroyoGlobals != null
@@ -279,7 +331,16 @@ public sealed partial class WorldSession
             || checkpoint.Areas.Select(a => a.Map).Distinct().Count() != checkpoint.Areas.Length
             || !checkpoint.Areas.Any(a => a.Map == initialMap) || !checkpoint.Areas.Any(a => a.Map == checkpoint.CurrentMap))
             throw new InvalidDataException("Checkpoint area set is invalid.");
-        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile,arroyoProfile,elderProfile);
+        var candidate = new WorldSession(load, allowed, initialMap, runtimePrototype, templeProfile,arroyoProfile, elderProfile, premade, aiPackets);
+        // The character decides the level's HP bound checked by the combat block, so it comes first.
+        try { candidate.Character = checkpoint.Character == null ? PlayerCharacter.Neutral : PlayerCharacter.Restore(checkpoint.Character, premade); }
+        catch (Exception error) when (error is IOException or ArgumentException or KeyNotFoundException)
+        { throw new InvalidDataException("Checkpoint premade character source is unavailable.", error); }
+        // Perks change the level's HP bound too (Lifegiver); their levels are checked once XP is known.
+        candidate.RestorePerks(checkpoint.Skills?.Perks);
+        candidate.RestoreSwiftExperience(checkpoint.Skills?.SwiftExperience);
+        candidate.RestoreMedicalExperience(checkpoint.Skills?.MedicalExperience);
+        var bodyLoot = new List<(WorldArea Area, TakenItem[] Rows)>();
         foreach (SavedArea saved in checkpoint.Areas)
         {
             WorldArea area = candidate.EnsureArea(saved.Map);
@@ -288,10 +349,17 @@ public sealed partial class WorldSession
                 throw new InvalidDataException("Checkpoint source or dependency fingerprints changed.");
             if (checkpoint.Version == 1 && saved.Taken != null || checkpoint.Version >= 2 && saved.Taken == null
                 || checkpoint.Version < 3 && saved.Uses != null || checkpoint.Version >= 3 && saved.Uses == null
-                || checkpoint.Version < 4 && saved.Replacements != null || checkpoint.Version >= 4 && saved.Replacements == null)
+                || checkpoint.Version < 4 && saved.Replacements != null || checkpoint.Version >= 4 && saved.Replacements == null
+                || checkpoint.Version < 11 && saved.Consumed != null || checkpoint.Version >= 11 && saved.Consumed == null
+                || saved.Ground is { Length: 0 } || checkpoint.Version < 13 && saved.Ground != null)
                 throw new InvalidDataException("Checkpoint item state does not match its schema version.");
-            area.Items.Restore(saved.Taken ?? Array.Empty<TakenItem>(), saved.Uses ?? Array.Empty<ItemUseAllocation>());
-            area.Doors.Restore(saved.Session, checkpoint.Version >= 5, checkpoint.Version >= 7 && checkpoint.Temple != null);
+            // Items taken from bodies wait for the corpses, which the combat block restores below.
+            TakenItem[] taken = saved.Taken ?? Array.Empty<TakenItem>();
+            bodyLoot.Add((area, taken.Where(t => t?.OwnerKey != null && area.Items.IsBody(t.OwnerKey)).ToArray()));
+            area.Items.Restore(taken.Where(t => t?.OwnerKey == null || !area.Items.IsBody(t.OwnerKey)).ToArray(), saved.Uses ?? Array.Empty<ItemUseAllocation>(),
+                saved.Consumed ?? Array.Empty<ConsumedItem>(), p => HealingDrugProfile.Supported(p) || MedicalKits.Supported(p) || IsAmmo(p));
+            bool killed = checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed;
+            area.Doors.Restore(saved.Session, checkpoint.Version >= 5, checkpoint.Version >= 7 && (checkpoint.Temple != null || killed), killed);
         }
         var scenes = checkpoint.Areas.Select(a => (Area: candidate._areas[a.Map], Records: a.Replacements ?? Array.Empty<SceneryReplacement>())).ToArray();
         candidate.ValidateScenery(scenes);
@@ -299,7 +367,17 @@ public sealed partial class WorldSession
         candidate.RestoreTempleProgress(checkpoint.Temple);
         candidate.RestoreEntries(checkpoint);
         candidate.RestoreElderDialogue(checkpoint.Elder);
-        candidate.RestoreCombat(checkpoint.Combat);
+        candidate.RestoreCombat(checkpoint.Combat, checkpoint.Duel?.Outcome == TempleDuelOutcome.Killed);
+        foreach (var (area, rows) in bodyLoot) area.Items.RestoreBodyLoot(rows);
+        // Thrown units may come from body loot, so they follow it; the challenge chest's custody comes next.
+        foreach (SavedArea saved in checkpoint.Areas)
+            if (saved.Ground != null) candidate._areas[saved.Map].Items.RestoreGround(saved.Ground, allowed.Contains);
+        candidate.RestoreTempleDuel(checkpoint.Duel);
+        candidate.RestoreFirearms(checkpoint.Firearms);
+        candidate.RestoreHands(checkpoint.Combat?.Hands);
+        candidate.ValidatePerks();
+        candidate.RestoreSkills(checkpoint.Skills);
+        candidate.RestoreMedicalUses(checkpoint.Skills?.FirstAidUses, checkpoint.Skills?.DoctorUses);
         candidate.ValidateTempleExit();
         candidate.ValidateUses();
         foreach (SavedArea saved in checkpoint.Areas) candidate._areas[saved.Map].Travel.Arrive(saved.Location);

@@ -75,7 +75,7 @@ public static class QuietGodot
     {
         if (Environment.OSVersion.Platform != PlatformID.Win32NT) throw new PlatformNotSupportedException("Windows only.");
         executable = Path.GetFullPath(executable); directory = Path.GetFullPath(directory);
-        if (!File.Exists(executable) || !Directory.Exists(directory) || timeoutSeconds < 1 || timeoutSeconds > 300)
+        if (!File.Exists(executable) || !Directory.Exists(directory) || timeoutSeconds < 1 || timeoutSeconds > 900)
             throw new ArgumentException("Executable, project directory or timeout is invalid.");
         var result = new Result { Desktop = "CodexFallout-" + Guid.NewGuid().ToString("N"), InputDesktopBefore = InputDesktopName(),
             StandardOutput = Path.GetFullPath(output), StandardError = Path.GetFullPath(error) };

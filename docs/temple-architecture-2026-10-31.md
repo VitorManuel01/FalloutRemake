@@ -112,3 +112,21 @@ continuam em `C:\Dev\FalloutRemake\Assets\TempleOfTrials\`.
   isométrica. O recorte V só atua em torno do personagem. Uma vista em corte
   (paredes baixas no lado da câmera) fica para depois.
 - **Comparação visual:** ainda não foi feita lado a lado com o Fallout 2 original.
+
+## Recipientes em nichos (31/10/2026)
+
+Todo pote do Templo fica sobre um bloqueador invisível original (`block.frm`, PID 0x02000043). Três deles ficam entre duas paredes:
+
+- elevação 1, hexes 14080 e 20080;
+- elevação 2, hex 20132.
+
+O preenchimento de vãos transformava esses bloqueadores em pedra e escondia o pote.
+
+- **Regra:** `PlanWalls` recebe `keepClear`, os hexes de itens e recipientes visíveis. Um bloqueador num desses hexes nunca vira pedra.
+- **`--architecture-clearance-report`:** lista os objetos visíveis sob peças do kit. Restam só tochas, suportes de lança e peças `tempsf04` presas às paredes, além de marcadores invisíveis.
+- **Validação:**
+  - teste sintético do nicho;
+  - `CheckTempleArchitecture` recusa qualquer item sob uma peça do kit;
+  - `Validate-Temple` aprovado nos 21 passos;
+  - captura isolada `architecture-niche-pot.png`.
+- **Runner:** `QuietGodot.cs` ainda limitava o timeout a 300 s. Agora aceita os 900 s que o `.ps1` já anunciava.

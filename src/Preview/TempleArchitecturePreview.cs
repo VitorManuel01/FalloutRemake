@@ -88,6 +88,8 @@ public partial class TemplePreview
         try { return _artLists?.ListEntry(list, index, ".frm") ?? ""; }
         catch (InvalidDataException) { return ""; }
     }
+    // Visible items and containers keep their hex free of stone, even over an original blocker.
+    private int[] ClearOfStone() => _layout!.Objects.Where(o => !o.Hidden && o.Kind == PreviewKind.Item).Select(o => o.Source.Header.Tile).Distinct().ToArray();
     private bool IsTempleFloor(PreviewFloor floor) => ArtName("art/tiles/tiles.lst", (int)(floor.Raw & 0xFFF)).StartsWith("tepflr", StringComparison.OrdinalIgnoreCase);
 
     private void BuildArchitecture()
@@ -100,7 +102,7 @@ public partial class TemplePreview
         _architecture = new Node3D { Name = "TempleArchitecture" }; _world.AddChild(_architecture);
         var walls = _layout.Objects.Where(IsArchitectureWall).ToArray();
         var fillers = _layout.Objects.Where(IsWallFiller).ToArray();
-        _wallPlan = TempleArchitecture.PlanWalls(walls.Select(o => o.Source.Header.Tile), _layout.Origin, fillers.Select(o => o.Source.Header.Tile));
+        _wallPlan = TempleArchitecture.PlanWalls(walls.Select(o => o.Source.Header.Tile), _layout.Origin, fillers.Select(o => o.Source.Header.Tile), ClearOfStone());
         var filled = _wallPlan.Filled.ToHashSet();
         var keysAt = walls.Concat(fillers.Where(o => filled.Contains(o.Source.Header.Tile))).GroupBy(o => o.Source.Header.Tile)
             .ToDictionary(g => g.Key, g => g.Select(o => o.Source.Key).ToArray());
@@ -305,6 +307,10 @@ public partial class TemplePreview
                 if (_wallPlan.Pieces.FirstOrDefault(p => p.Contains(center, .1)) is { } blocking)
                     throw new InvalidDataException($"Kit {blocking.Module} covers walkable hex {tile}.");
             }
+            // Containers and items stay in sight: niche pots stand on blockers that must not become stone.
+            foreach (PreviewObject item in _layout.Objects.Where(o => !o.Hidden && o.Kind == PreviewKind.Item))
+                if (_wallPlan.Pieces.FirstOrDefault(p => p.Contains(FalloutGrid.HexCenter(item.Source.Header.Tile) - _layout.Origin, .25)) is { } cover)
+                    throw new InvalidDataException($"Kit {cover.Module} covers {item.Source.Key} at hex {item.Source.Header.Tile}.");
             int temple = _layout.Floors.Count(IsTempleFloor);
             if (temple == 0 || _architectureFloorTiles != temple || _architectureFloor.Sum(c => c.Multimesh.InstanceCount) != temple)
                 throw new InvalidDataException("Temple floor squares and kit tiles differ.");
@@ -312,7 +318,7 @@ public partial class TemplePreview
             if (_architectureLights != lights || _architecture!.GetChildren().OfType<OmniLight3D>().Count() != lights) throw new InvalidDataException("Original light emitters and torch lights differ.");
             if (_layout.Objects.Where(o => o.Kind == PreviewKind.Wall).Any(w => _bodies[w.Source.Key].GetChild<MeshInstance3D>(0).Mesh != null))
                 throw new InvalidDataException("A provisional wall box remains under the kit.");
-            GD.Print($"TEMPLE_ARCHITECTURE_LAYER_OK: elevation {elevation}; {walls.Length} source wall objects; {_wallPlan.Filled.Length} blocker hexes closed; no open wall links; {_wallPlan.Runs.Length} runs; {_wallPlan.Pieces.Length} modules; {temple} floor tiles; {lights} torch lights; walkable hexes clear.");
+            GD.Print($"TEMPLE_ARCHITECTURE_LAYER_OK: elevation {elevation}; {walls.Length} source wall objects; {_wallPlan.Filled.Length} blocker hexes closed; no open wall links; items clear of stone; {_wallPlan.Runs.Length} runs; {_wallPlan.Pieces.Length} modules; {temple} floor tiles; {lights} torch lights; walkable hexes clear.");
         }
         GoToEntry(); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         _hud.Filters["wall"] = false; ApplyFilters();
@@ -347,6 +353,10 @@ public partial class TemplePreview
                 ChangeElevation(elevation); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
                 await Capture(Path.ChangeExtension(_capture, $"architecture-elevation{elevation}.png"));
             }
+            // Niche pot on elevation 1 (hex 14080): its blocker stays open between the two walls.
+            ChangeElevation(1); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            _focus = Point(FalloutGrid.HexCenter(14080) - _layout!.Origin, 0); _camera.Size = 9; UpdateCamera();
+            await Capture(Path.ChangeExtension(_capture, "architecture-niche-pot.png"));
             GoToEntry(); await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         }
         GD.Print($"TEMPLE_ARCHITECTURE_OK: kit walls, pillars, floor and torch lights on 3 elevations; filters, original floor, P switch, navigation and source bytes verified; {_kitStatus}.");

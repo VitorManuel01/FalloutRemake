@@ -14,8 +14,9 @@ public readonly record struct ObjectTraversalState(int Flags, int? DoorOpenFlags
 /// <summary>Single-hex movement using source geometry and optional session flags; no scripts or automatic door use.</summary>
 public sealed class HexNavigation
 {
-    public const int Hidden = 0x1, NoBlock = 0x10, Multihex = 0x800;
+    public const int Hidden = 0x1, NoBlock = 0x10, Multihex = 0x800, ShootThru = unchecked((int)0x80000000);
     private readonly Dictionary<int, List<HexBlocker>> _blockers = new();
+    private readonly Dictionary<int, List<HexBlocker>> _shotBlockers = new();
     private readonly HashSet<int> _exits = new();
     public int Elevation { get; }
     public int BlockedHexCount => _blockers.Count;
@@ -47,6 +48,16 @@ public sealed class HexNavigation
             if ((flags & Hidden) == 0 && h.Pid is >= 0x05000010 and <= 0x05000017) _exits.Add(h.Tile);
             // CE _obj_blocking_at uses the FID nibble, not the PID or the preview shape.
             int type = (h.Fid >> 24) & 0xF;
+            // CE _obj_shoot_blocking_at: a visible critter, scenery or wall stops a shot unless it both lets walkers through
+            // and is shoot-through; a multihex one also covers its neighbors while it blocks walkers.
+            if ((flags & Hidden) == 0 && type is >= 1 and <= 3 && ((flags & NoBlock) == 0 || (flags & ShootThru) == 0))
+            {
+                var shot = new HexBlocker(obj.Key, h.Id, h.Tile, type, door, (flags & Multihex) != 0);
+                AddTo(_shotBlockers, h.Tile, shot);
+                if (shot.Multihex && (flags & NoBlock) == 0)
+                    for (int direction = 0; direction < 6; direction++)
+                        if (FalloutGrid.Neighbor(h.Tile, direction) is int neighbor) AddTo(_shotBlockers, neighbor, shot);
+            }
             if ((flags & (Hidden | NoBlock)) != 0 || type is < 1 or > 3) continue;
             var blocker = new HexBlocker(obj.Key, h.Id, h.Tile, type, door, (flags & Multihex) != 0);
             Add(h.Tile, blocker);
@@ -56,11 +67,15 @@ public sealed class HexNavigation
         }
     }
 
-    private void Add(int tile, HexBlocker blocker)
+    private void Add(int tile, HexBlocker blocker) => AddTo(_blockers, tile, blocker);
+    private static void AddTo(Dictionary<int, List<HexBlocker>> index, int tile, HexBlocker blocker)
     {
-        if (!_blockers.TryGetValue(tile, out List<HexBlocker>? list)) _blockers[tile] = list = new();
+        if (!index.TryGetValue(tile, out List<HexBlocker>? list)) index[tile] = list = new();
         list.Add(blocker);
     }
+    /// <summary>Source objects that stop a shot or a throw on the hex (CE _obj_shoot_blocking_at).</summary>
+    public IReadOnlyList<HexBlocker> ShotBlockersAt(int tile) =>
+        _shotBlockers.TryGetValue(tile, out List<HexBlocker>? list) ? list.AsReadOnly() : Array.Empty<HexBlocker>();
     public static bool Valid(int tile) => tile is >= 0 and < 40000;
     public bool Walkable(int tile) => Valid(tile) && !_blockers.ContainsKey(tile);
     public bool IsExit(int tile) => _exits.Contains(tile);
@@ -124,6 +139,8 @@ public sealed class HexWalker
     public bool StopRequested { get; private set; }
     public double Progress { get; private set; }
     public int NextHex => Moving ? _route[_index + 1] : CurrentHex;
+    /// <summary>Hexes still ahead on the route, next first; empty when standing.</summary>
+    public int[] RemainingRoute => Moving ? _route[(_index + 1)..] : Array.Empty<int>();
     public HexWalker(HexNavigation navigation, int start)
     {
         if (!navigation.Walkable(start)) throw new ArgumentException("Marker start is blocked or outside the grid.", nameof(start));

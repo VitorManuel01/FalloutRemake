@@ -9,7 +9,7 @@ public enum ItemUseStatus { Ready, NoItem, Empty, Unsupported, InvalidState, Dup
 public sealed record ItemUseAllocation([property: JsonRequired] Guid Id, [property: JsonRequired] string OwnerKey, [property: JsonRequired] string ItemKey,
     [property: JsonRequired] int Quantity, [property: JsonRequired] ItemUsePhase Phase, [property: JsonRequired] ActorLocation Placement,
     [property: JsonRequired] ExplosiveSchedule Schedule, [property: JsonRequired] int RemainingTicks);
-public sealed record ItemBalance(int Original, int Remaining, int Carried, int Placed, int Consumed);
+public sealed record ItemBalance(int Original, int Remaining, int Carried, int Placed, int Consumed, int InCustody = 0, int OnGround = 0);
 
 internal static class ItemUseProfile
 {

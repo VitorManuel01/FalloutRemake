@@ -11,8 +11,8 @@ public partial class TemplePreview
     private PreviewLayout ProjectTempleLayout(PreviewLayout layout)
     {
         bool temple = _campaign?.TempleProgress != null && _campaign.CurrentMap == 3;
-        // Corpses of won fights are WorldSession projections too: they lie where they fell.
-        if (_campaign == null || !temple && !_campaign.Defeated.Any(d => d.Map == _campaign.CurrentMap)) return layout;
+        // Corpses of won fights and survivors of left fights are WorldSession projections too: they lie or stand where they stopped.
+        if (_campaign == null || !temple && !_campaign.Defeated.Any(d => d.Map == _campaign.CurrentMap) && !_campaign.Survivors.Any(s => s.Map == _campaign.CurrentMap)) return layout;
         var roots = _campaign.Current.Map.ObjectLayers.SelectMany(l => l.Objects).ToDictionary(o => o.Key);
         return layout with { Objects = layout.Objects.Select(obj =>
         {
@@ -33,11 +33,12 @@ public partial class TemplePreview
         var phase = progress?.Departure.Phase;
         string text = phase switch { NpcDeparturePhase.ToGate => "Indo até a porta", NpcDeparturePhase.GateDelay => $"Junto à porta · espera {progress!.Departure.RemainingTicks / 10.0:0.0} s",
             NpcDeparturePhase.ToMiddle => "Trecho intermediário", NpcDeparturePhase.ToExit => "Indo até a saída", NpcDeparturePhase.Hidden => "Saída concluída · NPC oculto", _ => "" };
-        text += phase == NpcDeparturePhase.Hidden ? "\nSpeech aceito · K salva a partida"
+        string trial = _campaign?.TempleTrial == TempleTrialPath.Duel ? "Desafio vencido" : "Speech aceito";
+        text += phase == NpcDeparturePhase.Hidden ? $"\n{trial} · K salva a partida"
             : current ? _templeAutomatic ? "\nAutomático · K pausa e salva" : "\nAvanço manual · K salva a partida" : "\nSequência pausada · volte à elevação 2 do templo";
         if (_campaign?.CurrentMap == 4 && _campaign.ArroyoGlobals is { } entry)
             text += $"\nArroyo · karma {entry.Karma} · reputação {entry.ArroyoReputation}";
-        if (present && _campaign!.CurrentMap == 3) _hud.Status(phase == NpcDeparturePhase.Hidden ? "NPC concluiu a saída · passagem para Arroyo disponível" : "Speech aceito · acompanhe a saída do NPC");
+        if (present && _campaign!.CurrentMap == 3) _hud.Status(phase == NpcDeparturePhase.Hidden ? "NPC concluiu a saída · passagem para Arroyo disponível" : $"{trial} · acompanhe a saída do NPC");
         _hud.TempleProgress(present,text,phase is NpcDeparturePhase.ToGate or NpcDeparturePhase.ToMiddle or NpcDeparturePhase.ToExit,
             phase == NpcDeparturePhase.GateDelay,enabled && !_templeAutomatic,current && phase != NpcDeparturePhase.Hidden && !InspectorOpen,phase == NpcDeparturePhase.Hidden);
         _hud.TemplePlayback(_templeAutomatic,enabled && phase != NpcDeparturePhase.Hidden);

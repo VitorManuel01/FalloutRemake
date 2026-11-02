@@ -1,4 +1,5 @@
 using System;
+using FalloutRemake.Runtime.Combat;
 
 namespace FalloutRemake.Runtime;
 
@@ -9,14 +10,24 @@ public sealed class PrototypeCharacter
     public int Perception { get; }
     public int Agility { get; }
     public int Luck { get; }
-    public int Lockpick => 10 + Perception + Agility;
-    public int CriticalChance => Luck;
+    private readonly int? _lockpick, _criticalChance;
+    public int Lockpick => _lockpick ?? 10 + Perception + Agility;
+    public int CriticalChance => _criticalChance ?? Luck;
     public PrototypeCharacter(int perception, int agility, int luck)
     {
         if (perception is < 1 or > 10 || agility is < 1 or > 10 || luck is < 1 or > 10)
             throw new ArgumentOutOfRangeException(nameof(perception), "Test-profile attributes must be 1–10.");
         Perception = perception; Agility = agility; Luck = luck;
     }
+    /// <summary>The player's sheet: Lockpick with tag, traits and points; critical chance with Finesse.</summary>
+    public static PrototypeCharacter From(PlayerCharacter character)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        Special effective = character.Effective;
+        return new(effective.Perception, effective.Agility, effective.Luck, character.Skill(CharacterSkill.Lockpick), character.CriticalChance);
+    }
+    private PrototypeCharacter(int perception, int agility, int luck, int lockpick, int criticalChance) : this(perception, agility, luck)
+    { _lockpick = lockpick; _criticalChance = criticalChance; }
 }
 
 public sealed record SkillCheckResult(SkillRollOutcome Outcome, int SkillValue, int Modifier,

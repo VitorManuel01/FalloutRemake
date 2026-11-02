@@ -41,9 +41,10 @@ public partial class TemplePreview
             var runtimePrototypes = new PrototypeCatalog(new ResourceCatalog(data.Read));
             WorldSession restored = WorldSession.Restore(id => catalog.Load(data, id), new[] { 3, 4, 126 }, saved, catalog.Source.Sha256, runtimePrototype: runtimePrototypes.Get,
                 templeProfile: map => TempleNpcDepartureProfile.Create(map,data.Read),arroyoProfile: map => ArroyoRewardProfile.Create(map,data.Read),
-                elderProfile: map => ArroyoElderStateProfile.Create(map,data.Read));
+                elderProfile: map => ArroyoElderStateProfile.Create(map,data.Read),
+                premade: path => CharacterFile.Read(data.Read(path)), aiPackets: _aiPackets);
             bool walking = _walkMode; string? selectedKey = _selected?.Source.Key;
-            _campaign = restored; _mapCatalog = catalog; _skills.Reset(); BindCurrentArea();
+            _campaign = restored; _mapCatalog = catalog; BindCharacter(); BindCurrentArea();
             ChangeElevation(_travel!.Location.Elevation); if (walking != _walkMode) ToggleWalkMode();
             var selected = _layout!.Objects.FirstOrDefault(o => o.Source.Key == selectedKey && VisibleObject(o));
             if (selected != null) SelectObject(selected);

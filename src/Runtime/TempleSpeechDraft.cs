@@ -87,6 +87,16 @@ public sealed class TempleSpeechProfile
         new ScriptVariableWrite(ScriptVariableScope.ScriptLocal, ActorKey, 13, 2),
         new ScriptVariableWrite(ScriptVariableScope.Map, MapKey, 20, 2),
         new ScriptVariableWrite(ScriptVariableScope.GameGlobal, GameKey, 10, 2) };
+    /// <summary>
+    /// The won unarmed duel: actemvil Node009 writes M20=1 and L13=1 when the fight starts (overwritten here), then
+    /// combat_p_proc (11240–11370), on Cameron's turn below half HP, writes L12=1, L13=2, M20=2 and G10=1.
+    /// The optional questions of Node002 (L7–L9) are not part of the direct challenge.
+    /// </summary>
+    internal ScriptVariableWrite[] DuelWrites() => new[] {
+        new ScriptVariableWrite(ScriptVariableScope.ScriptLocal, ActorKey, 12, 1),
+        new ScriptVariableWrite(ScriptVariableScope.ScriptLocal, ActorKey, 13, 2),
+        new ScriptVariableWrite(ScriptVariableScope.Map, MapKey, 20, 2),
+        new ScriptVariableWrite(ScriptVariableScope.GameGlobal, GameKey, 10, 1) };
     public TempleSpeechState Classify(ScriptStateSnapshot snapshot)
     {
         var candidate = CreateInitial();

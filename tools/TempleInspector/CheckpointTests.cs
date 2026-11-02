@@ -159,7 +159,7 @@ internal static class CheckpointTests
                 world.CommitElderDialogue(route);
                 byte[] encoded = CheckpointFile.Encode(world.Capture("catalog"));
                 WorldCheckpoint decoded = CheckpointFile.Decode(encoded);
-                Assert(decoded.Version == 10 && decoded.Profile == "neutral-v10" && decoded.Elder != null
+                Assert(decoded.Version == 13 && decoded.Profile == "neutral-v13" && decoded.Elder != null
                     && decoded.Elder.Complete && decoded.Elder.Procedure == "Node999" && decoded.Elder.Reaction == reaction
                     && decoded.Elder.Choices.SequenceEqual(route) && decoded.Elder.Global(531) == 1
                     && decoded.Elder.Local(0) == reaction && decoded.Elder.Local(1) == 1 && decoded.Elder.Local(2) == 1
@@ -200,6 +200,8 @@ internal static class CheckpointTests
                         Taken = version < 2 ? null : a.Taken,
                         Uses = version < 3 ? null : a.Uses,
                         Replacements = version < 4 ? null : a.Replacements,
+                        Consumed = null,
+                        Ground = null,
                         Session = version < 7 && a.Map == 3
                             ? a.Session with { Doors = a.Session.Doors.Select(d => d.Key == templeProfile.GateKey ? new SavedDoor(d.Key, 0, 0) : d).ToArray() }
                             : a.Session
@@ -207,17 +209,21 @@ internal static class CheckpointTests
                     Temple = version < 6 ? null : baseV10.Temple! with { InitialGateOpen = version >= 7 && baseV10.Temple.InitialGateOpen },
                     Entries = version < 8 ? null : version == 8 ? baseV10.Entries! with { ArroyoGlobals = null } : baseV10.Entries,
                     Combat = null,
+                    Character = null,
+                    Duel = null,
+                    Skills = null,
+                    Firearms = null,
                     Elder = null
                 };
                 var node = JsonNode.Parse(CheckpointFile.Encode(legacy))!.AsObject();
-                node.Remove("Combat"); node.Remove("Elder");
+                node.Remove("Combat"); node.Remove("Character"); node.Remove("Duel"); node.Remove("Skills"); node.Remove("Firearms"); node.Remove("Elder");
                 if (version < 6) node.Remove("Temple");
                 if (version < 8) node.Remove("Entries");
                 else if (version == 8) node["Entries"]!.AsObject().Remove("ArroyoGlobals");
                 var decoded = CheckpointFile.Decode(Encoding.UTF8.GetBytes(node.ToJsonString()));
                 var migrated = RestoreElder(decoded, load, templeProfile, elderProfile);
                 Assert(migrated.TalkedToElder == 0 && migrated.ElderDialogue == null && migrated.SavedElder == null
-                    && migrated.Capture("catalog").Version == 10 && migrated.Capture("catalog").Elder == null);
+                    && migrated.Capture("catalog").Version == 13 && migrated.Capture("catalog").Elder == null);
             }
         });
         check("legacy checkpoints v1 through v9 with non-null SavedElderState are rejected atomically", () =>
@@ -226,7 +232,7 @@ internal static class CheckpointTests
             world.CommitElderDialogue(new[] { 11868, 16348 });
             var saved = world.Capture("catalog");
             for (int version = 1; version <= 9; version++)
-                Reject(() => RestoreElder(saved with { Version = version, Profile = $"neutral-v{version}", Combat = null }, load, templeProfile, elderProfile));
+                Reject(() => RestoreElder(saved with { Version = version, Profile = $"neutral-v{version}", Combat = null, Character = null, Duel = null, Skills = null, Firearms = null }, load, templeProfile, elderProfile));
         });
         check("checkpoint encode decode and file read refuse payloads exceeding the 1 MB limit", () =>
         {

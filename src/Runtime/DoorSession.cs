@@ -37,6 +37,8 @@ public sealed class DoorSession
     internal Func<string, DoorState?>? ProjectDoor { get; set; }
     internal Func<string, bool>? AllowTempleExitUse { get; set; }
     public TempleDoorSnapshot? TempleDoor => _temple?.Snapshot;
+    /// <summary>Raised with the XP a lock gives (the Temple door's script, pcAddExperience): the world adds Swift Learner's share.</summary>
+    public event Action<int>? ExperienceGained;
     public static bool SupportsTempleDoorAdapter(MapDocument map) => TempleDoorAdapter.Match(map) != null;
     public static DoorSession FromMap(MapDocument map, bool enableTempleDoorAdapter = false)
     {
@@ -57,9 +59,16 @@ public sealed class DoorSession
         _roots = roots.ToArray(); _scriptedPrototypes = new(scriptedPrototypes ?? Array.Empty<int>()); Reset();
     }
     public DoorState? Get(string key) => ProjectDoor?.Invoke(key) ?? _doors.GetValueOrDefault(key);
+    /// <summary>A script sets this door's state (the Temple Key unlocking the challenge gate); only geometry and lock bits may differ.</summary>
+    internal void SetScriptedState(string key, DoorState state)
+    {
+        if (!_doors.TryGetValue(key, out DoorState? door) || state.Source.Key != key) throw new InvalidOperationException("Unknown door.");
+        _doors[key] = state; _revision++;
+    }
     public SavedDoorSession Capture() => new(_doors.Keys.Select(key => Get(key)!).OrderBy(d => d.Source.Key, StringComparer.Ordinal)
         .Select(d => new SavedDoor(d.Source.Key, d.Flags, d.OpenFlags)).ToArray(), _temple?.Snapshot.Locals.ToArray(), _temple?.Snapshot.Experience ?? 0);
-    public void Restore(SavedDoorSession saved, bool allowInitialGateChanges = true, bool allowTempleExitChanges = false)
+    /// <param name="allowInitialGateLock">The gate may also be locked: Cameron's challenge left it closed and locked (actemvil Node009).</param>
+    public void Restore(SavedDoorSession saved, bool allowInitialGateChanges = true, bool allowTempleExitChanges = false, bool allowInitialGateLock = false)
     {
         if (saved?.Doors == null || saved.Doors.Length != _doors.Count)
             throw new InvalidDataException("Checkpoint door count differs from its source MAP.");
@@ -75,7 +84,7 @@ public sealed class DoorSession
             bool templeExit = _templeExitKey == value.Key && allowTempleExitChanges;
             if (changed && source.Scripted && !adapted && !initialGate && !templeExit
                 || ((value.Flags ^ originalFlags) & ~OpenDoorMask) != 0
-                || ((value.OpenFlags ^ originalOpen) & ~(adapted ? 1 | Locked | Jammed : 1)) != 0)
+                || ((value.OpenFlags ^ originalOpen) & ~(adapted ? 1 | Locked | Jammed : initialGate && allowInitialGateLock ? 1 | Locked : 1)) != 0)
                 throw new InvalidDataException("Checkpoint attempts an unsupported door-state change.");
             if (changed && (!adapted && (originalOpen & Locked) != 0
                 || (originalFlags & (HexNavigation.Hidden | HexNavigation.Multihex)) != 0
@@ -176,6 +185,7 @@ public sealed class DoorSession
         if (!Enum.IsDefined(outcome)) throw new ArgumentOutOfRangeException(nameof(resolve), "Unknown roll outcome.");
         (DoorState state, int award) = _temple!.Apply(_doors[key], outcome);
         _doors[key] = state; _revision++;
+        if (award > 0) ExperienceGained?.Invoke(award);
         return new LockpickResult(DoorUseStatus.Ready, outcome, award);
     }
 }

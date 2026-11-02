@@ -22,14 +22,15 @@ O desenvolvimento do **FalloutRemake** adota uma dinâmica colaborativa e desaco
 
 ## 2. Estrutura de Diretórios e Worktrees
 
-O repositório principal reside em `C:\Dev\FalloutRemake` e atua como a base estável de referência. As áreas de trabalho adicionais foram criadas como **Git Worktrees** nativas apontando para o mesmo repositório Git, sem duplicar a pasta `.git` ou a biblioteca de assets:
+O repositório principal reside em `D:\Dev\FalloutRemake` e atua como a base estável de referência. Todas as áreas de trabalho adicionais foram criadas como **Git Worktrees** nativas apontando para o mesmo repositório Git, sem duplicar a pasta `.git` ou a biblioteca de assets:
 
 | Diretório Físico | Identificação / Propósito | Branch Vinculada | Commit Base de Criação |
 | :--- | :--- | :--- | :---: |
-| `C:\Dev\FalloutRemake` | **Projeto Principal (Base de Referência)** | `codex/arroyo-elder-entry-audit` | `a66f31c` *(com alterações locais em andamento)* |
+| `D:\Dev\FalloutRemake` | **Projeto Principal (Base de Referência)** | `codex/arroyo-elder-entry-audit` | `7d805ca` |
+| `D:\Dev\FalloutRemakeArgon` | **Área de Trabalho do Argon** | `agent/argon-work` | `ad1f9b5` |
 | `D:\Dev\FalloutRemakeCodex` | **Área de Trabalho do Codex** | `agent/codex-work` | `a66f31c` |
-| `C:\Dev\FalloutRemakeClaude` | **Área de Trabalho do Claude** | `agent/claude-work` | `a66f31c` |
-| `D:\Dev\FalloutRemakeIntegracao` | **Área Compartilhada de Integração** | `integration/work` | `a66f31c` |
+| `D:\Dev\FalloutRemakeClaude` | **Área de Trabalho do Claude** | `agent/claude-work` | `86fef77` |
+| `D:\Dev\FalloutRemakeIntegracao` | **Área Compartilhada de Integração** | `integration/work` | `ad1f9b5` |
 
 > [!IMPORTANT]
 > **Sobre a Área de Integração (`D:\Dev\FalloutRemakeIntegracao`):**  

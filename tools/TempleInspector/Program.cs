@@ -11,7 +11,7 @@ try
     if (args.Length < 2 || args[0] != "--data-dir")
     {
         Console.Error.WriteLine("Usage: TempleInspector --self-test | --data-dir <language-folder> [--map maps/arcaves.map] [--export-local] [--navigation] | --data-dir <language-folder> --script scripts/<name>.int [--instructions] | --data-dir <language-folder> <report>");
-        Console.Error.WriteLine("Reports: --door-adapter-test, --item-transfer-report, --temple-chest-report, --temple-dialogue-report, --temple-state-report, --arroyo-entry-report, --arroyo-elder-report, --temple-aftermath-report, --temple-npc-departure-report, --item-origin-route-report, --item-art-report, --temple-collection-report, --temple-barrier-report, --explosive-profile-report, --item-use-checkpoint-report, --barrier-effect-report, --barrier-commit-report, --combat-report");
+        Console.Error.WriteLine("Reports: --door-adapter-test, --item-transfer-report, --temple-chest-report, --temple-dialogue-report, --temple-state-report, --arroyo-entry-report, --arroyo-elder-report, --temple-aftermath-report, --temple-npc-departure-report, --item-origin-route-report, --item-art-report, --temple-collection-report, --temple-barrier-report, --explosive-profile-report, --item-use-checkpoint-report, --barrier-effect-report, --barrier-commit-report, --combat-report, --critical-report, --combat-ai-report, --critter-sight-report, --temple-run-report, --drug-report");
         return 2;
     }
     if (args.Length == 3 && args[2] == "--door-adapter-test")
@@ -89,6 +89,138 @@ try
     if (args.Length == 3 && args[2] == "--temple-barrier-report")
     {
         Console.WriteLine(JsonSerializer.Serialize(TempleBarrierReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--temple-run-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(TempleRunAudit.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--architecture-clearance-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(ArchitectureClearanceReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 4 && args[2] == "--msg")
+    {
+        var messages = MessageTextFile.Read(new GameData(args[1]).Read(args[3]));
+        foreach (var row in messages.Entries.Values.OrderBy(r => r.Id)) Console.WriteLine($"{row.Id}: {row.Text}");
+        return 0;
+    }
+    if (args.Length == 5 && args[2] == "--find-pid")
+    {
+        // Every object of the MAP with this PID (hex), or the object at "@offset", on the ground or inside an inventory,
+        // with its owner chain and its own inventory.
+        var pidData = new GameData(args[1]); var pidMap = MapDocument.Read(pidData.Read(args[3]), pidData.Read);
+        bool byOffset = args[4].StartsWith('@'); int wanted = byOffset ? int.Parse(args[4][1..]) : Convert.ToInt32(args[4], 16);
+        void Walk(MapObject o, string path)
+        {
+            if (byOffset ? o.Offset == wanted : o.Header.Pid == wanted)
+            {
+                Console.WriteLine($"{path} -> offset {o.Offset} hex {o.Header.Tile} elev {o.Header.Elevation} pid 0x{o.Header.Pid:X8} sid {o.Header.Sid} flags 0x{o.Header.Flags:X8}");
+                foreach (InventoryEntry entry in o.Inventory)
+                    Console.WriteLine($"    x{entry.Quantity} offset {entry.Object.Offset} pid 0x{entry.Object.Header.Pid:X8} sid {entry.Object.Header.Sid} flags 0x{entry.Object.Header.Flags:X8}");
+            }
+            foreach (InventoryEntry entry in o.Inventory) Walk(entry.Object, $"{path} / offset {o.Offset} pid 0x{o.Header.Pid:X8}");
+        }
+        foreach (MapObject o in pidMap.ObjectLayers.SelectMany(l => l.Objects)) Walk(o, "map");
+        return 0;
+    }
+    if (args.Length == 4 && args[2] == "--text")
+    {
+        Console.Write(System.Text.Encoding.Latin1.GetString(new GameData(args[1]).Read(args[3]).Bytes));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--premade-report")
+    {
+        var game = new GameData(args[1]);
+        var paths = game.FindPaths("premade/");
+        MessageTextFile traits = MessageTextFile.Read(game.Read("text/english/game/trait.msg")), skills = MessageTextFile.Read(game.Read("text/english/game/skill.msg"));
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            Paths = paths.Select(p => new { Path = p, Size = game.Read(p).Bytes.Length, Head = Convert.ToHexString(game.Read(p).Bytes.Take(48).ToArray()) }),
+            Characters = paths.Where(p => p.EndsWith(".gcd", StringComparison.OrdinalIgnoreCase)).Select(p => { var c = CharacterFile.Read(game.Read(p)); return new
+                { Path = p, c.Name, Base = c.BaseStats, Bonus = c.BonusStats, c.SkillPoints, c.TaggedSkills, c.Traits, c.CharacterPoints, c.Flags, c.BodyType, c.Experience, c.KillType, c.Source }; }),
+            Sheets = paths.Where(p => p.EndsWith(".gcd", StringComparison.OrdinalIgnoreCase)).Select(p => CharacterFile.Read(game.Read(p))).Where(c => c.CharacterPoints == 0).Select(c =>
+            {
+                var sheet = FalloutRemake.Runtime.PlayerCharacter.FromPremade(c); var e = sheet.Effective; int[] b = c.BaseStats;
+                // Values the character editor stored (base, before trait stat modifiers) against the same CE formulas.
+                var derived = new (string Name, int Index, int Mine)[] { ("HP", 7, sheet.BaseMaxHitPoints), ("AP", 8, 5 + e.Agility / 2), ("AC", 9, e.Agility),
+                    ("MD", 11, Math.Max(e.Strength - 5, 1)), ("Carry", 12, 25 + 25 * e.Strength), ("Sequence", 13, 2 * e.Perception),
+                    ("Healing", 14, Math.Max(e.Endurance / 3, 1)), ("Critical", 15, e.Luck), ("RadRes", 31, 2 * e.Endurance), ("PoisonRes", 32, 5 * e.Endurance) };
+                return new { c.Name, Premade = sheet.Premade, Effective = e.ToArray(), Traits = sheet.Traits.Select(t => traits.Entries.GetValueOrDefault(100 + (int)t)?.Text),
+                    Tags = sheet.TaggedSkills.Select(t => skills.Entries.GetValueOrDefault(100 + t)?.Text), sheet.Age, sheet.Gender,
+                    Mismatches = derived.Where(d => b[d.Index] != d.Mine).Select(d => $"{d.Name}: GCD {b[d.Index]} vs {d.Mine}").ToArray(),
+                    Final = new { HP = sheet.BaseMaxHitPoints, sheet.MaxActionPoints, sheet.ArmorClass, sheet.MeleeDamage, sheet.CarryWeight, sheet.Sequence, sheet.CriticalChance, sheet.HealingRate },
+                    Skills = Enumerable.Range(0, 18).Select(i => $"{skills.Entries.GetValueOrDefault(100 + i)?.Text}{(sheet.IsTagged(i) ? "*" : "")} {sheet.Skill(i)}%").ToArray() };
+            }),
+            TraitNames = Enumerable.Range(0, 16).Select(i => $"{i}: {traits.Entries.GetValueOrDefault(100 + i)?.Text}"),
+            Bios = paths.Where(p => p.EndsWith(".bio", StringComparison.OrdinalIgnoreCase)).Select(p => new { Path = p, Text = System.Text.Encoding.Latin1.GetString(game.Read(p).Bytes) })
+        }, new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--rest-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(RestReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--firearm-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(FirearmReport.Create(new GameData(args[1]), args[1]), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--medical-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(MedicalReport.Create(new GameData(args[1]), args[1]), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--perk-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(PerkReport.Create(new GameData(args[1]), args[1]), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--strength-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(StrengthReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--armor-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(ArmorReport.Create(new GameData(args[1]), args[1]), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--drug-report")
+    {
+        var drugs = new PrototypeCatalog(new ResourceCatalog(new GameData(args[1]).Read));
+        Console.WriteLine(JsonSerializer.Serialize(new[] { 273, 49 }.Select(pid => DrugPrototypeData.Read(drugs.Get(pid))).Select(d => new
+        { d.Pid, d.Stats, d.Immediate, d.FirstDelayMinutes, d.First, d.SecondDelayMinutes, d.Second, d.AddictionChance, d.WithdrawalEffect, d.WithdrawalOnset, d.Source }),
+            new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--walk-timing-report")
+    {
+        var walkData = new GameData(args[1]);
+        Console.WriteLine(JsonSerializer.Serialize(new[] { WalkTiming.ForGender(walkData, 0), WalkTiming.ForGender(walkData, 1) }, new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--duel-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(DuelReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--combat-ai-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(CombatAiReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--critical-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(CriticalReport.Create(new GameData(args[1]), args[1]), new JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+    if (args.Length == 3 && args[2] == "--critter-sight-report")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(CritterSightReport.Create(new GameData(args[1])), new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
     if (args.Length == 3 && args[2] == "--combat-report")

@@ -33,6 +33,12 @@ public sealed class WeaponPrototypeData
     public int SoundCode { get; }
     public WeaponAttackMode PrimaryMode { get; }
     public WeaponAttackMode SecondaryMode { get; }
+    /// <summary>CE WEAPON_TWO_HAND (extended flag 0x200): a crippled arm cannot wield it.</summary>
+    public bool TwoHanded { get; }
+    public const int TwoHandedFlag = 0x200;
+    /// <summary>CE ItemProtoExtendedFlags_BigGun (0x100): a non-energy firearm trained by Big Guns.</summary>
+    public bool BigGun { get; }
+    public const int BigGunFlag = 0x100;
 
     private WeaponPrototypeData(Prototype prototype)
     {
@@ -46,6 +52,7 @@ public sealed class WeaponPrototypeData
         BurstRounds = At(105); Caliber = At(109); AmmoPid = At(113); AmmoCapacity = At(117); SoundCode = b[121];
         int extended = prototype.ExtendedFlags;
         PrimaryMode = Mode(extended & 0xF); SecondaryMode = Mode((extended >> 4) & 0xF);
+        TwoHanded = (extended & TwoHandedFlag) != 0; BigGun = (extended & BigGunFlag) != 0;
         if (MinDamage < 0 || MaxDamage < MinDamage || DamageType is < 0 or > 6)
             throw new InvalidDataException($"Weapon PRO {Pid:X8} has an unsupported damage range or type.");
     }

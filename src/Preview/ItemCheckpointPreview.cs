@@ -38,11 +38,11 @@ public partial class TemplePreview
             if (_campaign.CurrentMap != 126 || _campaign.CarriedCount != 1 || _campaign.Carried[0].Map != 3)
                 throw new InvalidDataException("Inactive-area item state failed restoration in the exterior.");
             WorldCheckpoint saved = _campaign.Capture(_mapCatalog!.Source.Sha256);
-            var legacyV2 = saved with { Entries = null, Combat = null, Version = 2, Profile = "neutral-v2", Areas = saved.Areas.Select(a => a with { Uses = null, Replacements = null }).ToArray() };
+            var legacyV2 = saved with { Entries = null, Combat = null, Character = null, Duel = null, Skills = null, Version = 2, Profile = "neutral-v2", Areas = saved.Areas.Select(a => a with { Consumed = null, Uses = null, Replacements = null }).ToArray() };
             CheckpointFile.Write(CheckpointPath, legacyV2); LoadCheckpoint();
-            if (_campaign.CurrentMap != 126 || _campaign.CarriedCount != 1 || _campaign.ItemUses.Length != 0 || _campaign.Capture(_mapCatalog.Source.Sha256).Version != 10)
+            if (_campaign.CurrentMap != 126 || _campaign.CarriedCount != 1 || _campaign.ItemUses.Length != 0 || _campaign.Capture(_mapCatalog.Source.Sha256).Version != 13)
                 throw new InvalidDataException("Legacy v2 checkpoint failed to upgrade with the original carried item.");
-            var legacyV1 = legacyV2 with { Entries = null, Combat = null, Version = 1, Profile = "neutral-v1", Areas = legacyV2.Areas.Select(a => a with { Taken = null }).ToArray() };
+            var legacyV1 = legacyV2 with { Entries = null, Combat = null, Character = null, Duel = null, Skills = null, Version = 1, Profile = "neutral-v1", Areas = legacyV2.Areas.Select(a => a with { Consumed = null, Taken = null }).ToArray() };
             CheckpointFile.Write(CheckpointPath, legacyV1); LoadCheckpoint();
             if (_campaign.CarriedCount != 0 || _campaign.ItemUses.Length != 0) throw new InvalidDataException("Legacy v1 checkpoint invented carried or used items.");
             CheckpointFile.Write(CheckpointPath, saved); LoadCheckpoint();

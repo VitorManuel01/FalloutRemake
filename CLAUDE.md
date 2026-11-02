@@ -7,10 +7,10 @@ complementa com o contexto deste worktree; não cria exceções.
 
 ## Worktree e limites
 
-- Diretório de trabalho: `C:\Dev\FalloutRemakeClaude`, branch `agent/claude-work`.
-- Não editar `C:\Dev\FalloutRemake` (checkout principal do usuário, com trabalho
+- Diretório de trabalho: `D:\Dev\FalloutRemakeClaude`, branch `agent/claude-work`.
+- Não editar `D:\Dev\FalloutRemake` (checkout principal do usuário, com trabalho
   não commitado) nem os outros worktrees (`D:\Dev\FalloutRemakeCodex`,
-  `D:\Dev\FalloutRemakeIntegracao`). Ler deles é permitido.
+  `D:\Dev\FalloutRemakeArgon`, `D:\Dev\FalloutRemakeIntegracao`). Ler deles é permitido.
 - Inspecione `git status --short` antes de editar e distinga alterações
   preexistentes das suas.
 - Commit, push ou merge somente quando o usuário pedir.
@@ -30,7 +30,8 @@ commitado). Enquanto ele não chega a este branch, siga também estes pontos:
   ou testes executados. Diferencie fato verificado, inferência técnica e desconhecido.
 - **Sem falsos positivos de gameplay:** protótipos e ensaios (`*Preview`,
   `*Consultation`, `*Draft`, `*StateProfile`) e testes de auditoria não são
-  "gameplay integrado". O combate ainda não existe.
+  "gameplay integrado". O combate existe só como fatia jogável do Templo (COM-004):
+  formigas e radscorpions, IA provisória, sem críticos, fuga ou veneno.
 - **Dados originais:** não modificar PIDs, FIDs, SIDs, IDs de mapas, offsets INT,
   MSG, GAM/PRO nem a instalação do Fallout 2 (`master.dat`, `patch000.dat`, `data/*`).
 - **Assets 3D:** não alterar, remover ou regenerar `.glb`/`.import` em `Assets/`
@@ -46,7 +47,7 @@ commitado). Enquanto ele não chega a este branch, siga também estes pontos:
   copiados do checkout principal apenas os arquivos necessários:
   - `Assets/TempleOfTrials/Godot_Modular_glTF/` — kit modular v2 do Temple
     (`.gltf` + `.bin` + `textures/` compartilhadas). Origem:
-    `C:\Dev\FalloutRemake\Assets\TempleOfTrials\` (fonte Blender e relatório em
+    `D:\Dev\FalloutRemake\Assets\TempleOfTrials\` (fonte Blender e relatório em
     `Blender_Source/` e `Documentacao/`); scripts geradores no worktree
     `~\.gemini\antigravity\worktrees\FalloutAssetPipeline\blender_model_access_integration\src\blender\temple_kit\`.
   - `Assets/Nature/` — modelos usados por `NatureModels`.

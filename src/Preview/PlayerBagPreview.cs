@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FalloutRemake.Import;
 using FalloutRemake.Runtime;
+using FalloutRemake.Runtime.Combat;
 using Godot;
 
 namespace FalloutRemake.Preview;
@@ -11,7 +12,12 @@ namespace FalloutRemake.Preview;
 public partial class TemplePreview
 {
     private PlayerBagWindow? _bag;
-    private void CloseBag() { if (_bag != null) { _bag.Hide(); _bag.QueueFree(); _bag = null; } }
+    private void CloseBag()
+    {
+        if (_bag != null) { _bag.Hide(); _bag.QueueFree(); _bag = null; }
+        // Closing the bag in a fight closes the inventory the turn paid for.
+        if (_combat is { InventoryOpen: true } && _combat.Active is { IsPlayer: true } player) ApplyCombatResult(_combat.Execute(CombatActionProposal.CloseInventory(player.Id)));
+    }
     private PrototypeText? CarriedText(CarriedItem item)
     {
         if (_objectText == null || _campaign == null) return null;
@@ -27,6 +33,14 @@ public partial class TemplePreview
     {
         if (_bag?.Visible == true) { CloseBag(); return; }
         if (_campaign == null) return;
+        // In a fight the bag is CE's inventory: only on the player's turn, for 4 AP (inventoryOpen).
+        if (_combat != null)
+        {
+            if (_combat.Active is not { IsPlayer: true } fighter) { NavigationStatus("Aguarde: é o turno da criatura."); return; }
+            CombatActionResult opened = _combat.Execute(CombatActionProposal.OpenInventory(fighter.Id));
+            if (opened.Status != CombatActionStatus.Ready) { NavigationStatus($"Bolsa fechada · abrir em combate custa {CombatSession.InventoryCost(fighter)} AP"); return; }
+            ApplyCombatResult(opened);
+        }
         CloseBarrierEffectReview(); CloseUseClock(); CloseExplosivePreparation(); CloseInventory(); CloseLoot(); ClearRouteHover();
         GetTree().Root.GuiEmbedSubwindows = true;
         var dialog = new PlayerBagWindow { Size = new Vector2I(960, 680), Theme = _hud.GetChild<Control>(0).Theme };
@@ -42,15 +56,34 @@ public partial class TemplePreview
         };
         dialog.ApproachRequested = ApproachBagOrigin;
         dialog.PrepareExplosiveRequested = OpenExplosivePreparation;
+        dialog.UseDrugRequested = item => { if (_bag == dialog && _campaign?.SessionToken == sessionToken) UseDrugFromBag(item); };
         dialog.BarrierApproachRequested = ApproachBarrierForPlacement;
+        dialog.WieldRequested = (item, hand) => { if (_bag == dialog && _campaign?.SessionToken == sessionToken) WieldFromBag(item, hand); };
+        dialog.PutAwayRequested = hand => { if (_bag == dialog && _campaign?.SessionToken == sessionToken) PutAwayFromBag(hand); };
+        dialog.WearRequested = item => { if (_bag == dialog && _campaign?.SessionToken == sessionToken) WearFromBag(item); };
+        dialog.TakeOffRequested = () => { if (_bag == dialog && _campaign?.SessionToken == sessionToken) TakeOffFromBag(); };
         RefreshBag(); dialog.PopupCenteredClamped(new Vector2I(960, 680), .92f);
     }
     private void RefreshBag() => _bag?.Refresh(_campaign!.Carried, CarriedText, MapDisplayName, _campaign.CarriedWeight, _campaign.CarryCapacity,
         item => _campaign.UnitWeight(item.Map, item.Source),
         (item, qty) => _campaign.CanReturnItem(item.Map, item.OwnerKey, item.Source.Key, qty, _walker?.Moving == true),
-        item => ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true), item => InventoryTexture(item.Map, item.Source),
+        // No walking back to a container in the middle of a fight.
+        item => InCombat ? null : ItemOriginRoute.Find(_campaign, item, _walker?.Moving == true), item => InventoryTexture(item.Map, item.Source),
         item => ProposeExplosivePreparation(item, ExplosiveTimer.DefaultSeconds).Status, PreparationHint, item => BarrierPlacementApproach(item).HasValue,
-        item => _campaign.CanReturnAllItems(item.Map, item.OwnerKey, _walker?.Moving == true));
+        item => _campaign.CanReturnAllItems(item.Map, item.OwnerKey, _walker?.Moving == true), item => _campaign.CanUseDrug(item, _walker?.Moving == true),
+        (_campaign.Character.Kind == CharacterKind.TestNeutral ? $"Força {CarryWeight.TestStrength} (perfil de teste)" : $"Força {_campaign.Character.Effective.Strength} · {_campaign.Character.Name}")
+            + (_campaign.TempleChestCustody.Length == 0 ? "" : $" · {_campaign.TempleChestCustody.Sum(c => c.Quantity)} unidade(s) no baú do desafio (J ao lado do baú)"),
+        HeldIn, (item, hand) => _campaign.CanWield(item, hand, _walker?.Moving == true), IsWorn, item => _campaign.CanWear(item, _walker?.Moving == true));
+    // Outside combat a drug costs no AP (CE); the roll uses the fight seed in automated checks, the clock otherwise.
+    private void UseDrugFromBag(CarriedItem item)
+    {
+        if (_campaign == null) return;
+        DrugUseResult result = _campaign.UseDrug(item, new Runtime.Combat.SeededCombatRandom(_combatSeed ?? (ulong)DateTime.UtcNow.Ticks), _walker?.Moving == true);
+        NavigationStatus(result.Status == DrugUseStatus.Ready
+            ? $"Healing Powder usado · +{result.Healed} HP ({result.HitPoints}/{_campaign.MaxHitPoints}){(result.Healed < result.Rolled ? $" · {result.Rolled - result.Healed} além do máximo se perderam" : "")} · K para salvar"
+            : PlayerBagWindow.DrugHint(result.Status));
+        RefreshBag(); RefreshDoorAction();
+    }
     private void ApproachBagOrigin(CarriedItem item)
     {
         if (_campaign == null) return;
@@ -120,9 +153,19 @@ public partial class TemplePreview
                 throw new InvalidDataException("Bag modal changed movement, camera or collected items.");
             _bag.EmitSignal(Window.SignalName.WindowInput, key);
             if (_bag != null) throw new InvalidDataException("B did not close bag.");
+            // The original powder can be taken from the bag only while standing; outside combat it costs no AP and is used up.
+            OpenBag(); var use = (Button)_bag!.FindChild("UseDrugAction", true, false);
+            if (!use.Visible || !use.Disabled || !use.TooltipText.Contains("andar")) throw new InvalidDataException("Healing Powder use was offered while walking.");
+            CloseBag(); _walker.Advance(1000); UpdateWalkerPosition(); OpenBag(); use = (Button)_bag!.FindChild("UseDrugAction", true, false);
+            if (use.Disabled) throw new InvalidDataException("Healing Powder use unavailable while standing: " + use.TooltipText);
+            use.EmitSignal(Button.SignalName.Pressed);
+            if (_campaign.CarriedCount != 0 || _campaign.HitPoints != _campaign.MaxHitPoints || _bag?.RowCount != 0
+                || _campaign.Areas.Single(a => a.Map.Prefix.Header.MapIndex == 3).Items.Balance(pot.Key, powder.Source.Key) is not { Consumed: 1, Carried: 0 })
+                throw new InvalidDataException("Using the Healing Powder from the bag did not use up exactly one unit.");
+            CloseBag();
             foreach (WorldArea area in _campaign.Areas) MapLayoutWriter.Verify(area.Map);
             ResetWalker();
-            GD.Print("PLAYER_BAG_OK: B/button, empty bag, original powder name/ID/quantity/origin after exterior checkpoint reload, readable modal, movement/camera isolation, unchanged items and source bytes verified.");
+            GD.Print("PLAYER_BAG_OK: B/button, empty bag, original powder name/ID/quantity/origin after exterior checkpoint reload, readable modal, movement/camera isolation, unchanged items, Healing Powder used from the bag only while standing; source bytes verified.");
         }
         finally { CloseBag(); _checkingNavigation = false; }
     }

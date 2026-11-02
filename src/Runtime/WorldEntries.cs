@@ -23,16 +23,24 @@ public sealed partial class WorldSession
     public SavedArroyoReward? ArroyoReward => _arroyoReward;
     public SavedArroyoGlobals? ArroyoGlobals => _arroyoGlobals;
     private SavedWorldEntries CaptureEntries() => new(EnteredMaps,_arroyoReward,_arroyoGlobals);
+    // arvillag map_enter on the first visit: 600 XP for the Speech result (G10 = 2), 300 XP for the challenge (G10 = 1, Cameron
+    // yielded or died); the globals add karma and reputation, from what Cameron's death had already taken away.
+    private static SavedArroyoReward EntryReward(ArroyoRewardProfile profile, bool speech) => new(profile.Fingerprint, ArroyoRewardProfile.Experience(speech));
+    private static SavedArroyoGlobals EntryGlobals(ArroyoRewardProfile profile, bool cameronKilled) =>
+        cameronKilled ? profile.EntryGlobalsAfterCameronKilled() : profile.EntryGlobals();
     private (SavedArroyoReward Reward,SavedArroyoGlobals Globals)? PrepareEntryReward(ActorLocation destination,WorldArea target)
     {
         if (_enteredMaps.Contains(destination.Map) || destination != new ActorLocation(4,0,20517,0) || CurrentMap != 3
-            || InitialMap != 3 || _templeProgress == null || _arroyoProfile == null) return null;
-        if (_templeProgress.Profile.Speech.MapKey != TempleBarrierEffectProposal.MapHash
+            || InitialMap != 3 || _arroyoProfile == null) return null;
+        bool killed = _duelOutcome == TempleDuelOutcome.Killed;
+        TempleNpcDepartureProfile? temple = _templeProgress?.Profile ?? (killed ? _duelProfile : null);
+        if (temple == null) return null;
+        if (temple.Speech.MapKey != TempleBarrierEffectProposal.MapHash
             || Current.Map.Source.Sha256 != TempleBarrierEffectProposal.MapHash || Experience < 0)
-            throw new InvalidDataException("Arroyo reward requires verified Speech and a valid neutral character.");
+            throw new InvalidDataException("Arroyo reward requires a verified passed trial and a valid character.");
         var profile = _arroyoProfile(target.Map);
         if (!profile.Matches(target.Map)) throw new InvalidDataException("Arroyo entry reward MAP mismatch.");
-        return (new(profile.Fingerprint,ArroyoRewardProfile.BaseExperience),profile.EntryGlobals());
+        return (EntryReward(profile, _templeProgress?.Path == TempleTrialPath.Speech), EntryGlobals(profile, killed));
     }
     private void RestoreEntries(WorldCheckpoint saved)
     {
@@ -53,15 +61,17 @@ public sealed partial class WorldSession
             if (entries.ArroyoGlobals != null) throw new InvalidDataException("Arroyo entry globals require their verified first-entry receipt.");
             return;
         }
-        if (InitialMap != 3 || !maps.Contains(4) || _templeProgress == null || _arroyoProfile == null
-            || !_areas.TryGetValue(4,out var village) || _templeProgress.Profile.Speech.MapKey != TempleBarrierEffectProposal.MapHash
-            || reward.Experience != ArroyoRewardProfile.BaseExperience)
+        // The challenge block is restored later; its saved outcome tells which trial was passed (checked there against the world).
+        bool killed = saved.Duel?.Outcome == TempleDuelOutcome.Killed, speech = _templeProgress?.Path == TempleTrialPath.Speech;
+        if (InitialMap != 3 || !maps.Contains(4) || _templeProgress == null && !killed || _arroyoProfile == null
+            || !_areas.TryGetValue(4,out var village) || !_areas.TryGetValue(3,out var caves) || caves.Map.Source.Sha256 != TempleBarrierEffectProposal.MapHash
+            || reward.Experience != ArroyoRewardProfile.Experience(speech))
             throw new InvalidDataException("Checkpoint grants an unsupported Arroyo reward.");
         var profile = _arroyoProfile(village.Map);
         // Any level: the 600 XP is fixed in arvillag.int and level-ups are modeled by CharacterProgression.
         if (!profile.Matches(village.Map) || reward.Profile != profile.Fingerprint || Experience < 0)
             throw new InvalidDataException("Checkpoint Arroyo reward profile or character scope differs.");
-        var expected = profile.EntryGlobals();
+        var expected = EntryGlobals(profile, killed);
         if (saved.Version >= 9 && entries.ArroyoGlobals != expected || saved.Version < 9 && entries.ArroyoGlobals != null)
             throw new InvalidDataException("Checkpoint Arroyo entry globals differ from the neutral source profile.");
         _arroyoReward = reward;

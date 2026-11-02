@@ -7,15 +7,22 @@ using FalloutRemake.Import;
 
 namespace FalloutRemake.Runtime;
 
-/// <summary>Audited first-entry Speech XP and karma/reputation subset for the neutral character, at any level (CharacterProgression).</summary>
+/// <summary>
+/// Audited first-entry XP and karma/reputation subset, at any level (CharacterProgression). map_enter gives 600 XP when G10=2
+/// (the Speech result) and 300 XP for any other passed trial (G10=1: Cameron yielded or was killed). Karma and Arroyo
+/// reputation each rise by 15; Cameron's death (actemvil destroy_p_proc) had lowered them by 10 and 5 beforehand.
+/// </summary>
 public sealed class ArroyoRewardProfile
 {
-    public const int BaseExperience = 600;
+    public const int BaseExperience = 600, OtherTrialExperience = 300;
     public const string MapHash = "0EDCDFF2AFB6FAC7E8203CE9EAE8BA4663D37F3BE112D3EF4713AF3093D8D52A";
     public const string ProgramHash = "DB21D0CEA597C67D8597D7B98FEB252823DDF27D747FE9C710DB17720E319D48";
     public string Fingerprint { get; }
     public string EntryGlobalsFingerprint => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Fingerprint + "|entry-globals-neutral-v1")));
     public SavedArroyoGlobals EntryGlobals() => new(EntryGlobalsFingerprint,15,65,41);
+    /// <summary>After killing Cameron: karma 0 - 10 + 15 = 5 (still the Wanderer tier, G41) and reputation 50 - 5 + 15 = 60.</summary>
+    public SavedArroyoGlobals EntryGlobalsAfterCameronKilled() => new(EntryGlobalsFingerprint,5,60,41);
+    public static int Experience(bool speech) => speech ? BaseExperience : OtherTrialExperience;
     internal ArroyoRewardProfile() => Fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
         MapHash + "|" + ProgramHash + "|" + TempleSpeechProfile.GlobalHash + "|arroyo-first-entry-speech-neutral-v1")));
     internal bool Matches(MapDocument map) => map.Source is { Path:"maps/arvillag.map",Size:216200,Sha256:MapHash }
@@ -47,6 +54,7 @@ public sealed class ArroyoRewardProfile
         Span(3004,(0xC001,47),(0xC001,47),(0x80C5,null),(0xC001,15),(0x8039,null),(0x80C6,null));
         Span(3164,(0xC001,3270),(0xC001,10),(0x80C5,null),(0xC001,2),(0x8033,null),(0x802F,null),
             (0xC001,300),(0xC001,300),(0x8039,null),(0xC001,0),(0x8031,null),(0xC001,0),(0x8032,null),(0x80A1,null));
+        Span(3270,(0xC001,300),(0x80A1,null));
         return profile;
     }
 }

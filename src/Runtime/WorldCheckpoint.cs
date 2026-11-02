@@ -8,11 +8,22 @@ using System.Text.Json.Serialization;
 
 namespace FalloutRemake.Runtime;
 
-public sealed record SavedArea(int Map, string SourceHash, string DependenciesHash, ActorLocation Location, SavedDoorSession Session, TakenItem[]? Taken = null, ItemUseAllocation[]? Uses = null, SceneryReplacement[]? Replacements = null);
+/// <summary>Ground (optional, inside v13): thrown units of the area's collected items lying on a hex; absent when there are none.</summary>
+public sealed record SavedArea(int Map, string SourceHash, string DependenciesHash, ActorLocation Location, SavedDoorSession Session, TakenItem[]? Taken = null, ItemUseAllocation[]? Uses = null, SceneryReplacement[]? Replacements = null,
+    ConsumedItem[]? Consumed = null, GroundItem[]? Ground = null);
 public sealed record WorldCheckpoint(int Version, string Profile, string CatalogHash, int InitialMap, int CurrentMap, SavedArea[] Areas, SavedTempleProgress? Temple = null, SavedWorldEntries? Entries = null,
-    SavedCombat? Combat = null, SavedElderState? Elder = null);
-/// <summary>v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>
-public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defeated, [property: JsonRequired] int Experience, int? PlayerHitPoints);
+    SavedCombat? Combat = null, SavedCharacter? Character = null, SavedTempleDuel? Duel = null, SavedSkills? Skills = null, SavedFirearms? Firearms = null, SavedElderState? Elder = null);
+/// <summary>v11 adds <see cref="SavedArea.Consumed"/> (drugs taken from collected items). v10: outcome of won fights. Experience must equal the PRO experience of the defeated critters.</summary>
+/// <summary>Survivors (optional, inside v13): critters left standing when the player ended a fight, where they stand.</summary>
+/// <summary>
+/// GameTime (optional, inside v13): the game clock in CE ticks, absent at the start time; criticals wait for day 1.
+/// PlayerCrippled (optional, inside v13): the dude's crippled limbs (CE damage flags), which outlast fights.
+/// Hands (optional, inside v13): the items the player holds and the active hand (<see cref="SavedHands"/>); absent at the defaults.
+/// </summary>
+public sealed record SavedCombat([property: JsonRequired] DefeatedCritter[] Defeated, [property: JsonRequired] int Experience, int? PlayerHitPoints,
+    SurvivingCritter[]? Survivors = null, SavedPoison? Poison = null, long? GameTime = null, int? PlayerCrippled = null, SavedHands? Hands = null);
+/// <summary>The dude's poison (optional, inside v13): level and game ticks until the next poison event.</summary>
+public sealed record SavedPoison([property: JsonRequired] int Level, [property: JsonRequired] int TicksLeft);
 /// <summary>v10: committed Arroyo elder dialogue state (choices, reaction and audited local/global variables).</summary>
 public sealed record SavedElderState(
     [property: JsonRequired] string Profile,
@@ -63,6 +74,12 @@ public static class CheckpointFile
                 throw new InvalidDataException("Checkpoint v10 requires an explicit Combat object.");
             if (checkpoint.Version >= 10 && !document.RootElement.TryGetProperty("Elder", out _))
                 throw new InvalidDataException("Checkpoint v10 requires an explicit Elder field.");
+            if (checkpoint.Version >= 12 && (!document.RootElement.TryGetProperty("Character", out var character) || character.ValueKind != JsonValueKind.Object))
+                throw new InvalidDataException("Checkpoint v12 requires an explicit Character object.");
+            if (checkpoint.Version >= 12 && (!document.RootElement.TryGetProperty("Duel", out var duel) || duel.ValueKind != JsonValueKind.Object))
+                throw new InvalidDataException("Checkpoint v12 requires an explicit Duel object.");
+            if (checkpoint.Version >= 13 && (!document.RootElement.TryGetProperty("Skills", out var skills) || skills.ValueKind != JsonValueKind.Object))
+                throw new InvalidDataException("Checkpoint v13 requires an explicit Skills object.");
             return checkpoint;
         }
         catch (JsonException error) { throw new InvalidDataException("Malformed checkpoint JSON.", error); }

@@ -16,6 +16,8 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _inventory = new() { Name = "InventoryAction", Text = "Inventário [I]", Disabled = true,
         TooltipText = "Consultar o inventário original do objeto selecionado, sem transferir itens" };
     private readonly Button _focusCharacter = new() { Name = "CharacterFocusAction", Text = "Personagem [C]" };
+    private readonly Button _characterSheet = new() { Name = "CharacterSheetAction", Text = "Novo jogo [N]", TooltipText = "Escolher Narg, Mingan, Chitsa ou criar um personagem · começa um novo jogo" };
+    private readonly Button _skillSheet = new() { Name = "SkillSheetAction", Text = "Ficha [H]", TooltipText = "Ficha do personagem em jogo · gastar os pontos de perícia dos níveis" };
     private readonly Button _originalFloor = new() { Name = "OriginalFloorAction", Text = "Piso original [O]", ToggleMode = true,
         TooltipText = "Comparar com o piso da instalação local" };
     private readonly Button _revealActor = new() { Name = "WallOcclusionAction", Text = "Auto [V]", ToggleMode = true, ButtonPressed = true,
@@ -37,15 +39,21 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _resetWalker = new() { Text = "Reiniciar prévia", CustomMinimumSize = new Vector2(0, 30) };
     private readonly Button _doorUse = new() { Text = "Usar porta [U]", Disabled = true, CustomMinimumSize = new Vector2(0, 30) };
     private readonly Button _lockpick = new() { Name = "LockpickAction", Text = "Arrombar [L]", Disabled = true, CustomMinimumSize = new Vector2(0, 30) };
+    private readonly Button _rest = new() { Name = "RestAction", Text = "Descansar", CustomMinimumSize = new Vector2(0, 30) };
+    private readonly Button _medical = new() { Name = "MedicalAction", Text = "Curar", CustomMinimumSize = new Vector2(0, 30) };
+    private readonly Button _reload = new() { Name = "ReloadAction", Text = "Recarregar", CustomMinimumSize = new Vector2(0, 30) };
     private readonly Label _character = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Button _exit = new() { Name = "ExitAction", Text = "Passar [Enter]", Visible = false, Disabled = true };
     private PanelContainer? _navigationPanel;
     public Action? WalkModeRequested, ResetWalkerRequested;
     public Action? DoorUseRequested;
     public Action? LockpickRequested;
+    public Action? RestRequested;
+    public Action? MedicalRequested;
+    public Action? ReloadRequested;
     public Action? ExitRequested;
     public Action? SaveRequested, LoadRequested;
-    public Action? CharacterFocusRequested;
+    public Action? CharacterFocusRequested, CharacterSheetRequested, SkillSheetRequested;
     public Action<bool>? OriginalFloorRequested;
     public Action? StopRequested;
     public Action<bool>? RevealActorRequested;
@@ -54,6 +62,10 @@ public partial class PreviewHud : CanvasLayer
     private readonly Button _speech = new() { Name = "SpeechAction", Text = "Conversa · ensaio", Visible = false, Disabled = true };
     public Action? NpcApproachRequested;
     private readonly Button _npcApproach = new() { Name = "NpcApproachAction", Text = "Chegar ao NPC", Visible = false, Disabled = true };
+    public Action? DuelRequested;
+    private readonly Button _duel = new() { Name = "TempleDuelAction", Text = "Desafio de Cameron", Visible = false, Disabled = true };
+    public Action? TempleKeyRequested;
+    private readonly Button _templeKey = new() { Name = "TempleKeyAction", Text = "Usar a Temple Key", Visible = false, Disabled = true };
     public Action<bool>? NavigationGridRequested;
     public Action? FrameRouteRequested;
     public Action? LootRequested;
@@ -98,6 +110,8 @@ public partial class PreviewHud : CanvasLayer
         Button(row, "Entrada  [F]", () => EntryRequested?.Invoke());
         Button(row, "Ver tudo  [Home]", () => FrameRequested?.Invoke());
         _focusCharacter.Pressed += () => CharacterFocusRequested?.Invoke(); row.AddChild(_focusCharacter);
+        _characterSheet.Pressed += () => CharacterSheetRequested?.Invoke(); row.AddChild(_characterSheet);
+        _skillSheet.Pressed += () => SkillSheetRequested?.Invoke(); row.AddChild(_skillSheet);
         _bag.Pressed += () => BagRequested?.Invoke(); row.AddChild(_bag);
         _save.Pressed += () => SaveRequested?.Invoke(); row.AddChild(_save);
         _load.Pressed += () => LoadRequested?.Invoke(); row.AddChild(_load);
@@ -144,6 +158,8 @@ public partial class PreviewHud : CanvasLayer
         _inventory.Pressed += () => InventoryRequested?.Invoke(); selectionActions.AddChild(_inventory);
         _speech.Pressed += () => { if (!_speech.Disabled) SpeechRequested?.Invoke(); }; selectionActions.AddChild(_speech);
         _npcApproach.Pressed += () => { if (!_npcApproach.Disabled) NpcApproachRequested?.Invoke(); }; selectionActions.AddChild(_npcApproach);
+        _duel.Pressed += () => { if (!_duel.Disabled) DuelRequested?.Invoke(); }; selectionActions.AddChild(_duel);
+        _templeKey.Pressed += () => { if (!_templeKey.Disabled) TempleKeyRequested?.Invoke(); }; selectionActions.AddChild(_templeKey);
 
         _navigationPanel = new PanelContainer { AnchorTop = 1, AnchorBottom = 1,
             AnchorRight = 1, OffsetLeft = 16, OffsetRight = -316, OffsetTop = -272, OffsetBottom = -64 };
@@ -155,6 +171,9 @@ public partial class PreviewHud : CanvasLayer
         _doorUse.Pressed += () => DoorUseRequested?.Invoke(); actions.AddChild(_doorUse);
         _lockpick.Pressed += () => LockpickRequested?.Invoke(); actions.AddChild(_lockpick);
         _exit.Pressed += () => ExitRequested?.Invoke(); actions.AddChild(_exit);
+        _rest.Pressed += () => RestRequested?.Invoke(); actions.AddChild(_rest);
+        _medical.Pressed += () => MedicalRequested?.Invoke(); actions.AddChild(_medical);
+        _reload.Pressed += () => ReloadRequested?.Invoke(); actions.AddChild(_reload);
         _character.AddThemeFontSizeOverride("font_size", 12); _character.Modulate = new Color("d2c397"); navigation.AddChild(_character);
         var movement = new HBoxContainer(); navigation.AddChild(movement);
         _navigationStatus.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -173,7 +192,7 @@ public partial class PreviewHud : CanvasLayer
 
         var footer = Panel(root, 16, -52, -16, -12, true);
         footer.AnchorTop = 1; footer.AnchorBottom = 1;
-        var help = new Label { Text = "W A S D  mover    ·    Botão direito  arrastar    ·    Roda  zoom    ·    Q / E  girar    ·    M  caminhar    ·    U  porta    ·    L  arrombar    ·    Enter  passar",
+        var help = new Label { Text = "W A S D  mover    ·    Botão direito  arrastar    ·    Roda  zoom    ·    Q / E  girar    ·    M  caminhar    ·    U  porta    ·    L  arrombar    ·    X  trocar mão    ·    Enter  passar",
             HorizontalAlignment = HorizontalAlignment.Center, Modulate = new Color("9fb2a8") };
         help.ClipText = true; help.AddThemeFontSizeOverride("font_size", 12); footer.AddChild(help);
     }
@@ -189,6 +208,8 @@ public partial class PreviewHud : CanvasLayer
     { _save.Disabled = !saveAvailable; _load.Disabled = !loadAvailable; }
     public void Counts(string text) => _counts.Text = text;
     public void Elevation(int elevation) => _elevation.Select(elevation);
+    // The last status message, whatever route hint covers it.
+    public string NavigationStatusText => _navigationMessage;
     public void Navigation(bool available, bool walkingMode, string status)
     {
         _walkMode.Disabled = !available; _resetWalker.Disabled = false;
@@ -202,6 +223,10 @@ public partial class PreviewHud : CanvasLayer
     public void InventoryAction(bool enabled) => _inventory.Disabled = !enabled;
     public void SpeechAction(bool visible, bool enabled, string hint)
     { _speech.Visible = visible; _speech.Disabled = !enabled; _speech.TooltipText = hint; }
+    public void DuelAction(bool visible, bool enabled, string hint)
+    { _duel.Visible = visible; _duel.Disabled = !enabled; _duel.TooltipText = hint; }
+    public void TempleKeyAction(bool visible, bool enabled, string hint)
+    { _templeKey.Visible = visible; _templeKey.Disabled = !enabled; _templeKey.TooltipText = hint; }
     public void NpcApproachAction(bool visible, bool enabled, string hint)
     { _npcApproach.Visible = visible; _npcApproach.Disabled = !enabled; _npcApproach.TooltipText = hint; }
     public void NavigationGrid(bool enabled) => _grid.SetPressedNoSignal(enabled);
@@ -219,6 +244,7 @@ public partial class PreviewHud : CanvasLayer
         _doorUse.Disabled = !enabled; _doorUse.Text = open ? "Fechar porta [U]" : "Abrir porta [U]";
         _doorUse.TooltipText = hint;
     }
+    public string CharacterText => _character.Text;
     public void LockpickAction(bool enabled, bool locked, string hint, string character)
     {
         _lockpick.Disabled = !enabled; _lockpick.Text = locked ? "Arrombar [L]" : "Retrancar [L]";

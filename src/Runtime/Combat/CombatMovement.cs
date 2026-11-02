@@ -29,6 +29,29 @@ public sealed class CombatMovement
         && _navigation.BlockersAt(hex).All(b => _combatantKeys.Contains(b.Key))
         && !_combatants.Any(c => c != mover && c.Alive && c.Elevation == mover.Elevation && c.Hex == hex);
 
+    /// <summary>A critter (combatant or a map critter outside the fight) standing on the hex, which CE _obj_ai_blocking_at may step past.</summary>
+    public bool CritterAt(int hex, CombatantState mover) =>
+        _combatants.Any(c => c != mover && c.Alive && c.Elevation == mover.Elevation && c.Hex == hex)
+        || _navigation.BlockersAt(hex).Any(b => b.FidType == 1 && !_combatantKeys.Contains(b.Key));
+
+    /// <summary>Passable once every critter on the hex is ignored: only walls, scenery, closed doors and exit grids count.</summary>
+    public bool PassableIgnoringCritters(int hex, CombatantState mover) =>
+        HexNavigation.Valid(hex) && !_navigation.IsExit(hex) && _navigation.BlockersAt(hex).All(b => b.FidType == 1 || _combatantKeys.Contains(b.Key));
+
+    /// <summary>Whether the hexes form a walk from the mover's hex, one neighbor at a time, over passable hexes.</summary>
+    public bool Follows(CombatantState mover, int[] path)
+    {
+        ArgumentNullException.ThrowIfNull(mover); ArgumentNullException.ThrowIfNull(path);
+        if (path.Length == 0 || _navigation.Elevation != mover.Elevation) return false;
+        int previous = mover.Hex;
+        foreach (int hex in path)
+        {
+            if (FalloutGrid.Distance(previous, hex) != 1 || !Passable(hex, mover)) return false;
+            previous = hex;
+        }
+        return true;
+    }
+
     /// <summary>Shortest path from the mover to the target, excluding the start hex; null when no path exists.</summary>
     public int[]? Path(CombatantState mover, int target) => Path(mover, t => t == target);
 

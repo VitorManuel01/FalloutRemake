@@ -11,7 +11,8 @@ public sealed record LevelGain(int Level, int HitPoints, int SkillPoints, bool P
 /// Fallout 2 level progression for the neutral character, as CE: thresholds of pcGetExperienceForLevel
 /// (1000 x triangular numbers), +EN/2+2 max HP per level with current HP rising by the same amount,
 /// 5 + 2 x IN skill points per level (unspent total capped at 99) and a perk every third level.
-/// Spending skill points and choosing perks are not modeled yet, so both are derived totals.
+/// These are totals before spending: the unspent pool of a running game lives in WorldSession (skill spending);
+/// choosing perks is not modeled yet.
 /// </summary>
 public static class CharacterProgression
 {
@@ -45,6 +46,25 @@ public static class CharacterProgression
         var gains = new List<LevelGain>();
         for (int level = CheckedLevel(fromLevel) + 1; level <= CheckedLevel(toLevel); level++)
             gains.Add(new LevelGain(level, HitPointsPerLevel(special), SkillPointsPerLevel(special), level % PerkInterval == 0));
+        return gains;
+    }
+
+    // The player's sheet: trait-adjusted SPECIAL, Skilled/Gifted skill points and the Skilled perk interval.
+    public static int MaxHitPoints(PlayerCharacter character, int level)
+    {
+        // The character editor adds 4 at once for every Lifegiver rank chosen; later levels add 4 more each.
+        int hp = character.BaseMaxHitPoints + character.Perks.StatBonus(DerivedCombatStats.MaxHitPointsStat) + 4 * character.Perks.Rank(Perk.Lifegiver);
+        for (int l = 2; l <= CheckedLevel(level); l++) hp += character.HitPointsForLevel(l);
+        return hp;
+    }
+    public static int UnspentSkillPoints(PlayerCharacter character, int level) =>
+        Math.Min(MaxUnspentSkillPoints, (CheckedLevel(level) - 1) * character.SkillPointsPerLevel);
+    public static int PerksAvailable(PlayerCharacter character, int level) => CheckedLevel(level) / character.PerkInterval;
+    public static IReadOnlyList<LevelGain> Gains(PlayerCharacter character, int fromLevel, int toLevel)
+    {
+        var gains = new List<LevelGain>();
+        for (int level = CheckedLevel(fromLevel) + 1; level <= CheckedLevel(toLevel); level++)
+            gains.Add(new LevelGain(level, character.HitPointsPerLevel, character.SkillPointsPerLevel, level % character.PerkInterval == 0));
         return gains;
     }
 

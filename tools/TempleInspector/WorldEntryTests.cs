@@ -8,16 +8,8 @@ internal static class WorldEntryTests
     private static (WorldSession World,Func<int,MapDocument> Load,TempleNpcDepartureProfile Profile) Fixture(Func<MapDocument,ArroyoRewardProfile>? reward = null,bool ambiguousReturn = false,Func<MapDocument,MapDocument>? adjustTemple = null)
     {
         var (temple,profile,original) = WorldTempleSpeechTests.Fixture();
-        var exit = WorldTests.Map(3,4).ObjectLayers[0].Objects[0];
-        exit = exit with { Key = temple.Source.Sha256 + ":422028",ContainerElevation = 2,Header = exit.Header with { Tile = 13326,Elevation = 2 },
-            State = new Dictionary<string,int> { ["destinationMap"] = 4,["destinationElevation"] = 0,["destinationTile"] = 20517,["destinationRotation"] = 0 } };
-        temple = temple with { ObjectLayers = temple.ObjectLayers.Select(l => l.Elevation == 2 ? l with { Objects = l.Objects.Append(exit).ToArray() } : l).ToArray() };
-        var village = WorldTests.Map(4,3);
-        village = village with { Source = village.Source with { Path = "maps/arvillag.map",Size = 216200,Sha256 = ArroyoRewardProfile.MapHash },
-            Prefix = village.Prefix with { Header = village.Prefix.Header with { ScriptIndex = 27,EnteringTile = 20517 } },
-            MapProgram = new("scripts/arvillag.int","synthetic verified profile",5188,ArroyoRewardProfile.ProgramHash),
-            ObjectLayers = village.ObjectLayers.Select(l => l with { Objects = l.Objects.Select(o => (o.Header.Pid >> 24) != 5 ? o : o with { Header = o.Header with { Tile = 20517 },
-                State = new Dictionary<string,int> { ["destinationMap"] = 3,["destinationElevation"] = 2,["destinationTile"] = 13326,["destinationRotation"] = 0 } }).ToArray() }).ToArray() };
+        temple = WithArroyoExit(temple);
+        var village = Village();
         if (ambiguousReturn)
         {
             var marker = village.ObjectLayers[0].Objects[0];
@@ -30,6 +22,23 @@ internal static class WorldEntryTests
         world.Current.Travel.Arrive(original.Location); world.CommitTempleSpeech(WorldTempleSpeechTests.Plan(world,profile),false);
         world.Current.Travel.Arrive(new(3,2,13326,0));
         return (world,Load,profile);
+    }
+    // The Temple elevation 2 exit grid at 13326 to Arroyo (4/0/20517), and the verified village profile with its way back.
+    internal static MapDocument WithArroyoExit(MapDocument temple)
+    {
+        var exit = WorldTests.Map(3,4).ObjectLayers[0].Objects[0];
+        exit = exit with { Key = temple.Source.Sha256 + ":422028",ContainerElevation = 2,Header = exit.Header with { Tile = 13326,Elevation = 2 },
+            State = new Dictionary<string,int> { ["destinationMap"] = 4,["destinationElevation"] = 0,["destinationTile"] = 20517,["destinationRotation"] = 0 } };
+        return temple with { ObjectLayers = temple.ObjectLayers.Select(l => l.Elevation == 2 ? l with { Objects = l.Objects.Append(exit).ToArray() } : l).ToArray() };
+    }
+    internal static MapDocument Village()
+    {
+        var village = WorldTests.Map(4,3);
+        return village with { Source = village.Source with { Path = "maps/arvillag.map",Size = 216200,Sha256 = ArroyoRewardProfile.MapHash },
+            Prefix = village.Prefix with { Header = village.Prefix.Header with { ScriptIndex = 27,EnteringTile = 20517 } },
+            MapProgram = new("scripts/arvillag.int","synthetic verified profile",5188,ArroyoRewardProfile.ProgramHash),
+            ObjectLayers = village.ObjectLayers.Select(l => l with { Objects = l.Objects.Select(o => (o.Header.Pid >> 24) != 5 ? o : o with { Header = o.Header with { Tile = 20517 },
+                State = new Dictionary<string,int> { ["destinationMap"] = 3,["destinationElevation"] = 2,["destinationTile"] = 13326,["destinationRotation"] = 0 } }).ToArray() }).ToArray() };
     }
     private static WorldSession Restore(WorldCheckpoint saved,Func<int,MapDocument> load,TempleNpcDepartureProfile profile)
         => WorldSession.Restore(load,new[] {3,4,126},saved,"catalog",templeProfile:_ => profile,arroyoProfile:_ => new ArroyoRewardProfile());
@@ -103,9 +112,9 @@ internal static class WorldEntryTests
         check("legacy v7 cached Arroyo migrates conservatively without retroactive reward while uncached Arroyo remains eligible",() =>
         {
             var (world,load,profile) = Fixture();
-            var old = world.Capture("catalog") with {Version = 7,Profile = "neutral-v7",Entries = null, Combat = null};
+            var old = world.Capture("catalog") with {Version = 7,Profile = "neutral-v7",Entries = null, Combat = null, Character = null, Duel = null, Skills = null, Areas = world.Capture("catalog").Areas.Select(a => a with { Consumed = null }).ToArray()};
             var fresh = Restore(old,load,profile); fresh.UseExit(false); Assert(fresh.Experience == 600);
-            world.InspectExit(false); old = world.Capture("catalog") with {Version = 7,Profile = "neutral-v7",Entries = null, Combat = null};
+            world.InspectExit(false); old = world.Capture("catalog") with {Version = 7,Profile = "neutral-v7",Entries = null, Combat = null, Character = null, Duel = null, Skills = null, Areas = world.Capture("catalog").Areas.Select(a => a with { Consumed = null }).ToArray()};
             var conservative = Restore(old,load,profile);
             Assert(conservative.EnteredMaps.Contains(4) && conservative.UseExit(false).Status == ExitStatus.Ready && conservative.Experience == 0);
         });
@@ -119,10 +128,10 @@ internal static class WorldEntryTests
         check("v8 receipt migrates exact neutral entry globals once while visited villages without a receipt receive no invented state",() =>
         {
             var (world,load,profile) = Fixture(); world.UseExit(false);
-            var old = world.Capture("catalog") with {Version=8,Profile="neutral-v8",Combat=null,Entries=world.Capture("catalog").Entries! with {ArroyoGlobals=null}};
+            var old = world.Capture("catalog") with {Version=8,Profile="neutral-v8",Combat = null, Character = null, Duel = null, Skills = null,Areas=world.Capture("catalog").Areas.Select(a => a with { Consumed = null }).ToArray(),Entries=world.Capture("catalog").Entries! with {ArroyoGlobals=null}};
             var node=JsonNode.Parse(CheckpointFile.Encode(old))!; node["Entries"]!.AsObject().Remove("ArroyoGlobals");
             var restored=Restore(CheckpointFile.Decode(Encoding.UTF8.GetBytes(node.ToJsonString())),load,profile);
-            Assert(restored.Capture("catalog").Version==10 && restored.Experience==600 && restored.ArroyoGlobals==new ArroyoRewardProfile().EntryGlobals());
+            Assert(restored.Capture("catalog").Version==13 && restored.Experience==600 && restored.ArroyoGlobals==new ArroyoRewardProfile().EntryGlobals());
             restored.UseExit(false); restored.UseExit(false); Assert(restored.ArroyoGlobals!.ArroyoReputation==65 && restored.Experience==600);
             var without=Restore(old with {Entries=old.Entries! with {ArroyoReward=null}},load,profile);
             Assert(without.ArroyoGlobals==null && without.Experience==0);
