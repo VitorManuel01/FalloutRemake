@@ -37,6 +37,8 @@ public sealed class DoorSession
     internal Func<string, DoorState?>? ProjectDoor { get; set; }
     internal Func<string, bool>? AllowTempleExitUse { get; set; }
     public TempleDoorSnapshot? TempleDoor => _temple?.Snapshot;
+    /// <summary>Raised with the XP a lock gives (the Temple door's script, pcAddExperience): the world adds Swift Learner's share.</summary>
+    public event Action<int>? ExperienceGained;
     public static bool SupportsTempleDoorAdapter(MapDocument map) => TempleDoorAdapter.Match(map) != null;
     public static DoorSession FromMap(MapDocument map, bool enableTempleDoorAdapter = false)
     {
@@ -183,6 +185,7 @@ public sealed class DoorSession
         if (!Enum.IsDefined(outcome)) throw new ArgumentOutOfRangeException(nameof(resolve), "Unknown roll outcome.");
         (DoorState state, int award) = _temple!.Apply(_doors[key], outcome);
         _doors[key] = state; _revision++;
+        if (award > 0) ExperienceGained?.Invoke(award);
         return new LockpickResult(DoorUseStatus.Ready, outcome, award);
     }
 }

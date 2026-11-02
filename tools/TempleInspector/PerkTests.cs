@@ -28,7 +28,7 @@ internal static class PerkTests
                 && PerkCatalog.Get(Perk.MasterThief) is { Param1: CharacterSkill.Steal, Value1: 50, ParamMode: PerkCatalog.Both, Param2: CharacterSkill.Lockpick, Value2: 50 }
                 && PerkCatalog.Get(Perk.AdrenalineRush).Stats[0] == -10 && !PerkCatalog.Get(Perk.PoweredArmor).Selectable, "Rows.");
             Assert(PerkCatalog.Effect(Perk.Toughness) == PerkEffect.Applied && PerkCatalog.Effect(Perk.Medic) == PerkEffect.SheetOnly
-                && PerkCatalog.Effect(Perk.SwiftLearner) == PerkEffect.NotModeled, "What each does here.");
+                && PerkCatalog.Effect(Perk.Awareness) == PerkEffect.NotModeled, "What each does here.");
         });
         check("CE perkCanAdd: level, rank, SPECIAL (negative means below), skills by parameter mode; perks not modeled here are refused", () =>
         {
@@ -217,6 +217,32 @@ internal static class PerkTests
                 mutation with { TraitGained = null }, mutation with { TraitGained = 16 } })
                 try { Load(saved with { Skills = saved.Skills with { Perks = new[] { bad } } }); throw new Exception($"Forged Mutate! accepted: {bad}."); }
                 catch (InvalidDataException) { }
+        });
+        check("Swift Learner (CE pcAddExperienceWithOptions): every gain after it adds 5% per rank, rounded down per gain; saved apart and bounded", () =>
+        {
+            var world = SkillSpendingTests.Leveled(SkillSpendingTests.Map(3000));
+            Assert(world.ChoosePerk(Perk.SwiftLearner) == PerkChoiceStatus.Ready && world.SwiftLearnerExperience == 0 && world.Experience == 3000,
+                "Nothing before: the gains already made keep their XP.");
+            // The other ant (also 3000 XP) fought the same way: it bites for 4, one spear hit kills it.
+            int Tile(int column, int row) => row * 200 + 199 - column;
+            world.Current.Travel.Arrive(new(3, 0, Tile(80, 119), 0));
+            var spear = CombatWeapon.Primary("Spear", WeaponPrototypeData.Read(CombatTests.Spear()));
+            var fight = world.BeginCombat(new CombatEncounter(world.Location, new[] { "map3:other-ant" }, "map3:other-ant"), spear, new CombatTests.Scripted(1, 4, 1, 11));
+            ProvisionalMeleeBehavior.TakeTurn(fight);
+            fight.Execute(CombatActionProposal.Attack("player", "map3:other-ant"));
+            Assert(world.CommitCombat(fight) == CombatCommitStatus.Ready && world.SwiftLearnerExperience == 150 && world.Experience == 6150 && world.Level == 4,
+                "3000 XP + 150: level 4.");
+            WorldSession Load(WorldCheckpoint checkpoint) => WorldSession.Restore(_ => SkillSpendingTests.Map(3000), new[] { 3, 126 }, checkpoint, "catalog");
+            var saved = CheckpointFile.Decode(CheckpointFile.Encode(world.Capture("catalog")));
+            Assert(saved.Skills!.SwiftExperience == 150 && Load(saved).Experience == 6150 && Load(saved).Level == 4, "Saved and restored.");
+            foreach (int? bad in new int?[] { 0, -5, 301 })
+                try { Load(saved with { Skills = saved.Skills with { SwiftExperience = bad } }); throw new Exception($"Forged Swift Learner XP {bad} accepted."); }
+                catch (InvalidDataException) { }
+            var plain = CheckpointFile.Decode(CheckpointFile.Encode(SkillSpendingTests.Leveled(SkillSpendingTests.Map(3000)).Capture("catalog")));
+            try { Load(plain with { Skills = plain.Skills! with { SwiftExperience = 10 } }); throw new Exception("Swift Learner XP without the perk accepted."); }
+            catch (InvalidDataException) { }
+            world.Reset();
+            Assert(world.SwiftLearnerExperience == 0 && world.Experience == 0, "A new game starts without it.");
         });
         check("in the world a perk is chosen once the level earns it, joins the sheet and the checkpoint, and forged choices are refused", () =>
         {

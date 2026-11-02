@@ -26,7 +26,9 @@ public sealed partial class WorldSession
     public int CurrentMap { get; private set; }
     public WorldArea Current => _areas[CurrentMap];
     public ActorLocation Location => Current.Travel.Location;
-    public int Experience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0) + (_arroyoReward?.Experience ?? 0) + _combatExperience + _perks.Experience;
+    public int Experience => BaseExperience + _swiftExperience;
+    // Every XP source but Swift Learner's share.
+    private int BaseExperience => _areas.Values.Sum(a => a.Doors.TempleDoor?.Experience ?? 0) + (_arroyoReward?.Experience ?? 0) + _combatExperience + _perks.Experience;
     public IReadOnlyList<WorldArea> Areas => _areas.OrderBy(p => p.Key).Select(p => p.Value).ToArray();
     public CarriedItem[] Carried => Areas.SelectMany(a => a.Items.Carried).ToArray();
     public WorldItemUse[] ItemUses => Areas.SelectMany(a => a.Items.CaptureUses().Select(u => new WorldItemUse(a.Map.Prefix.Header.MapIndex, u))).ToArray();
@@ -153,6 +155,7 @@ public sealed partial class WorldSession
         doors.AllowTempleExitUse = key => id == 3 && CanUseTempleExit(key);
         var items = new ItemTransferSession(map) { CorpseHex = key => _defeated.TryGetValue((id, key), out DefeatedCritter? dead) ? dead.Hex : null };
         items.Changed += ReleaseHands;
+        doors.ExperienceGained += GainExperience;
         area = new WorldArea(map, doors, new TempleTravel(map, doors), items, scenery);
         _areas.Add(id, area); return area;
     }
@@ -194,7 +197,7 @@ public sealed partial class WorldSession
         { return option with { Status = ExitStatus.UnavailableMap }; }
         target.Travel.Arrive(destination); CurrentMap = destination.Map;
         _enteredMaps.Add(destination.Map);
-        if (reward is { } entry) { _arroyoReward = entry.Reward; _arroyoGlobals = entry.Globals; }
+        if (reward is { } entry) { _arroyoReward = entry.Reward; _arroyoGlobals = entry.Globals; GainExperience(entry.Reward.Experience); }
         return option;
     }
     public void Reset()
@@ -247,6 +250,7 @@ public sealed partial class WorldSession
         { throw new InvalidDataException("Checkpoint premade character source is unavailable.", error); }
         // Perks change the level's HP bound too (Lifegiver); their levels are checked once XP is known.
         candidate.RestorePerks(checkpoint.Skills?.Perks);
+        candidate.RestoreSwiftExperience(checkpoint.Skills?.SwiftExperience);
         var bodyLoot = new List<(WorldArea Area, TakenItem[] Rows)>();
         foreach (SavedArea saved in checkpoint.Areas)
         {

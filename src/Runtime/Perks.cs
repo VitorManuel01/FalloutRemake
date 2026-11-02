@@ -171,7 +171,7 @@ public static class PerkCatalog
         Perk.Sharpshooter, Perk.Educated, Perk.BetterCriticals, Perk.Slayer, Perk.ActionBoy, Perk.Lifegiver, Perk.Dodger, Perk.Snakeater,
         Perk.MasterThief, Perk.HeaveHo, Perk.QuickPockets, Perk.GainStrength, Perk.GainPerception, Perk.GainEndurance, Perk.GainCharisma,
         Perk.GainIntelligence, Perk.GainAgility, Perk.GainLuck, Perk.HtHEvade, Perk.LivingAnatomy, Perk.PackRat, Perk.QuickRecovery,
-        Perk.Thief, Perk.WeaponHandling, Perk.Tag, Perk.Mutate, Perk.HereAndNow
+        Perk.Thief, Perk.WeaponHandling, Perk.Tag, Perk.Mutate, Perk.HereAndNow, Perk.SwiftLearner
     };
     // Perks whose rule is on the sheet with no system using it yet.
     private static readonly HashSet<int> SheetPerks = new()

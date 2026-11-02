@@ -141,7 +141,7 @@ public sealed partial class WorldSession
         }
         foreach (DefeatedCritter critter in dead) { _defeated.Add((critter.Map, critter.Key), critter); _survivors.Remove((critter.Map, critter.Key)); }
         foreach (SurvivingCritter critter in standing) _survivors[(critter.Map, critter.Key)] = critter;
-        _combatExperience += awarded;
+        _combatExperience += awarded; GainExperience(awarded);
         _playerDamage = players[0].Stats.MaxHitPoints - players[0].HitPoints;
         _poison = players[0].Poison;
         _gameTime = fight.GameTime; _playerCrippled = players[0].Conditions; KeepHand(players[0]);

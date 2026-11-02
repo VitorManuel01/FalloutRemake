@@ -137,7 +137,7 @@ public sealed partial class WorldSession
         {
             if (cameron.Alive) return CombatCommitStatus.InvalidFight;
             _defeated.Add((3, cameron.Id), new DefeatedCritter(3, cameron.Id, cameron.Pid!.Value, 2, cameron.Hex));
-            _combatExperience += fight.Turn.ExperienceAwarded;
+            _combatExperience += fight.Turn.ExperienceAwarded; GainExperience(fight.Turn.ExperienceAwarded);
             _playerDamage = player.Stats.MaxHitPoints - player.HitPoints;
             _duelOutcome = TempleDuelOutcome.Killed;
         }

@@ -15,6 +15,12 @@ public sealed partial class WorldSession
 {
     private PerkRanks _perks = PerkRanks.None;
     private bool _freePerk;
+    private int _swiftExperience;
+    /// <summary>The XP Swift Learner added: 5% per rank of every gain after it was chosen, rounded down per gain (pcAddExperience).</summary>
+    public int SwiftLearnerExperience => _swiftExperience;
+
+    // pcAddExperienceWithOptions: each gain adds rank x 5 x xp / 100 more (combat once per fight, scripts, locks, Here and Now).
+    private void GainExperience(int xp) { if (xp > 0) _swiftExperience += _perks.Rank(Perk.SwiftLearner) * 5 * xp / 100; }
     private int _perkLevel = 1;
     public PerkRanks Perks => _perks;
 
@@ -62,11 +68,23 @@ public sealed partial class WorldSession
         int? experience = perk == Perk.HereAndNow && level < CharacterProgression.MaxLevel ? CharacterProgression.ExperienceForLevel(level + 1) - Experience : null;
         _perks = _perks.With(new ChosenPerk(perk, level, skill, lose is CharacterTrait l ? (int)l : null, gain is CharacterTrait g ? (int)g : null, experience));
         _freePerk = false; _skillRevision++;
+        // Here and Now's experience goes through pcAddExperienceWithOptions too, so Swift Learner adds its share.
+        if (experience is int granted) GainExperience(granted);
         if (perk == Perk.Educated) _unspentSkillPoints = Math.Min(CharacterProgression.MaxUnspentSkillPoints, unspent + 2);
         return PerkChoiceStatus.Ready;
     }
 
     private void ResetFreePerk() { _freePerk = false; _perkLevel = 1; }
+    private void ResetSwiftExperience() => _swiftExperience = 0;
+
+    // With the perks, before the level is needed: Swift Learner's XP, only with the perk; its bound is checked once XP is known.
+    private void RestoreSwiftExperience(int? saved)
+    {
+        _swiftExperience = 0;
+        if (saved == null) return;
+        if (saved <= 0 || !_perks.Has(Perk.SwiftLearner)) throw new InvalidDataException("Checkpoint Swift Learner XP is malformed.");
+        _swiftExperience = saved.Value;
+    }
 
     // Read with the character, before the level is known: identities, ranks, what each perk decided and the level order.
     private void RestorePerks(ChosenPerk[]? saved)
@@ -99,6 +117,9 @@ public sealed partial class WorldSession
     // Once XP is restored: every choice used a flag raised by a perk level since the previous one, none past the level reached.
     private void ValidatePerks()
     {
+        // At most 5% per rank of all the other XP (it only counts gains after the perk).
+        if (_swiftExperience > _perks.Rank(Perk.SwiftLearner) * 5 * BaseExperience / 100)
+            throw new InvalidDataException("Checkpoint Swift Learner XP exceeds its share.");
         PlayerCharacter sheet = Character.WithPerks(_perks);
         int previous = 1;
         foreach (ChosenPerk row in _perks.Chosen)
