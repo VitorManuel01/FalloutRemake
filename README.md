@@ -25,6 +25,39 @@ Toda a lógica central de regras, combate, inventário e checkpoints é executad
 
 ---
 
+## 📸 Galeria de Gameplay e Capturas (NVIDIA RTX)
+
+Todas as capturas abaixo foram geradas em alta resolução (1440x900) diretamente na cena Godot renderizada via Direct3D 12 na GPU NVIDIA GeForce RTX:
+
+| Combate por Turnos e Disparos Mirados | Encontro com Criaturas (Giant Ants) |
+| :---: | :---: |
+| ![Tiros Mirados](docs/images/combat-called-shot.png) | ![Combate](docs/images/combat-encounter.png) |
+| *Janela de disparos mirados (Called Shots) nos 8 membros com custos de AP e probabilidades* | *Início de combate por linha de visão e iniciativa com criaturas no Templo* |
+
+| Acerto Crítico e Dano Autêntico | Arquitetura 3D do Templo dos Ensaios |
+| :---: | :---: |
+| ![Acerto Crítico](docs/images/combat-critical.png) | ![Kit Modular](docs/images/temple-architecture-kit.png) |
+| *Acerto crítico autêntico do CE com efeito Knockdown e log detalhado* | *Kit modular de pedras e iluminação por tochas no interior do Templo* |
+
+| Criação de Personagem SPECIAL | Grid Hexagonal e Pathfinding |
+| :---: | :---: |
+| ![Criação de Ficha](docs/images/character-creation-special.png) | ![Navegação Hexagonal](docs/images/hex-grid-navigation.png) |
+| *Editor de atributos SPECIAL com 40 pontos, traits e tag skills* | *Grid de 40.000 hexágonos, pathfinder BFS do CE e visualização de alcance* |
+
+| Arrombamento de Portas (Lockpick) | Gestão de Inventário e Capacidade de Carga |
+| :---: | :---: |
+| ![Arrombamento](docs/images/lockpick-door.png) | ![Inventário e Saque](docs/images/inventory-loot.png) |
+| *Segunda porta com adaptador de lockpick determinístico e 25 XP* | *Janela de contêiner com cálculo atômico de peso por Força e Take All* |
+
+| Ambiente Externo e Assets PBR | Progressão e Árvore de Perks |
+| :---: | :---: |
+| ![Exterior](docs/images/nature-exterior.png) | ![Perks](docs/images/perks-progression.png) |
+| *Área externa do Templo com rochas e árvores queimadas PBR (Assets/Nature)* | *Consulta da tabela de perks clássicos com requisitos de nível e efeitos reais* |
+
+---
+
+---
+
 ## 2. Subsistemas Implementados
 
 ### ⚔️ Combate Tático por Turnos (Fiel ao Fallout 2 CE)
@@ -110,6 +143,20 @@ dotnet run --project tools/TempleInspector -- --data-dir $dataDir --elder-report
 1. Abra o arquivo `project.godot` no **Godot Engine (.NET)**.
 2. Pressione **F5** (ou clique em Reproduzir).
 3. Na primeira execução, se solicitado, aponte para a pasta de dados do seu Fallout 2 contendo `master.dat` e `critter.dat`. O caminho fica salvo localmente em `.local/`.
+
+### 🎥 Gravar Gameplay com a Ferramenta NVIDIA (NVIDIA App / ShadowPlay)
+
+O projeto suporta captura direta em 60 FPS com aceleração de hardware NVENC na GPU NVIDIA:
+
+1. Inicie a cena interativa do jogo:
+   ```powershell
+   & "D:\Downloads\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe" --path .
+   ```
+2. Utilize os atalhos oficiais da NVIDIA:
+   - **`Alt + F9`**: Iniciar ou encerrar a gravação de vídeo.
+   - **`Alt + Z`**: Abrir a sobreposição da NVIDIA App para ajustar resolução, taxa de quadros e atalhos.
+3. Os vídeos são salvos automaticamente no diretório padrão da NVIDIA (`%USERPROFILE%\Videos\NVIDIA\Desktop\`).
+
 
 ---
 
