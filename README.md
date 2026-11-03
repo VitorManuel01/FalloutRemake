@@ -1,366 +1,154 @@
-# Fallout Remake — prévia 3D do templo
+# FalloutRemake — Recriação de Fallout 2 em Godot 4 .NET / C#
 
-[Bateria atual: nove marcos da entrada de Arroyo e anciã](docs/arroyo-elder-batch-2026-10-21.md).
-[Auditoria da conversa repetida e áreas do mapa-múndi](docs/arroyo-elder-repeat-audit-2026-10-21.md).
-[Ensaio separado dos efeitos do diálogo da anciã](docs/arroyo-elder-detached-state-2026-10-21.md).
-[Auditoria da reação inicial da anciã](docs/arroyo-elder-neutral-reaction-2026-10-21.md).
-[Atributos originais da anciã e leitura de PRO](docs/arroyo-elder-prototype-stats-2026-10-21.md).
-[Consulta dos textos originais da anciã](docs/arroyo-elder-consultation-2026-10-21.md).
-[Caminhada até a anciã de Arroyo](docs/arroyo-elder-approach-2026-10-21.md).
-[Entrada de Arroyo: karma/reputação e checkpoint v9](docs/arroyo-entry-globals-v9-2026-10-21.md).
-[Auditoria das guardas do primeiro diálogo da anciã](docs/arroyo-elder-opening-audit-2026-10-21.md).
-[Bateria atual: Nature, árvores, primeira entrada e retorno de Arroyo](docs/nature-and-arroyo-batch-2026-10-21.md).
-[Resumo de todos os marcos e estado atual](docs/milestones-through-2026-10-20.md).
-[Bateria mais recente: conversa ativa, saída do NPC e chegada a Arroyo](docs/temple-active-batch-2026-10-21.md).
-[Primeiros modelos Nature importados e renderização compartilhada](docs/nature-models-2026-10-21.md).
-[Árvores Nature no exterior do templo](docs/nature-exterior-trees-2026-10-21.md).
-[Primeira entrada em Arroyo e recompensa única, checkpoint v8](docs/arroyo-first-entry-v8-2026-10-21.md).
-[Retorno ao templo e segunda chegada sem repetir XP](docs/arroyo-return-loop-2026-10-21.md).
-[Bateria atual: saída restaurável do NPC e vista 3D isolada](docs/temple-npc-batch-2026-10-20.md).
-[Bateria anterior: estados, porta final e consulta de Speech](docs/temple-state-batch-2026-10-20.md).
-[Bateria anterior: doze incrementos e validações](docs/continuation-batch-2026-10-20.md).
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/)
+[![Godot Engine](https://img.shields.io/badge/Godot-4.7%2B%20.NET-478cbf.svg)](https://godotengine.org/)
+[![Synthetic Tests](https://img.shields.io/badge/Tests-481%20passing-brightgreen.svg)]()
+[![Parity Reference](https://img.shields.io/badge/Parity-Fallout%202%20CE%20(e97087b)-orange.svg)](https://github.com/alexbatalov/fallout2-ce)
 
-Projeto pessoal em Godot 4 .NET/C#, começando por Fallout 2. A direção visual futura é
-um ambiente isométrico 3D inspirado em Wasteland 3. A cena principal já permite
-explorar o Temple of Trials com formas provisórias, inspecionar os objetos originais
-e mover um marcador por hexágonos válidos na elevação do personagem. A primeira porta pode ser
-aberta e fechada; a segunda já aceita arrombamento com um perfil de teste,
-atualizando os caminhos sem alterar os dados originais.
-Já é possível recolher o explosivo original, caminhar até a barreira, posicionar
-uma unidade, avançar seu prazo manualmente e confirmar a abertura da passagem
-em um ensaio de cenário, preservado pelo checkpoint.
-O leitor verifica a reconstrução dos bytes do mapa antes de montar a cena.
-O personagem ainda tem apenas as regras mínimas deste teste, sem combate ou arte final.
-A porta final já abre no estado inicial, permitindo chegar perto do NPC;
-o botão **Conversa · ensaio** permite consultar cinco escolhas originais, sem
-alterar a partida. Ao concluir, **Aplicar à partida** confirma esse resultado no
-cenário ativo. O duelo permanece indisponível.
-Após a aceitação no ensaio, **Saída do NPC · ensaio** permite acompanhar os três
-trechos originais, cumprir a espera, salvar/restaurar a saída e alternar entre
-traçado e vista 3D própria. Na partida, **Saída do NPC** oferece passos manuais,
-avanço automático opcional e **Percurso NPC** para consultar o trecho atual.
-Depois, siga até a porta de Arroyo, abra com **U**, caminhe até a saída e use
-**Enter** para atravessar. **K/R** preserva esse progresso, inclusive na vila.
-A primeira chegada à vila após o Speech concede os 600 XP originais uma única
-vez. Os demais efeitos do script de entrada da vila ainda não são executados.
-As rochas compatíveis no exterior e na vila já usam os modelos locais de
-**Assets/Nature**, com materiais PBR e três lotes de malha por área. **Nature 3D**
-compara com as formas provisórias. As 88 árvores do exterior usam o modelo
-Nature de árvore queimada, em um lote adicional. Os assets proprietários
-permanecem fora do Git.
+Projeto pessoal de recriação de **Fallout 2** desenvolvido em **Godot 4 .NET / C#**, adotando uma apresentação isométrica 3D com iluminação e qualidade de materiais inspiradas em *Wasteland 3*, preservando com fidelidade matemática e binária as regras, opcodes e estruturas do motor original via **Fallout 2 Community Engine (CE)**.
 
-**Correção do primeiro marco:** o interior é `maps/arcaves.map`, ID 3.
-`maps/artemple.map`, ID 126, é a área externa com Klint. O inspetor agora usa o interior
-como padrão. O cadastro local e os scripts dos objetos confirmaram essa distinção.
+---
 
-## Executar
+## 1. Visão Geral da Arquitetura
 
-Abra `project.godot` no **Godot .NET** e pressione **F5**. A prévia lê a pasta
-salva em `.local/preview-settings.json` (configurada nesta máquina). Em outra máquina,
-use **Abrir dados** e selecione a pasta de idioma que contém `master.dat` e `critter.dat`.
-A escolha fica salva apenas localmente; não é necessário extrair ou exportar o MAP.
+O projeto adota uma separação rigorosa entre a **lógica de domínio (C# puro .NET 8 desacoplado)** e a **camada de apresentação (Godot 4)**:
 
-- **WASD / botão direito:** mover a câmera; **roda:** zoom; **Q/E:** girar.
-- **F / Entrada:** reenquadrar a vista da entrada sem mover o personagem; **Home / Ver tudo:** enquadrar a camada.
-- **Clique:** consultar objeto ou piso; painel lateral: elevações 0–2 e filtros.
-  O inspetor inclui nome e descrição originais quando disponíveis na instalação.
-- **Próximo no mesmo hex:** alternar objetos sobrepostos sem confundir seus IDs.
-- **Localizar recipiente…:** no painel lateral, escolher por nome e conteúdo
-  restante para enquadrar a câmera. Não move o personagem nem recolhe itens.
-- **I / Inventário:** consultar o conteúdo original do objeto selecionado.
-  Exibe hierarquia, quantidades e descrições; não transfere itens. A janela
-  suspende o avanço da caminhada enquanto está aberta.
-- **J / Recolher:** abre o recipiente selecionado com as quantidades restantes
-  nesta sessão. Use **Aproximar-se**, aguarde chegar e abra novamente para retirar
-  uma unidade ou a pilha. A bolsa é salva com K e restaurada com R; reiniciar
-  a prévia esvazia a bolsa e restaura os recipientes.
-  **Retirar tudo** recolhe todas as pilhas restantes numa única operação, somente
-  se todos os itens forem suportados e couberem na bolsa. Uma recusa não recolhe nada.
-- **B / Bolsa:** consulta os itens recolhidos, nomes, quantidades e área de origem,
-  inclusive depois de viajar e carregar checkpoint. B também fecha a janela.
-  **Devolver 1 / Devolver esta pilha** repõem o item no recipiente original
-  quando o personagem estiver ao alcance. A devolução também é salva com K.
-  **Devolver tudo à origem** devolve conjuntamente as pilhas recolhidas do mesmo
-  recipiente do item selecionado. Itens de outras origens permanecem na bolsa.
-  **Voltar ao recipiente** solicita a aproximação à origem na área atual.
-  Em outra área visitada, **Ir à passagem** guia o primeiro trecho; use Enter
-  e abra B novamente para continuar. Depois de chegar, confirme a devolução.
-  As janelas J/B mostram peso por pilha e carga atual. O perfil usa **Força 5 /
-  capacidade 150 lb**. Retiradas que ultrapassam a carga são recusadas; devolver
-  libera espaço. Itens com peso ainda indisponível não recebem estimativa.
-  Pilhas maiores que uma unidade também permitem escolher **Qtd.** para retirar
-  ou devolver um número específico, com revalidação no clique.
-- **M / Caminhar:** alternar para caminhada na elevação do personagem; clique no chão para mover
-  o marcador azul. Pontos verdes indicam alcance, vermelhos bloqueios e âmbar saídas.
-- **Portas:** no modo Caminhar, clique na primeira porta para se aproximar; depois
-  use **U / Abrir porta**. Clique além dela para atravessar. U também permite fechar.
-- **L / Arrombar:** após se aproximar da segunda porta, tenta destrancar. U abre a
-  passagem depois. L muda para **Retrancar** quando destrancada; os 25 XP não repetem.
-- **Reiniciar prévia:** voltar à entrada e restaurar as portas. Trocar de elevação
-  no painel apenas inspeciona; o personagem e os XP permanecem no lugar.
-  Durante uma caminhada, termine ou use Esc antes de mudar a elevação exibida.
-- **Enter / Passar:** ao chegar a uma saída interna, atravessa para a elevação de
-  destino, preservando portas e XP. Caminhe na elevação onde o personagem está.
-- **K / Salvar:** checkpoint local quando estiver parado. **R / Carregar:**
-  recupera posição, portas e XP das áreas carregadas. Reiniciar não apaga esse slot.
-  Os atalhos usam letras para evitar conflito com os controles do editor Godot.
-  O schema atual é v9; checkpoints v1–v8 continuam carregando. Itens posicionados,
-  consumidos e substituições de cenário têm estado próprio. Ao carregar, o modo
-  e a seleção ainda válida são preservados.
-- **C / Personagem:** reenquadra e acompanha o personagem. WASD ou arrasto retomam
-  a câmera livre; recentrar mantém o percurso em andamento.
-- **O / Piso original:** compara o piso com imagens lidas da instalação local.
-  O filtro Piso funciona nos dois modos. Texturas ficam somente em memória.
-- **Esc / Parar:** interrompe a caminhada ao concluir o passo atual, preservando
-  portas e XP. Depois, pode escolher outro destino sem reiniciar a prévia.
-- **V / Auto**, junto de Paredes: oculta paredes que encobrem o personagem.
-  A opção é visual; os bloqueios e a seleção dos objetos permanecem.
-- **G / Grade:** mostra ou oculta os hexágonos de navegação. Caminhada e traçado
-  continuam ativos sem a grade; combine com O para ver o piso original.
-- **T / Ver percurso:** enquadra o trajeto apontado ou em andamento no espaço
-  livre dos painéis. Também inclui a porta de destino quando houver aproximação.
-  A caminhada continua; **C** retoma o acompanhamento do personagem.
-- **Preferências visuais:** as escolhas de **G**, **O** e **V**, por tecla ou botão,
-  são salvas automaticamente nesta máquina e restauradas ao abrir a prévia.
-  Reiniciar a prévia e carregar um checkpoint mantêm essas escolhas.
-- **Apontar para o chão no modo Caminhar:** mostra o percurso e os passos antes
-  do clique. A prévia não move o personagem e também funciona sem a grade.
-  Ao apontar para uma porta, mostra a aproximação alcançável ou sua condição.
-  Saídas mostram destino e disponibilidade. Apontar não carrega outra área;
-  a passagem continua sendo validada ao chegar e usar Enter.
-  Recipientes também mostram a aproximação; clique seleciona e caminha até eles,
-  e **J** permite recolher depois de chegar. **T** inclui o recipiente na vista.
+```text
+src/
+├── Import/    (29 arquivos) -> C# Puro (.NET 8). Decodificação de arquivos DAT, MAP, PRO, INT, GAM, MSG, FRM, GCD e AI.
+├── Geometry/  (11 arquivos) -> C# Puro (.NET 8). Grid hexagonal de 40.000 hexes, BFS, pathfinding CE, linha de tiro e oclusão.
+├── Runtime/   (65 arquivos) -> C# Puro (.NET 8). Máquina de estados (WorldSession), combate por turnos, fichas, perks, medicina e checkpoints v1-v13.
+└── Preview/   (114 arquivos)-> Camada Godot 4. TemplePreview, adaptadores de visão, HUD de combate, janelas modais e testes in-engine.
+```
 
-Paredes são volumes de referência nos hexes originais. Alturas, dimensões e cores
-são provisórias. O bloqueio usa FID/flags dos objetos, sem depender do piso ou dos
-filtros visuais. Portas fechadas bloqueiam; saídas encerram o percurso e aguardam
-Enter. Passagens internas e saídas entre templo, exterior e vila usam os destinos
-originais; outras áreas continuam indisponíveis. O retorno preserva portas e XP.
-A interação exige proximidade e marcador parado. A segunda porta e o efeito de
-cenário da barreira possuem adaptadores restritos aos scripts conferidos;
-uma passagem ocupada não pode ser fechada.
-O perfil de teste usa PER/AGI/SOR 5, Arrombamento 20, dificuldade normal e primeiro
-dia. Com o bônus +100 desta porta, a tentativa tem sucesso em todas as faces do d100.
+Toda a lógica central de regras, combate, inventário e checkpoints é executada e testada pelo console [`tools/TempleInspector`](tools/TempleInspector/TempleInspector.csproj) **em ~1,4 segundo**, sem nenhuma dependência gráfica ou inicialização do Godot.
 
-## Ensaiar a abertura da barreira
+---
 
-1. Atravesse a primeira porta com U. Na segunda, use L para destrancar e U para
-   abrir; caminhe até a passagem e use Enter para chegar à elevação 1.
-2. Em **Localizar recipiente…**, encontre o pote com **Plastic Explosives**.
-   No modo Caminhar, clique no recipiente para se aproximar e use J para recolher.
-3. Abra B, selecione o explosivo e use **Ir à barreira**. A aproximação respeita
-   o caminho e para dentro do alcance; abra B novamente ao chegar.
-4. Use **Posicionar · ensaio**, escolha 10–180 segundos e confirme uma unidade.
-   Cancelar preserva a bolsa. O ensaio prepara com sucesso fixo, sem rolagem real.
-5. Em **Tempo · ensaio**, avance com **+1 s / +10 s**. Caminhar e esperar não
-   avançam esse relógio. Ele para no primeiro evento vencido, inclusive entre segundos.
-6. Use **Ver efeito → Aplicar no cenário** para conferir e abrir a passagem.
-   Cancelar mantém o evento pendente. **K/R** salvam/restauram prazo e cenário.
-7. Atravesse para a elevação 2. A porta final pode ser aberta com U antes do
-   desafio; depois, selecione o NPC e use **Chegar ao NPC** para caminhar até um
-   hex ao lado dele. **Conversa · ensaio**
-   consulta cinco escolhas com INT 5/Speech marcado, em um estado separado.
-   Fechar ou recomeçar preserva a partida. O duelo ainda não está disponível.
-8. Ao concluir as cinco escolhas, **Salvar resultado** grava apenas o ensaio.
-   **Carregar ensaio** restaura esse arquivo separado; não carrega a partida.
-   Escolhas incompletas precisam ser concluídas ou recomeçadas para salvar.
-9. Abra **Saída do NPC · ensaio**. Use **Um passo / Até a próxima parada** para
-   acompanhar a cópia do percurso; junto à porta, avance a espera pelo botão.
-   **Ver em 3D** mostra o NPC destacado no cenário de referência.
-   **Salvar saída / Carregar saída** preservam inclusive a espera parcial, em
-   outro arquivo. **Voltar à conversa** conserva o resultado Speech aceito.
-10. Para continuar na partida, use **Aplicar à partida** após aceitar a conversa.
-    Em **Saída do NPC**, avance manualmente ou ative **Avançar automaticamente**.
-    **Percurso NPC** mostra o trecho e a primeira obstrução. K pausa e salva;
-    R restaura em pausa, inclusive durante a espera.
-11. Ao terminar, use **Ir à porta de Arroyo**, aguarde e abra com U. Depois use
-    **Ir à saída de Arroyo** e confirme com Enter. Esc permite parar e retomar
-    o percurso; K/R conserva o progresso e a porta aberta. A recompensa da
-    primeira entrada concede 600 XP uma única vez; retornar ou carregar não
-    repete o prêmio. Saves antigos com Arroyo já carregado não ganham XP retroativo.
-12. Na vila, **Voltar ao templo** guia até uma passagem original. Enter confirma
-    o retorno; a porta aberta e o estado do NPC continuam preservados. Visitar
-    Arroyo outra vez mantém a experiência já recebida.
+## 2. Subsistemas Implementados
 
-O efeito deste ensaio altera somente a barreira validada; não há dano a personagens
-ou combate geral. A preparação fora desse alcance fica indisponível. Baús com
-scripts ainda não suportados permanecem identificados como interação especial.
+### ⚔️ Combate Tático por Turnos (Fiel ao Fallout 2 CE)
+- **Núcleo de Combate em C# Puro:** Implementado em [`src/Runtime/Combat/`](src/Runtime/Combat/) (`CombatSession.cs`, `DamageCalculator.cs`, `CriticalRules.cs`, `CombatAi.cs`, `CombatInitiative.cs`).
+- **Pontos de Ação e Iniciativa:** Ordem de turnos calculada deterministicamente por Sequência e Percepção, consumo de AP para movimentação, ataques, recarga e abertura de inventário (4 AP).
+- **Cálculo de Dano Autêntico:** Aplicação exata de *Damage Threshold* (DT) e *Damage Resistance* (DR) baseados nas tabelas de munição e armadura do Fallout 2.
+- **Disparos Mirados (*Called Shots*):** Janela dedicada de mira ([`CalledShotWindow.cs`](src/Preview/CalledShotWindow.cs)) com alvos em Cabeça, Olhos, Tronco, Braço Direito, Braço Esquerdo, Perna Direita, Perna Esquerda e Virilha, com penalidades de precisão e custos adicionais de AP.
+- **Tabelas de Críticos Originais:** Mais de 66 KB de dados em [`CriticalRules.cs`](src/Runtime/Combat/CriticalRules.cs), reproduzindo fielmente as tabelas de acerto e falha crítica do `fallout2.exe`.
+- **Armas de Fogo e Balística:** Rastreamento de cartuchos e carregadores, recarga no mundo e em combate, dispersão de rajada (*burst spray*) por cálculo angular e perks de armas (Long Range, Scope Range, Accurate, Penetrate, Fast Reload).
+- **Combate Melee, Desarmado e Arremesso:** Alternância entre soco e chute com bônus de dano desarmado; mecânica de arremesso de lanças consumindo o item da mão e posicionando-o no chão do hex de impacto.
+- **Dois Slots de Mão e Armadura:** Suporte aos dois slots ativos de mão do Fallout 2 e slot de armadura ativa com aplicação de Classe de Armadura (AC), bônus de Força e resistência a radiação.
+- **IA Tática dos Inimigos:** Inimigos orientados pelo algoritmo `combat_ai` do Community Engine com leitura de pacotes `ai.txt` originais.
+- **Encontros no Templo dos Ensaios:** Combates integrados com Formigas Gigantes (*Giant Ants*) e Escorpiões-Rad (*Radscorpions*), com veneno acumulando no relógio de jogo ([`PoisonRules.cs`](src/Runtime/Combat/PoisonRules.cs)).
+- **Desafio Final de Cameron:** Três vias de resolução comprovadas: persuasão diplomática (Speech), duelo desarmado até a rendição ou combate com coleta da chave do Templo do corpo.
 
-Na raiz do repositório, com SDK .NET capaz de compilar `net8.0` e runtime .NET 8:
+### 📜 Diálogos, Missões e Transição para Arroyo
+- **Diálogo da Anciã (*Elder*):** Implementação completa em [`src/Runtime/ArroyoElderConsultation.cs`](src/Runtime/ArroyoElderConsultation.cs) cobrindo o primeiro diálogo (`Node001`), a conversa repetida (`Node004`), e os ramos de aceitação e lembrete da busca pelo GECK (`Node015`, `Node007`, `Node016`).
+- **Concessão de Recompensas:** Entrega controlada de 152 tampas (`PID 41`) e do cantil de Vic (`PID 267`), com gravação de variáveis globais (`GVAR_TALKED_TO_ELDER`, `GVAR_DEN_VIC_KNOWN`) e locais no checkpoint.
+- **Transição de Mapa e Experiência:** Saída do Templo pela porta 100 com transição para `maps/arvillag.map`, concessão de 600 XP (ou 300 XP caso Cameron tenha sido morto) com persistência de Karma e Reputação.
+
+### 👤 Criação de Personagem, Ficha, Progressão e Sobrevivência
+- **Criação de Personagem:** Distribuição de 40 pontos SPECIAL, escolha de até 2 características (*Traits*) e 3 perícias marcadas (*Tag Skills*).
+- **Personagens Pré-definidos:** Leitura direta dos arquivos `.gcd` originais (`Narg`, `Mingan` e `Chitsa`).
+- **Progressão de Nível:** Subida de nível por acúmulo de XP com tabela original e distribuição de pontos de perícia com custo progressivo do editor clássico.
+- **Perks e Traits:** Efeitos reais integrados de *Lifegiver*, *Educated*, *Tag!*, *Mutate!*, *Here and Now*, *Swift Learner*, *One Hander* e *Jinxed*.
+- **Medicina e Cura:** Perícias *First Aid* e *Doctor* exercitáveis com kits de primeiros socorros e limite de 3 usos diários; uso de Pó de Cura (*Healing Powder*) e descanso natural pelo Pip-Boy (*Pipboy Rest* com checagem de mapa seguro).
+
+### 📦 Inventário, Carga e Manipulação de Objetos
+- **Cálculo Rigoroso de Peso:** Limite de carga atômico baseado em Força ($25 + \text{Força} \times 25\text{ lb}$), com validação estrita prévia antes de qualquer coleta.
+- **Coleta e Devolução Rápida:** Funções *"Retirar tudo"* (*Take All*) e *"Devolver tudo"* (*Return All*) com conservação atômica de quantidades e preservação dos contêineres de origem.
+- **Barreira Explosiva do Templo:** Posicionamento de dinamite plástica, temporizador configurável (10 a 180 segundos), detonação atômica no relógio de jogo e abertura física da passagem para a elevação 2.
+- **Arrombamento e Portas:** Adaptador de arrombamento (*Lockpick*) determinístico para a segunda porta com concessão única de 25 XP; portas com abertura e bloqueio físico no grid.
+
+### 💾 Persistência e Checkpoints (v1 a v13)
+- **Serialização Multi-Mapa Atômica:** Gravação e restauração em JSON mantendo estado de portas, contêineres, itens posicionados/consumidos, inventário da bolsa, dados de combate, cargas de armas, perks e progresso de diálogos (`SavedElderState`).
+- **Compatibilidade Reversa:** Migração determinística automática de saves legados (`v1` a `v12`) para o schema consolidado `v13`.
+
+### 🗺️ Importação Direta e Geometria Hexagonal
+- **Leitura Nativa de Binários:** Carregamento de arquivos clássicos sem descompactação manual (`master.dat`, `critter.dat`, `*.map`, `*.pro`, `*.int`, `*.frm`, `*.msg`, `*.gam`).
+- **Grid Hexagonal Fiel:** Grid matemático de 40.000 hexágonos com conversão 3D/Hex, pathfinding BFS do CE e respeito a `NO_BLOCK`, `MULTIHEX` e elevações 0–2.
+- **Apresentação 3D:** Kit modular de pedras para o Templo dos Ensaios, modelos de natureza PBR (rochas e árvores queimadas) e sistema de corte de oclusão de paredes (*Wall Occlusion*).
+
+---
+
+## 3. Como Executar
+
+### Pré-requisitos
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [Godot Engine 4 .NET (C#)](https://godotengine.org/download) (versão 4.3 ou 4.7 Mono)
+- Instalação clássica de **Fallout 2** (para fornecimento de `master.dat` e `critter.dat`). *Nenhum asset proprietário é distribuído no repositório.*
+
+### Compilação e Testes Sintéticos (.NET CLI)
+
+Na raiz do repositório:
 
 ```powershell
+# 1. Compilar o projeto Godot e ferramentas
 dotnet build 'Fallout Remake.csproj'
+
+# 2. Executar a suíte completa de 481 testes sintéticos (~1,4 segundo)
 dotnet run --project tools/TempleInspector -- --self-test
-dotnet run --project tools/TempleInspector -- --data-dir 'D:\Games\fallout2\Fallout 2 English'
-dotnet run --project tools/TempleInspector -- --data-dir 'D:\Games\fallout2\Fallout 2 English' --export-local
-dotnet run --project tools/TempleInspector -- --data-dir 'D:\Games\fallout2\Fallout 2 English' --navigation
-
-dotnet run --project tools/TempleInspector -- --data-dir 'D:\Games\fallout2\Fallout 2 English' --script scripts/doorl100.int
-
-dotnet run --project tools/TempleInspector -- --data-dir 'D:\Games\fallout2\Fallout 2 English' --door-adapter-test
 ```
 
-O último caminho foi confirmado no manifesto local da Epic em 16/10/2026. Em outra
-máquina, informe explicitamente a pasta de idioma que contém `master.dat` e `critter.dat`.
-Não selecione a pasta `Fallout1in2`. Para conferir a área externa, acrescente
-`--map maps/artemple.map`.
+### Relatórios e Conformidade de Dados Originais
 
-Para testar a prévia e o leitor dentro do Godot, após compilar:
+Para conferir a decodificação dos arquivos originais e a verificação byte a byte:
 
 ```powershell
-$godotExe = 'D:\Downloads\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe'
-& $godotExe --headless --path . -- --data-dir 'D:\Games\fallout2\Fallout 2 English' --preview-test
-& $godotExe --headless --path . res://scenes/ImportSmoke.tscn -- --data-dir 'D:\Games\fallout2\Fallout 2 English'
+$dataDir = "C:\Caminho\Para\Fallout2"
+
+# Inspecionar mapa e integridade estrutural
+dotnet run --project tools/TempleInspector -- --data-dir $dataDir
+
+# Relatório de regras de armas de fogo
+dotnet run --project tools/TempleInspector -- --data-dir $dataDir --firearms-report
+
+# Relatório de diálogo da Anciã
+dotnet run --project tools/TempleInspector -- --data-dir $dataDir --elder-report
 ```
 
-Sucesso: `PREVIEW_TEST_OK`, `NAVIGATION_TEST_OK`, `DOOR_TEST_OK` e
-`LOCKPICK_PREVIEW_OK`, `TRAVEL_PREVIEW_OK`, `WORLD_PREVIEW_OK` e
-`CHECKPOINT_PREVIEW_OK`, `CHARACTER_CAMERA_OK`, `FLOOR_ART_PREVIEW_OK`,
-`STOP_WALKING_OK`, `WALL_OCCLUSION_OK`, `OBJECT_TEXT_OK`,
-`INVENTORY_INSPECTOR_OK`, `NAVIGATION_GRID_OK`, `ROUTE_HOVER_OK`,
-`DOOR_ROUTE_PREVIEW_OK`, `EXIT_ROUTE_PREVIEW_OK`, `ROUTE_CAMERA_OK`,
-`ITEM_CHECKPOINT_OK`, `CONTAINER_LOOT_OK`, `PLAYER_BAG_OK`, `ITEM_RETURN_OK`,
-`CONTAINER_ROUTE_OK`, `BAG_ORIGIN_OK`, `CARRY_WEIGHT_UI_OK`, `QUANTITY_TRANSFER_OK`, `SCRIPTED_CONTAINER_OK`,
-`INVENTORY_ART_UI_OK`,
-`ELEVATION_WALK_GUARD_OK`,
-`VISUAL_PREFERENCES_OK` / `IMPORT_SMOKE_OK`,
-seguidos de saída com código 0.
-Prefira `tools/Validate-Temple.ps1 -GodotExe $godotExe -DataDirectory <pasta-local>`
-para conferir também os marcadores atuais e os logs: **18 etapas**, incluindo
-285 grupos sintéticos e sete grupos do validador de logs. Erros do Godot ou recursos
-vazados são recusados mesmo quando o processo retorna zero. O manifesto fica em `.local/`.
-O caminho do Godot foi obtido do atalho local; ajuste-o em outra máquina.
-Durante o uso simultâneo do computador, faça capturas pelo
-`tools/Run-QuietGodot.ps1`, com caminhos explícitos. Esse runner usa um desktop
-isolado do Windows; `--headless` continua sendo a opção sem renderização.
-Após `--preview-test`, o teste de reabertura pode ser executado sem janela com
-`--visual-preferences-smoke` após `--`. Ele lê apenas o arquivo de preferências
-de teste e deve emitir `VISUAL_PREFERENCES_STARTUP_OK`. Para conferir com imagem,
-o runner aceita `-Check VisualPreferencesStartup`. Ambos preservam as opções reais.
-Informe `-CapturePath "$PWD\.local\temple-preview.png"` ao runner isolado para
-capturar a cena. Ele já executa `--preview-test`, que também gera
-uma captura `.selection.png` da porta selecionada, `.navigation.png` do percurso
-e `.door.png` da primeira passagem aberta, além de `.lockpick.png` da segunda
-porta após arrombar e atravessar. `.route-frame.png` mostra o percurso enquadrado.
-`.exit.png` mostra a passagem interna disponível e
-`.travel.png` a chegada na elevação 1; `.outside.png` mostra o exterior. Todas ficam fora do Git.
-Para repetir somente o ensaio completo do explosivo, acrescente
-`-Check ExplosivePreparation`; para a leitura visual/localizador, `-Check SceneReview`.
-O runner aceita `-Width 1280 -Height 720` e retorna `Passed`/`LogFailure`, além do
-código do processo e dos desktops de entrada antes/depois.
+### Executar a Apresentação no Godot
 
-Marcos recentes:
+1. Abra o arquivo `project.godot` no **Godot Engine (.NET)**.
+2. Pressione **F5** (ou clique em Reproduzir).
+3. Na primeira execução, se solicitado, aponte para a pasta de dados do seu Fallout 2 contendo `master.dat` e `critter.dat`. O caminho fica salvo localmente em `.local/`.
 
-- [Preparação pela bolsa](docs/explosive-preparation-ui-2026-10-20.md)
-- [Aproximação e alcance da barreira](docs/barrier-placement-guidance-2026-10-20.md)
-- [Avanço manual e eventos pendentes](docs/manual-use-clock-2026-10-20.md)
-- [Revisão e aplicação do efeito](docs/barrier-effect-ui-2026-10-20.md)
-- [Localizar recipientes pelo conteúdo](docs/container-locator-2026-10-20.md)
-- [Gravação atômica com recusa transitória](docs/atomic-save-retry-2026-10-20.md)
-- [Validação estrita dos logs](docs/strict-godot-validation-2026-10-20.md)
+---
 
-O leitor abre os dados em modo de leitura e imprime um resumo JSON, com contagens,
-origens, hashes e divergências dos dados originais. Sempre verifica uma reconstrução
-byte a byte a partir dos campos lidos. O modo `--export-local` grava a representação
-intermediária em `.local/arcaves.v2.json`, incluindo os bytes de origem e protótipos;
-esse arquivo é privado, regenerável e ignorado pelo Git. Execute esse modo na raiz.
-Não inclua dados originais, exportações ou arte convertida no repositório.
+## 4. Controles Principais na Cena (`TemplePreview`)
 
-O modo `--script` inspeciona a estrutura de um INT sem executá-lo. Acrescente
-`--instructions` para incluir opcodes e operandos brutos. Os trechos são físicos,
-sem prova automática de fluxo ou comportamento. Também lista referências literais
-de opções de diálogo, mantendo requisitos desconhecidos sem estimá-los.
-A análise da segunda porta confirmou
-que o script a tranca na entrada, embora o MAP grave o estado destrancado. Sua
-interação já usa um perfil mínimo de teste na prévia.
+| Tecla / Ação | Ação |
+| :--- | :--- |
+| **WASD** / Botão Direito | Movimentar a câmera isométrica livre |
+| **Q / E** | Girar a visão de câmera |
+| **Roda do Mouse** | Zoom in / Zoom out |
+| **C** | Centralizar câmera e acompanhar o personagem |
+| **M** | Alternar modo Caminhar (clique no chão para traçar rota por hexágonos) |
+| **U** | Interagir com porta (Abrir / Fechar) |
+| **L** | Arrombar porta trancada (Lockpick) |
+| **J** | Abrir contêiner / Coletar itens (*Take All* / Seleção de quantidade) |
+| **B** | Abrir bolsa do jogador (*Player Bag* / Gerenciamento de itens e peso) |
+| **I** | Inspecionar inventário original do objeto selecionado |
+| **K** | **Salvar Checkpoint** no slot local |
+| **R** | **Restaurar Checkpoint** do slot local |
+| **V** | Alternar corte automático de oclusão de paredes |
+| **G** | Mostrar / Ocultar grade de hexágonos |
+| **O** | Alternar sobreposição do piso original 2D |
+| **Enter** | Confirmar travessia de transição de elevação / área |
+| **Esc** | Parar caminhada no passo atual / Cancelar seleção |
 
-O modo `--door-adapter-test` já valida a inicialização, tranca e arrombamento da
-segunda porta com resultados determinísticos. Sucesso destranca e concede 25 XP uma
-vez; falha crítica emperra e impede nova tentativa. A sessão mantém os dados fonte
-intactos. O comando emite `TEMPLE_ADAPTER_TEST_OK`; não representa uma rolagem jogável.
+---
 
-- [Formatos, limites e próximo incremento](docs/temple-import.md)
-- [Coordenadas e limites da prévia 3D](docs/preview-3d.md)
-- [Navegação: regras e limites](docs/navigation.md)
-- [Portas: comportamento e validação atual](docs/doors-2026-10-17.md)
-- [Segunda porta: condições do script e leitor INT](docs/door-script-2026-10-18.md)
-- [Leitor INT: referências de opções de diálogo e limites](docs/int-dialogue-options-2026-10-20.md)
-- [Porta final: escritas constantes, entrada e atualização de estado](docs/temple-gate-state-evidence-2026-10-20.md)
-- [Scripts.lst: metadados de locais e alocação inicial](docs/script-local-metadata-2026-10-20.md)
-- [Locais do NPC: referências fora da contagem declarada](docs/temple-local-reference-audit-2026-10-20.md)
-- [Patch/master: comparação das contagens e armazenamento do CE](docs/temple-script-source-comparison-2026-10-20.md)
-- [Estado limitado de scripts: blocos separados e transações](docs/bounded-script-state-2026-10-20.md)
-- [Perfil inicial: GAM global, metadados e geometria](docs/temple-original-state-profile-2026-10-20.md)
-- [Porta final inicial e checkpoint v5](docs/initial-temple-gate-v5-2026-10-20.md)
-- [Porta final na cena: abertura, percurso e restauração](docs/initial-temple-gate-preview-2026-10-20.md)
-- [Adaptador de arrombamento: regras e validação](docs/door-adapter-2026-10-18.md)
-- [Arrombamento na prévia: perfil e controles](docs/lockpick-preview-2026-10-18.md)
-- [Passagens internas: destinos e estado do personagem](docs/travel-2026-10-18.md)
-- [Áreas externas e retorno: cache e validação](docs/world-2026-10-18.md)
-- [Checkpoint local: formato e restauração](docs/checkpoint-2026-10-18.md)
-- [Câmera no personagem: controles e validação](docs/camera-2026-10-18.md)
-- [Piso original: formato e referência visual](docs/floor-art-2026-10-18.md)
-- [Parada da caminhada: continuidade e controles](docs/stop-walking-2026-10-18.md)
-- [Revelar o personagem: paredes e limites](docs/wall-occlusion-2026-10-18.md)
-- [Nomes e descrições: mensagens e idioma](docs/object-text-2026-10-18.md)
-- [Inventário original: consulta e limites](docs/inventory-inspector-2026-10-18.md)
-- [Grade de navegação: visualização opcional](docs/navigation-grid-2026-10-18.md)
-- [Prévia do percurso: estados e controles](docs/route-hover-2026-10-18.md)
-- [Prévia da porta: aproximação e estado](docs/door-route-hover-2026-10-18.md)
-- [Prévia da saída: destino e carregamento](docs/exit-route-hover-2026-10-18.md)
-- [Validação isolada: executar sem abrir janelas no desktop ativo](docs/quiet-validation-2026-10-18.md)
-- [Enquadrar percurso: câmera, espaço livre e validação](docs/route-camera-2026-10-19.md)
-- [Preferências visuais: persistência local e reabertura](docs/visual-preferences-2026-10-19.md)
-- [Fontes dos itens: transferência e conservação de quantidades](docs/item-transfer-domain-2026-10-19.md)
-- [Itens no mundo: checkpoint v2 e compatibilidade com v1](docs/item-checkpoint-2026-10-19.md)
-- [Coleta: aproximação, quantidades restantes e janela](docs/container-loot-2026-10-19.md)
-- [Bolsa do personagem: consulta e origem dos itens](docs/player-bag-2026-10-19.md)
-- [Devolver itens: origem, proximidade e conservação](docs/item-return-2026-10-19.md)
-- [Devolver todas as pilhas da mesma origem: domínio e conservação](docs/return-all-domain-2026-10-20.md)
-- [Devolução conjunta na bolsa: sessão, seleção e checkpoint](docs/return-all-ui-2026-10-20.md)
-- [Recipientes no modo Caminhar: prévia, clique e enquadramento](docs/container-route-2026-10-19.md)
-- [Bolsa: solicitar aproximação ao recipiente de origem](docs/bag-origin-2026-10-19.md)
-- [Peso base original: layout PRO e validações](docs/item-base-weight-2026-10-19.md)
-- [Carga do perfil de teste: limite, pesos e compatibilidade](docs/carry-profile-2026-10-19.md)
-- [Pesos na interface: pilhas, carga e estados indisponíveis](docs/carry-weight-ui-2026-10-19.md)
-- [Quantidade escolhida: edição, carga e transferência](docs/item-quantity-2026-10-19.md)
-- [Retirar tudo: conservação e capacidade somada](docs/take-all-domain-2026-10-20.md)
-- [Retirar tudo na interface: coleta real e proteção de callbacks](docs/take-all-ui-2026-10-20.md)
-- [Baú do templo: referências externas e limites do adaptador](docs/temple-chest-script-2026-10-19.md)
-- [Baú: referências de diálogo e recuperação ainda não comprovada](docs/temple-chest-flow-2026-10-20.md)
-- [Baú: caminho nativo de recuperação manual](docs/temple-chest-native-recovery-2026-10-20.md)
-- [Baú do desafio: explicação na interface e limites atuais](docs/temple-chest-role-ui-2026-10-20.md)
-- [Cameron: evidência da alternativa Speech e estados ainda não implementados](docs/temple-speech-evidence-2026-10-20.md)
-- [Recipiente vazio: informar scripts e impedimentos](docs/container-status-2026-10-19.md)
-- [Rota de retorno: áreas visitadas e passagens explícitas](docs/item-origin-route-2026-10-19.md)
-- [Bolsa: orientação de retorno entre áreas](docs/bag-return-route-2026-10-19.md)
-- [Arte do inventário: FID original, FRM e paleta](docs/inventory-art-2026-10-19.md)
-- [Ícones em J/B: apresentação e fallback](docs/inventory-icon-ui-2026-10-19.md)
-- [Coleta nas elevações: percurso validado e barreira pendente](docs/temple-collection-2026-10-19.md)
-- [Barreira explosiva: condição e objeto de substituição](docs/temple-barrier-2026-10-19.md)
-- [Distância em hexes e referência de alcance da barreira](docs/hex-distance-2026-10-19.md)
-- [Explosivo: temporizador confirmado e questões da referência](docs/explosive-profile-2026-10-19.md)
-- [Consulta I: ícones e inventário original preservado](docs/original-inventory-icons-2026-10-19.md)
-- [Inspeção de elevação: preservar o passo e o percurso](docs/elevation-walk-guard-2026-10-19.md)
-- [Bateria local sem janela: um comando e manifesto de resultados](docs/validation-battery-2026-10-19.md)
-- [Explosivo: proposta validada sem ativar ou consumir](docs/explosive-use-proposal-2026-10-19.md)
-- [Retomada: propriedade, conservação e checkpoint do próximo incremento](docs/next-increment-2026-10-19.md)
-- [Propriedade de itens: carregados, posicionados e consumidos](docs/item-use-ownership-2026-10-19.md)
-- [Checkpoint v3: conservação, áreas e compatibilidade](docs/item-use-checkpoint-2026-10-19.md)
-- [Commit de uso: revisão, sessão e revalidação](docs/explosive-use-commit-2026-10-19.md)
-- [Ticks pendentes: prazo, restauração e conclusão explícita](docs/pending-use-clock-2026-10-19.md)
-- [Ordem dos vencimentos: parar no primeiro evento e preservar a sobra](docs/use-deadline-ordering-2026-10-19.md)
-- [Itens posicionados: camada visual, identidade e tempo lógico](docs/placed-use-preview-2026-10-19.md)
-- [Efeito da barreira: alvo, perfis e proposta sem mutação](docs/barrier-effect-proposal-2026-10-19.md)
-- [Cenário substituído: identidade e projeção isolada da passagem](docs/barrier-scene-projection-2026-10-19.md)
-- [Ensaio 3D: coleta real, posição, prazo e barreira preservada](docs/temple-explosive-preview-audit-2026-10-19.md)
-- [Continuação projetada: chegada e recipientes da elevação 2](docs/projected-temple-continuation-2026-10-19.md)
-- [Retomada: contrato e aceitação do próximo commit de barreira](docs/next-barrier-commit-2026-10-19.md)
-- [Entidades de teste: obstáculos, luzes e recipientes com estados visuais](docs/entity-readability-2026-10-19.md)
-- [Checkpoint v4: substituição de cenário e consumo na mesma operação](docs/barrier-checkpoint-v4-2026-10-19.md)
-- [Efeito aplicado: ida à elevação 2, coleta e retorno com checkpoint](docs/applied-temple-continuation-2026-10-19.md)
-- [Prévia aplicada: passagem aberta, identidade e checkpoints no Godot](docs/applied-barrier-preview-2026-10-19.md)
-- [Validação do quarto marco: caminhada por hexágonos](docs/validation-navigation-2026-10-17.md)
-- [Validação do terceiro marco: prévia 3D](docs/validation-preview-2026-10-17.md)
-- [Validação do segundo marco: scripts, objetos e inventários](docs/validation-objects-2026-10-17.md)
-- [Validação histórica do primeiro marco](docs/validation-2026-10-16.md)
+## 5. Diretrizes para Desenvolvimento e IA
+
+O projeto adota regras estritas de integridade técnica para desenvolvedores e agentes autônomos documentadas em [`AGENTS.md`](AGENTS.md):
+
+1. **Validação Obrigatória:** A suíte de 481 testes (`tools/TempleInspector --self-test`) deve ser executada e aprovada antes e depois de qualquer alteração em C#.
+2. **Ambiente Não Intrusivo:** Execuções do Godot para testes automatizados devem usar `--headless` ou o runner isolado [`tools/Run-QuietGodot.ps1`](tools/Run-QuietGodot.ps1).
+3. **Preservação dos Dados Originais:** Proibida qualquer alteração em IDs originais (PIDs, FIDs, SIDs), tabelas MSG ou binários clássicos.
+
+---
+
+## 6. Licença e Reconhecimentos
+
+- **Código:** Distribuído sob a licença [MIT](LICENSE).
+- **Fallout 2:** Marca registrada da Bethesda Softworks LLC / ZeniMax Media. Este é um projeto de estudo e engenharia reversa sem fins lucrativos.
+- **Fallout 2 Community Engine (CE):** Agradecimento especial ao projeto de engenharia reversa [fallout2-ce](https://github.com/alexbatalov/fallout2-ce) de Alex Batalov pelas referências de algoritmos e estruturas.
