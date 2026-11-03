@@ -3,11 +3,81 @@
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/)
 [![Godot Engine](https://img.shields.io/badge/Godot-4.7%2B%20.NET-478cbf.svg)](https://godotengine.org/)
 [![Synthetic Tests](https://img.shields.io/badge/Tests-481%20passing-brightgreen.svg)]()
-[![Parity Reference](https://img.shields.io/badge/Parity-Fallout%202%20CE%20(e97087b)-orange.svg)](https://github.com/alexbatalov/fallout2-ce)
+[![Development Mode](https://img.shields.io/badge/Mode-Vibe%20Coding%20%2B%20Multi--Agent-blueviolet.svg)]()
+[![AI Harnesses](https://img.shields.io/badge/Harnesses-Codex%20%7C%20Claude%20%7C%20Antigravity-orange.svg)]()
+[![Parity Reference](https://img.shields.io/badge/Parity-Fallout%202%20CE%20(e97087b)-yellow.svg)](https://github.com/alexbatalov/fallout2-ce)
 
-Projeto pessoal de recriação de **Fallout 2** desenvolvido em **Godot 4 .NET / C#**, adotando uma apresentação isométrica 3D com iluminação e qualidade de materiais inspiradas em *Wasteland 3*, preservando com fidelidade matemática e binária as regras, opcodes e estruturas do motor original via **Fallout 2 Community Engine (CE)**.
+Projeto de recriação de **Fallout 2** desenvolvido em **Godot 4 .NET / C#**, adotando uma apresentação isométrica 3D com iluminação e qualidade de materiais inspiradas em *Wasteland 3*, preservando com fidelidade matemática e binária as regras, opcodes e estruturas do motor original via **Fallout 2 Community Engine (CE)**.
 
 ---
+
+## ⚡ Vibe Coding com Engenharia Séria: O Workflow Multi-Agente em Paralelo
+
+Embora este projeto tenha sido desenvolvido sob a filosofia de **"Vibe Coding"** (código guiado por intenção e desenvolvido massivamente por Inteligência Artificial), ele não utiliza o paradigma frágil de "prompt-and-pray". Foi desenhado e implementado um **workflow profissional de engenharia com múltiplos harnesses de IA operando simultaneamente em paralelo**:
+
+```text
+                               ┌──────────────────────────────────────────────────────────┐
+                               │           MEMÓRIA COMPARTILHADA ENTRE AGENTES            │
+                               │  • Servidor MCP ai-memory (decisões históricas e fatos)  │
+                               │  • Documentação Canônica (AGENTS.md, PROJECT_STATUS.md)  │
+                               └────────────────────────────┬─────────────────────────────┘
+                                                            │
+                 ┌──────────────────────────────────────────┼──────────────────────────────────────────┐
+                 │                                          │                                          │
+                 ▼                                          ▼                                          ▼
+   ┌───────────────────────────┐              ┌───────────────────────────┐              ┌───────────────────────────┐
+   │       HARNESS CODEX       │              │       HARNESS CLAUDE      │              │    HARNESS ANTIGRAVITY    │
+   │      (OpenAI Codex)       │              │     (Anthropic Claude)    │              │      (Google Gemini)      │
+   ├───────────────────────────┤              ├───────────────────────────┤              ├───────────────────────────┤
+   │ Worktree:                 │              │ Worktree:                 │              │ Worktree:                 │
+   │ D:\Dev\FalloutRemakeCodex │              │ D:\Dev\FalloutRemakeClaude│              │ D:\Dev\FalloutRemakeArgon │
+   │ Branch: agent/codex-work  │              │ Branch: agent/claude-work │              │ Branch: agent/argon-work  │
+   │ Foco: Domínio, diálogos,  │              │ Foco: Núcleo de combate,  │              │ Foco: Pipeline de assets, │
+   │ regras de RPG e sessão    │              │ chamadas de mira e IA CE  │              │ conversões e automação    │
+   └─────────────┬─────────────┘              └─────────────┬─────────────┘              └─────────────┬─────────────┘
+                 │                                          │                                          │
+                 └──────────────────────────────────────────┼──────────────────────────────────────────┘
+                                                            │
+                                                            ▼
+                                              ┌───────────────────────────┐
+                                              │    BRANCH INTEGRATION     │
+                                              │ (D:\Dev\FalloutRemake...  │
+                                              │       Integracao)         │
+                                              ├───────────────────────────┤
+                                              │ Quality Gate:             │
+                                              │ 481 Testes Sintéticos     │
+                                              │ Console em ~1,4s          │
+                                              └─────────────┬─────────────┘
+                                                            │
+                                                            ▼
+                                              ┌───────────────────────────┐
+                                              │     BRANCH MAIN (PROD)    │
+                                              │    (D:\Dev\FalloutRemake) │
+                                              └───────────────────────────┘
+```
+
+### Pilares desse Workflow Profissional:
+
+1. **Isolamento Físico via Git Worktrees:**
+   - Cada harness de IA trabalha em uma pasta de trabalho física separada (`D:\Dev\FalloutRemakeCodex`, `FalloutRemakeClaude`, `FalloutRemakeArgon`), conectadas ao mesmo repositório Git local.
+   - Isso elimina qualquer colisão de arquivos de trava (*lockfiles*), impede que um agente sobrescreva a árvore de trabalho de outro e permite que múltiplos modelos trabalhem e compilem em paralelo simultaneamente.
+
+2. **Memória Compartilhada e Sem Alucinações (MCP + Docs Canônicos):**
+   - Agentes de diferentes fornecedores (OpenAI, Anthropic, Google) compartilham as mesmas decisões arquiteturais através de um **servidor MCP de memória vetorial (`ai-memory`)** e arquivos canônicos obrigatórios ([`AGENTS.md`](AGENTS.md) e [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)).
+   - Antes de iniciar qualquer tarefa, o agente consulta o histórico de decisões e contratos técnicos homologados, eliminando regresso de código e perda de contexto entre sessões.
+
+3. **Quality Gates Ultra-Rápidos (.NET 8 puro C#):**
+   - Como os subsistemas de regras de negócio (`Import`, `Geometry`, `Runtime`) são C# puro completamente desacoplados da engine gráfica, o console de testes [`tools/TempleInspector`](tools/TempleInspector/TempleInspector.csproj) valida **481 grupos de testes sintéticos em ~1,4 segundo**.
+   - É **obrigatório** pelo protocolo do projeto que qualquer agente execute a suíte antes e depois de qualquer modificação. Se um único teste quebrar, a alteração é sumariamente rejeitada.
+
+4. **Ambiente Não-Intrusivo no Desktop:**
+   - O projeto possui o runner [`tools/Run-QuietGodot.ps1`](tools/Run-QuietGodot.ps1), que inicia o Godot em um desktop virtual do Windows para testes visuais e capturas de tela sem roubar o foco, mover o mouse ou atrapalhar o desenvolvedor enquanto ele utiliza a máquina.
+
+5. **Intercambialidade com Rigor Crítico:**
+   - Nenhum modelo tem monopólio sobre uma tarefa. As tarefas são distribuídas por afinidade, disponibilidade ou cotas. Nenhum agente pode assumir que o código de outro modelo está correto sem conferir evidências reais no código e nos testes.
+
+---
+
 
 ## 1. Visão Geral da Arquitetura
 
