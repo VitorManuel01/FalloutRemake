@@ -76,7 +76,35 @@ Embora este projeto tenha sido desenvolvido sob a filosofia de **"Vibe Coding"**
 5. **Intercambialidade com Rigor Crítico:**
    - Nenhum modelo tem monopólio sobre uma tarefa. As tarefas são distribuídas por afinidade, disponibilidade ou cotas. Nenhum agente pode assumir que o código de outro modelo está correto sem conferir evidências reais no código e nos testes.
 
+### 🎨 Pipeline Híbrido de Criação de Assets 3D (Multi-Tier Cost & Quality):
+
+Para reconstruir o mundo isométrico em 3D preservando com perfeição a identidade visual de 1998 e otimizando os custos de inferência de IA, foi implementada uma esteira de produção multimodelos:
+
+```text
+  [ Sprites 2D Originais ] (.FRM do Fallout 2 clássico)
+             │
+             ▼
+  [ Estágio 1: IA de Geração de Imagens (Google / Imagen) ]
+  • Analisa os sprites clássicos e gera no chat concepts ultra-detalhados
+  • Define vistas ortogonais, proporções anatômicas/arquitetônicas e medidas métricas
+             │
+             ▼
+  [ Estágio 2: Prototipagem Rápida de Baixo Custo (Gemini Flash no Antigravity) ]
+  • IA rápida e econômica para criar protótipos de malha 3D e scripts de automação
+  • Mapeamento de caixas delimitadoras (bounding boxes) e testes preliminares
+             │
+             ▼
+  [ Estágio 3: Refinamento Estético e Homologação Final (Anthropic Claude) ]
+  • Auditoria rigorosa de proporções artísticas, topologia e materiais PBR
+  • Refinamento da geometria até o modelo 3D final (.GLB) pronto para o Godot
+```
+
+1. **Estágio 1 — Concept e Folha de Proporções (IA Geradora de Imagens / Google):** A partir dos sprites e renders clássicos em 2D do Fallout 2, a IA gera ilustrações conceituais de alta fidelidade com folhas de proporções, ângulos ortogonais e especificações de medidas no chat.
+2. **Estágio 2 — Prototipagem Acelerada (Gemini Flash via Antigravity):** Utilizando um modelo ágil e de baixo custo operacional (**Gemini Flash**) dentro do harness Antigravity, são gerados os protótipos preliminares, estruturas de colisão, nós de cena e automações da pipeline.
+3. **Estágio 3 — Refinamento e Arte Final (Anthropic Claude):** O modelo **Claude** realiza a engenharia fina e o refinamento estético: validação de proporções em relação ao motor clássico, ajuste de shaders/PBR e homologação do modelo 3D final em `.glb` integrado à cena.
+
 ---
+
 
 
 ## 1. Visão Geral da Arquitetura
