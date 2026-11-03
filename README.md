@@ -1,4 +1,6 @@
-# FalloutRemake — Recriação de Fallout 2 em Godot 4 .NET / C#
+# FalloutRemake — Fallout 2 Remake in Godot 4 .NET / C#
+
+**English** | [Português (Brasil)](README.pt-BR.md)
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/)
 [![Godot Engine](https://img.shields.io/badge/Godot-4.7%2B%20.NET-478cbf.svg)](https://godotengine.org/)
@@ -7,293 +9,288 @@
 [![AI Harnesses](https://img.shields.io/badge/Harnesses-Codex%20%7C%20Claude%20%7C%20Antigravity-orange.svg)]()
 [![Parity Reference](https://img.shields.io/badge/Parity-Fallout%202%20CE%20(e97087b)-yellow.svg)](https://github.com/alexbatalov/fallout2-ce)
 
-Projeto de recriação de **Fallout 2** desenvolvido em **Godot 4 .NET / C#**, adotando uma apresentação isométrica 3D com iluminação e qualidade de materiais inspiradas em *Wasteland 3*, preservando com fidelidade matemática e binária as regras, opcodes e estruturas do motor original via **Fallout 2 Community Engine (CE)**.
+A personal remake of **Fallout 2** built with **Godot 4 .NET / C#**, featuring a 3D isometric presentation with lighting and material fidelity inspired by *Wasteland 3*, while strictly preserving original binary structures, opcodes, and mathematical rules via the **Fallout 2 Community Engine (CE)**.
 
 ---
 
-## ⚡ Vibe Coding com Engenharia Séria: O Workflow Multi-Agente em Paralelo
+## ⚡ Vibe Coding with Serious Engineering: The Parallel Multi-Agent Workflow
 
-Embora este projeto tenha sido desenvolvido sob a filosofia de **"Vibe Coding"** (código guiado por intenção e desenvolvido massivamente por Inteligência Artificial), ele não utiliza o paradigma frágil de "prompt-and-pray". Foi desenhado e implementado um **workflow profissional de engenharia com múltiplos harnesses de IA operando simultaneamente em paralelo**:
+While this project is developed under the **"Vibe Coding"** paradigm (intent-driven development authored massively by AI agents), it strictly rejects fragile "prompt-and-pray" habits. Instead, it implements an **enterprise-grade multi-agent engineering workflow with distinct AI harnesses operating concurrently in parallel**:
 
 ```text
                                ┌──────────────────────────────────────────────────────────┐
-                               │           MEMÓRIA COMPARTILHADA ENTRE AGENTES            │
-                               │  • Servidor MCP ai-memory (decisões históricas e fatos)  │
-                               │  • Documentação Canônica (AGENTS.md, PROJECT_STATUS.md)  │
+                               │               SHARED MULTI-AGENT MEMORY                  │
+                               │  • ai-memory MCP Server (historical decisions & facts)   │
+                               │  • Canonical Docs (AGENTS.md, PROJECT_STATUS.md)         │
                                └────────────────────────────┬─────────────────────────────┘
                                                             │
                  ┌──────────────────────────────────────────┼──────────────────────────────────────────┐
                  │                                          │                                          │
                  ▼                                          ▼                                          ▼
    ┌───────────────────────────┐              ┌───────────────────────────┐              ┌───────────────────────────┐
-   │       HARNESS CODEX       │              │       HARNESS CLAUDE      │              │    HARNESS ANTIGRAVITY    │
+   │       CODEX HARNESS       │              │       CLAUDE HARNESS      │              │    ANTIGRAVITY HARNESS    │
    │      (OpenAI Codex)       │              │     (Anthropic Claude)    │              │      (Google Gemini)      │
    ├───────────────────────────┤              ├───────────────────────────┤              ├───────────────────────────┤
    │ Worktree:                 │              │ Worktree:                 │              │ Worktree:                 │
    │ D:\Dev\FalloutRemakeCodex │              │ D:\Dev\FalloutRemakeClaude│              │ D:\Dev\FalloutRemakeArgon │
    │ Branch: agent/codex-work  │              │ Branch: agent/claude-work │              │ Branch: agent/argon-work  │
-   │ Foco: Domínio, diálogos,  │              │ Foco: Núcleo de combate,  │              │ Foco: Pipeline de assets, │
-   │ regras de RPG e sessão    │              │ chamadas de mira e IA CE  │              │ conversões e automação    │
+   │ Focus: Domain logic, RPG  │              │ Focus: Combat core,       │              │ Focus: Asset pipeline,    │
+   │ rules, dialogs & session  │              │ called shots & combat AI  │              │ conversions & automation  │
    └─────────────┬─────────────┘              └─────────────┬─────────────┘              └─────────────┬─────────────┘
                  │                                          │                                          │
                  └──────────────────────────────────────────┼──────────────────────────────────────────┘
                                                             │
                                                             ▼
                                               ┌───────────────────────────┐
-                                              │    BRANCH INTEGRATION     │
+                                              │    INTEGRATION WORKTREE   │
                                               │ (D:\Dev\FalloutRemake...  │
                                               │       Integracao)         │
                                               ├───────────────────────────┤
                                               │ Quality Gate:             │
-                                              │ 481 Testes Sintéticos     │
-                                              │ Console em ~1,4s          │
+                                              │ 481 Synthetic Tests       │
+                                              │ Pure C# Console (~1.4s)   │
                                               └─────────────┬─────────────┘
                                                             │
                                                             ▼
                                               ┌───────────────────────────┐
-                                              │     BRANCH MAIN (PROD)    │
+                                              │     MAIN BRANCH (PROD)    │
                                               │    (D:\Dev\FalloutRemake) │
                                               └───────────────────────────┘
 ```
 
-### Pilares desse Workflow Profissional:
+### Core Workflow Pillars:
 
-1. **Isolamento Físico via Git Worktrees:**
-   - Cada harness de IA trabalha em uma pasta de trabalho física separada (`D:\Dev\FalloutRemakeCodex`, `FalloutRemakeClaude`, `FalloutRemakeArgon`), conectadas ao mesmo repositório Git local.
-   - Isso elimina qualquer colisão de arquivos de trava (*lockfiles*), impede que um agente sobrescreva a árvore de trabalho de outro e permite que múltiplos modelos trabalhem e compilem em paralelo simultaneamente.
+1. **Physical Isolation via Git Worktrees:**
+   - Each AI harness operates in a dedicated, isolated filesystem directory (`D:\Dev\FalloutRemakeCodex`, `FalloutRemakeClaude`, `FalloutRemakeArgon`), all connected to the same underlying Git repository.
+   - This prevents file locking collisions, avoids dirty working-tree overwrites, and allows multiple models to develop, run tests, and compile concurrently.
 
-2. **Memória Compartilhada e Sem Alucinações (MCP + Docs Canônicos):**
-   - Agentes de diferentes fornecedores (OpenAI, Anthropic, Google) compartilham as mesmas decisões arquiteturais através de um **servidor MCP de memória vetorial (`ai-memory`)** e arquivos canônicos obrigatórios ([`AGENTS.md`](AGENTS.md) e [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)).
-   - Antes de iniciar qualquer tarefa, o agente consulta o histórico de decisões e contratos técnicos homologados, eliminando regresso de código e perda de contexto entre sessões.
+2. **Cross-Vendor Shared Memory (MCP + Living Documentation):**
+   - Independent AI models from different providers (OpenAI, Anthropic, Google) share architectural decisions and rules via a **vector memory MCP server (`ai-memory`)** and mandatory canonical project files ([`AGENTS.md`](AGENTS.md) and [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)).
+   - Prior to editing code, agents inspect past decisions and established contracts, eliminating hallucinations and context loss across sessions.
 
-3. **Quality Gates Ultra-Rápidos (.NET 8 puro C#):**
-   - Como os subsistemas de regras de negócio (`Import`, `Geometry`, `Runtime`) são C# puro completamente desacoplados da engine gráfica, o console de testes [`tools/TempleInspector`](tools/TempleInspector/TempleInspector.csproj) valida **481 grupos de testes sintéticos em ~1,4 segundo**.
-   - É **obrigatório** pelo protocolo do projeto que qualquer agente execute a suíte antes e depois de qualquer modificação. Se um único teste quebrar, a alteração é sumariamente rejeitada.
+3. **Ultra-Fast Pure C# Quality Gates (.NET 8):**
+   - Domain subsystems (`Import`, `Geometry`, `Runtime`) are pure C# completely decoupled from the Godot engine. The console test suite [`tools/TempleInspector`](tools/TempleInspector/TempleInspector.csproj) executes **481 synthetic test groups in ~1.4 seconds**.
+   - Project protocol mandates that tests run before and after every code change. If a single test fails, the modification is rejected immediately.
 
-4. **Ambiente Não-Intrusivo no Desktop:**
-   - O projeto possui o runner [`tools/Run-QuietGodot.ps1`](tools/Run-QuietGodot.ps1), que inicia o Godot em um desktop virtual do Windows para testes visuais e capturas de tela sem roubar o foco, mover o mouse ou atrapalhar o desenvolvedor enquanto ele utiliza a máquina.
+4. **Non-Intrusive Desktop Execution:**
+   - Visual test execution uses [`tools/Run-QuietGodot.ps1`](tools/Run-QuietGodot.ps1), which spawns Godot inside an isolated Windows virtual desktop. Automated tests and screenshot generation run without stealing focus, moving the mouse cursor, or disrupting the developer's active workspace.
 
-5. **Intercambialidade com Rigor Crítico:**
-   - Nenhum modelo tem monopólio sobre uma tarefa. As tarefas são distribuídas por afinidade, disponibilidade ou cotas. Nenhum agente pode assumir que o código de outro modelo está correto sem conferir evidências reais no código e nos testes.
+5. **Interchangeability & Mutual Verification:**
+   - No AI model has a monopoly on any task. Models are assigned dynamically by availability, rate limits, or context suitability. Furthermore, agents must verify each other's work through test evidence rather than blind trust.
 
-### 🎨 Pipeline Híbrido de Criação de Assets 3D (Multi-Tier Cost & Quality):
+### 🎨 Hybrid 3D Asset Creation Pipeline (Multi-Tier Cost & Quality):
 
-Para reconstruir o mundo isométrico em 3D preservando com perfeição a identidade visual de 1998 e otimizando os custos de inferência de IA, foi implementada uma esteira de produção multimodelos:
+To rebuild the isometric environment in 3D while preserving the 1998 artistic identity and optimizing AI inference costs, the project employs a 3-stage multi-model asset pipeline:
 
 ```text
-  [ Sprites 2D Originais ] (.FRM do Fallout 2 clássico)
+  [ Original 2D Sprites ] (Classic Fallout 2 .FRM files)
              │
              ▼
-  [ Estágio 1: IA de Geração de Imagens (Google / Imagen) ]
-  • Analisa os sprites clássicos e gera no chat concepts ultra-detalhados
-  • Define vistas ortogonais, proporções anatômicas/arquitetônicas e medidas métricas
+  [ Stage 1: Generative Image AI (Google / Imagen) ]
+  • Analyzes original sprites and outputs high-fidelity concept art in chat
+  • Establishes orthographic perspectives, anatomical/architectural measurements
              │
              ▼
-  [ Estágio 2: Prototipagem Rápida de Baixo Custo (Gemini Flash no Antigravity) ]
-  • IA rápida e econômica para criar protótipos de malha 3D e scripts de automação
-  • Mapeamento de caixas delimitadoras (bounding boxes) e testes preliminares
+  [ Stage 2: Rapid Low-Cost Prototyping (Gemini Flash via Antigravity) ]
+  • Fast, economical AI generates initial 3D mesh drafts, collision bounds & tools
+  • Maps bounding boxes, coordinates, and preliminary layout structures
              │
              ▼
-  [ Estágio 3: Refinamento Estético e Homologação Final (Anthropic Claude) ]
-  • Auditoria rigorosa de proporções artísticas, topologia e materiais PBR
-  • Refinamento da geometria até o modelo 3D final (.GLB) pronto para o Godot
+  [ Stage 3: Aesthetic Refinement & Final Topology (Anthropic Claude) ]
+  • Rigorous artistic review of proportions, mesh topology, and PBR materials
+  • Hardens geometry into the final production .GLB asset ready for Godot
 ```
 
-1. **Estágio 1 — Concept e Folha de Proporções (IA Geradora de Imagens / Google):** A partir dos sprites e renders clássicos em 2D do Fallout 2, a IA gera ilustrações conceituais de alta fidelidade com folhas de proporções, ângulos ortogonais e especificações de medidas no chat.
-2. **Estágio 2 — Prototipagem Acelerada (Gemini Flash via Antigravity):** Utilizando um modelo ágil e de baixo custo operacional (**Gemini Flash**) dentro do harness Antigravity, são gerados os protótipos preliminares, estruturas de colisão, nós de cena e automações da pipeline.
-3. **Estágio 3 — Refinamento e Arte Final (Anthropic Claude):** O modelo **Claude** realiza a engenharia fina e o refinamento estético: validação de proporções em relação ao motor clássico, ajuste de shaders/PBR e homologação do modelo 3D final em `.glb` integrado à cena.
+1. **Stage 1 — Concept & Scale Specifications (Image Generation AI / Google):** Using the original Fallout 2 2D sprites and renders, the image generation AI produces high-resolution turnaround concept sheets with metric scale and orthographic references directly in the chat session.
+2. **Stage 2 — Rapid Prototyping (Gemini Flash via Antigravity):** A fast, cost-effective model (**Gemini Flash**) leverages those specifications in the Antigravity harness to build raw 3D meshes, collision geometry, scene nodes, and pipeline automation scripts.
+3. **Stage 3 — Refinement & Production Asset (Anthropic Claude):** **Claude** performs high-precision aesthetic and structural refinement: verifying proportions against classic engine sprites, tuning PBR shaders/materials, and exporting the final production-ready `.glb` model.
 
 ---
 
+## 1. Architectural Overview
 
-
-## 1. Visão Geral da Arquitetura
-
-O projeto adota uma separação rigorosa entre a **lógica de domínio (C# puro .NET 8 desacoplado)** e a **camada de apresentação (Godot 4)**:
+The codebase enforces strict separation between **domain logic (pure decoupled .NET 8 C#)** and the **presentation layer (Godot 4)**:
 
 ```text
 src/
-├── Import/    (29 arquivos) -> C# Puro (.NET 8). Decodificação de arquivos DAT, MAP, PRO, INT, GAM, MSG, FRM, GCD e AI.
-├── Geometry/  (11 arquivos) -> C# Puro (.NET 8). Grid hexagonal de 40.000 hexes, BFS, pathfinding CE, linha de tiro e oclusão.
-├── Runtime/   (65 arquivos) -> C# Puro (.NET 8). Máquina de estados (WorldSession), combate por turnos, fichas, perks, medicina e checkpoints v1-v13.
-└── Preview/   (114 arquivos)-> Camada Godot 4. TemplePreview, adaptadores de visão, HUD de combate, janelas modais e testes in-engine.
+├── Import/    (29 files) -> Pure C# (.NET 8). Decodes classic DAT, MAP, PRO, INT, GAM, MSG, FRM, GCD, and AI files.
+├── Geometry/  (11 files) -> Pure C# (.NET 8). 40,000-hex grid math, BFS, CE pathfinder, line-of-fire, and wall occlusion.
+├── Runtime/   (65 files) -> Pure C# (.NET 8). State machine (WorldSession), CE turn-based combat, progression, medicine, and v1-v13 checkpoints.
+└── Preview/   (114 files)-> Godot 4 Presentation. TemplePreview, viewport adapters, combat HUD, modal windows, and in-engine test runners.
 ```
 
-Toda a lógica central de regras, combate, inventário e checkpoints é executada e testada pelo console [`tools/TempleInspector`](tools/TempleInspector/TempleInspector.csproj) **em ~1,4 segundo**, sem nenhuma dependência gráfica ou inicialização do Godot.
+The entire core game logic, combat resolver, container inventory, and checkpoint persistence can be executed and verified via [`tools/TempleInspector`](tools/TempleInspector/TempleInspector.csproj) **in ~1.4 seconds** with zero graphical dependencies.
 
 ---
 
-## 📸 Galeria de Gameplay e Capturas (NVIDIA RTX)
+## 📸 Gameplay & In-Engine Captures (NVIDIA RTX)
 
-Todas as capturas abaixo foram geradas em alta resolução (1440x900) diretamente na cena Godot renderizada via Direct3D 12 na GPU NVIDIA GeForce RTX:
+All captures below were rendered at high resolution (1440x900) directly from Godot using Direct3D 12 on an NVIDIA GeForce RTX GPU:
 
-| Combate por Turnos e Disparos Mirados | Encontro com Criaturas (Giant Ants) |
+| Turn-Based Combat & Called Shots | Creature Encounter (Giant Ants) |
 | :---: | :---: |
-| ![Tiros Mirados](docs/images/combat-called-shot.png) | ![Combate](docs/images/combat-encounter.png) |
-| *Janela de disparos mirados (Called Shots) nos 8 membros com custos de AP e probabilidades* | *Início de combate por linha de visão e iniciativa com criaturas no Templo* |
+| ![Called Shots](docs/images/combat-called-shot.png) | ![Combat Encounter](docs/images/combat-encounter.png) |
+| *Called Shots targeting window for 8 body parts with AP costs and hit chances* | *Line-of-sight and initiative-driven creature combat inside the Temple of Trials* |
 
-| Acerto Crítico e Dano Autêntico | Arquitetura 3D do Templo dos Ensaios |
+| Critical Hits & Authentic Damage | 3D Modular Temple of Trials Architecture |
 | :---: | :---: |
-| ![Acerto Crítico](docs/images/combat-critical.png) | ![Kit Modular](docs/images/temple-architecture-kit.png) |
-| *Acerto crítico autêntico do CE com efeito Knockdown e log detalhado* | *Kit modular de pedras e iluminação por tochas no interior do Templo* |
+| ![Critical Hit](docs/images/combat-critical.png) | ![Modular Kit](docs/images/temple-architecture-kit.png) |
+| *Authentic CE critical hit with Knockdown flag, armor bypass, and combat log* | *Modular stone architecture kit and dynamic torch lighting inside the Temple* |
 
-| Criação de Personagem SPECIAL | Grid Hexagonal e Pathfinding |
+| SPECIAL Character Creation | Hexagonal Grid & Pathfinding |
 | :---: | :---: |
-| ![Criação de Ficha](docs/images/character-creation-special.png) | ![Navegação Hexagonal](docs/images/hex-grid-navigation.png) |
-| *Editor de atributos SPECIAL com 40 pontos, traits e tag skills* | *Grid de 40.000 hexágonos, pathfinder BFS do CE e visualização de alcance* |
+| ![Character Creation](docs/images/character-creation-special.png) | ![Hex Navigation](docs/images/hex-grid-navigation.png) |
+| *SPECIAL attribute editor with 40 distribution points, Traits, and Tag Skills* | *40,000-hex grid, CE BFS pathfinder, and visual reachability radius* |
 
-| Arrombamento de Portas (Lockpick) | Gestão de Inventário e Capacidade de Carga |
+| Door Lockpicking | Container Inventory & Carry Weight |
 | :---: | :---: |
-| ![Arrombamento](docs/images/lockpick-door.png) | ![Inventário e Saque](docs/images/inventory-loot.png) |
-| *Segunda porta com adaptador de lockpick determinístico e 25 XP* | *Janela de contêiner com cálculo atômico de peso por Força e Take All* |
+| ![Lockpick](docs/images/lockpick-door.png) | ![Inventory Loot](docs/images/inventory-loot.png) |
+| *Second Temple door with deterministic Lockpick adapter and 25 XP reward* | *Container loot window with Strength-based carry limits and Take All button* |
 
-| Ambiente Externo e Assets PBR | Progressão e Árvore de Perks |
+| Exterior Environment & PBR Assets | Character Progression & Perks |
 | :---: | :---: |
 | ![Exterior](docs/images/nature-exterior.png) | ![Perks](docs/images/perks-progression.png) |
-| *Área externa do Templo com rochas e árvores queimadas PBR (Assets/Nature)* | *Consulta da tabela de perks clássicos com requisitos de nível e efeitos reais* |
+| *Temple exterior area with PBR rock and burnt tree models (Assets/Nature)* | *Classic Perk table browser with level prerequisites and integrated effects* |
 
 ---
 
----
+## 2. Implemented Subsystems
 
-## 2. Subsistemas Implementados
+### ⚔️ Turn-Based Tactical Combat (Fallout 2 CE Parity)
+- **Pure C# Combat Engine:** Implemented in [`src/Runtime/Combat/`](src/Runtime/Combat/) (`CombatSession.cs`, `DamageCalculator.cs`, `CriticalRules.cs`, `CombatAi.cs`, `CombatInitiative.cs`).
+- **Action Points (AP) & Initiative:** Deterministic turn order calculated by Sequence and Perception; AP costs for movement, attacks, reloading, and accessing the inventory mid-fight (4 AP).
+- **Damage Calculations:** Exact application of *Damage Threshold* (DT) and *Damage Resistance* (DR) derived from classic Fallout 2 weapon and armor prototypes.
+- **Targeted Shots (Called Shots):** Dedicated aiming interface ([`CalledShotWindow.cs`](src/Preview/CalledShotWindow.cs)) targeting Head, Eyes, Torso, Right Arm, Left Arm, Right Leg, Left Leg, and Groin, with accurate accuracy penalties and AP modifiers.
+- **Authentic Critical Tables:** Over 66 KB of authentic table data in [`CriticalRules.cs`](src/Runtime/Combat/CriticalRules.cs), mirroring the critical hit and failure tables of `fallout2.exe`.
+- **Firearms & Ballistics:** Magazine loads, world and combat reloading, burst spray dispersion (`_compute_spray` and `_shoot_along_path`), and weapon perks (Long Range, Scope Range, Accurate, Penetrate, Fast Reload).
+- **Melee, Unarmed & Thrown Weapons:** Switching between punch and kick with unarmed bonus damage; thrown spear mechanics consuming weapon from hand and depositing the item onto the target hex.
+- **Dual Hand Slots & Armor:** Full support for Fallout 2's dual active hand slots and equipped armor slots granting Armor Class (AC), stat bonuses, and damage resistances.
+- **Creature Combat AI:** AI decision trees based on Community Engine `combat_ai` and original `ai.txt` packets.
+- **Temple of Trials Encounters:** Integrated fights with Giant Ants and Radscorpions with accumulating poison on the game clock ([`PoisonRules.cs`](src/Runtime/Combat/PoisonRules.cs)).
+- **Cameron's Challenge:** Three verified paths: diplomatic Speech persuasion, an unarmed duel until yield, or lethal combat with Temple Key recovery from Cameron's body.
 
-### ⚔️ Combate Tático por Turnos (Fiel ao Fallout 2 CE)
-- **Núcleo de Combate em C# Puro:** Implementado em [`src/Runtime/Combat/`](src/Runtime/Combat/) (`CombatSession.cs`, `DamageCalculator.cs`, `CriticalRules.cs`, `CombatAi.cs`, `CombatInitiative.cs`).
-- **Pontos de Ação e Iniciativa:** Ordem de turnos calculada deterministicamente por Sequência e Percepção, consumo de AP para movimentação, ataques, recarga e abertura de inventário (4 AP).
-- **Cálculo de Dano Autêntico:** Aplicação exata de *Damage Threshold* (DT) e *Damage Resistance* (DR) baseados nas tabelas de munição e armadura do Fallout 2.
-- **Disparos Mirados (*Called Shots*):** Janela dedicada de mira ([`CalledShotWindow.cs`](src/Preview/CalledShotWindow.cs)) com alvos em Cabeça, Olhos, Tronco, Braço Direito, Braço Esquerdo, Perna Direita, Perna Esquerda e Virilha, com penalidades de precisão e custos adicionais de AP.
-- **Tabelas de Críticos Originais:** Mais de 66 KB de dados em [`CriticalRules.cs`](src/Runtime/Combat/CriticalRules.cs), reproduzindo fielmente as tabelas de acerto e falha crítica do `fallout2.exe`.
-- **Armas de Fogo e Balística:** Rastreamento de cartuchos e carregadores, recarga no mundo e em combate, dispersão de rajada (*burst spray*) por cálculo angular e perks de armas (Long Range, Scope Range, Accurate, Penetrate, Fast Reload).
-- **Combate Melee, Desarmado e Arremesso:** Alternância entre soco e chute com bônus de dano desarmado; mecânica de arremesso de lanças consumindo o item da mão e posicionando-o no chão do hex de impacto.
-- **Dois Slots de Mão e Armadura:** Suporte aos dois slots ativos de mão do Fallout 2 e slot de armadura ativa com aplicação de Classe de Armadura (AC), bônus de Força e resistência a radiação.
-- **IA Tática dos Inimigos:** Inimigos orientados pelo algoritmo `combat_ai` do Community Engine com leitura de pacotes `ai.txt` originais.
-- **Encontros no Templo dos Ensaios:** Combates integrados com Formigas Gigantes (*Giant Ants*) e Escorpiões-Rad (*Radscorpions*), com veneno acumulando no relógio de jogo ([`PoisonRules.cs`](src/Runtime/Combat/PoisonRules.cs)).
-- **Desafio Final de Cameron:** Três vias de resolução comprovadas: persuasão diplomática (Speech), duelo desarmado até a rendição ou combate com coleta da chave do Templo do corpo.
+### 📜 Dialogue, Quests & Arroyo Transition
+- **Arroyo Elder Dialogue:** Full dialogue tree in [`src/Runtime/ArroyoElderConsultation.cs`](src/Runtime/ArroyoElderConsultation.cs) covering initial conversation (`Node001`), repeated talks (`Node004`), and GECK quest acceptance and reminder branches (`Node015`, `Node007`, `Node016`).
+- **Quest Rewards & Flags:** Atomically awards 152 Caps (`PID 41`) and Vic's Flask (`PID 267`), updating global variables (`GVAR_TALKED_TO_ELDER`, `GVAR_DEN_VIC_KNOWN`) and local script states in checkpoints.
+- **Area Transition & Karma:** Exit through Temple Door 100 with transition to `maps/arvillag.map`, 600 XP award (or 300 XP if Cameron was slain), and Karma/Reputation tracking.
 
-### 📜 Diálogos, Missões e Transição para Arroyo
-- **Diálogo da Anciã (*Elder*):** Implementação completa em [`src/Runtime/ArroyoElderConsultation.cs`](src/Runtime/ArroyoElderConsultation.cs) cobrindo o primeiro diálogo (`Node001`), a conversa repetida (`Node004`), e os ramos de aceitação e lembrete da busca pelo GECK (`Node015`, `Node007`, `Node016`).
-- **Concessão de Recompensas:** Entrega controlada de 152 tampas (`PID 41`) e do cantil de Vic (`PID 267`), com gravação de variáveis globais (`GVAR_TALKED_TO_ELDER`, `GVAR_DEN_VIC_KNOWN`) e locais no checkpoint.
-- **Transição de Mapa e Experiência:** Saída do Templo pela porta 100 com transição para `maps/arvillag.map`, concessão de 600 XP (ou 300 XP caso Cameron tenha sido morto) com persistência de Karma e Reputação.
+### 👤 Character Creation, Stats, Progression & Survival
+- **Character Creation:** 40 SPECIAL attribute points, selection of up to 2 Traits and 3 Tag Skills.
+- **Original Premades:** Direct parsing of original `.gcd` character files (`Narg`, `Mingan`, and `Chitsa`).
+- **Level Progression:** XP accumulation, level ups, and progressive skill point distribution using classic editor rules.
+- **Perks & Traits:** Integrated effects for *Lifegiver*, *Educated*, *Tag!*, *Mutate!*, *Here and Now*, *Swift Learner*, *One Hander*, and *Jinxed*.
+- **Medicine & Healing:** Usable *First Aid* and *Doctor* skills with medical kits and 3-uses/day limits; Healing Powder and Pip-Boy natural rest (*Pipboy Rest* with safe map checks).
 
-### 👤 Criação de Personagem, Ficha, Progressão e Sobrevivência
-- **Criação de Personagem:** Distribuição de 40 pontos SPECIAL, escolha de até 2 características (*Traits*) e 3 perícias marcadas (*Tag Skills*).
-- **Personagens Pré-definidos:** Leitura direta dos arquivos `.gcd` originais (`Narg`, `Mingan` e `Chitsa`).
-- **Progressão de Nível:** Subida de nível por acúmulo de XP com tabela original e distribuição de pontos de perícia com custo progressivo do editor clássico.
-- **Perks e Traits:** Efeitos reais integrados de *Lifegiver*, *Educated*, *Tag!*, *Mutate!*, *Here and Now*, *Swift Learner*, *One Hander* e *Jinxed*.
-- **Medicina e Cura:** Perícias *First Aid* e *Doctor* exercitáveis com kits de primeiros socorros e limite de 3 usos diários; uso de Pó de Cura (*Healing Powder*) e descanso natural pelo Pip-Boy (*Pipboy Rest* com checagem de mapa seguro).
+### 📦 Inventory, Carry Weight & Item Management
+- **Strict Carry Weight:** Weight capacity calculated via Strength ($25 + \text{Strength} \times 25\text{ lb}$), validated atomically before moving any stack.
+- **Fast Container Transfer:** Atomically verified *Take All* and *Return All* preserving item origins and preventing item duplication.
+- **Temple Plastic Explosives:** Timed explosive placement (10 to 180 seconds), detonating on the game clock to destroy the barrier obstacle and open passage to elevation 2.
+- **Lockpicking & Doors:** Deterministic Lockpick session adapter granting 25 one-time XP; physical grid-blocking doors.
 
-### 📦 Inventário, Carga e Manipulação de Objetos
-- **Cálculo Rigoroso de Peso:** Limite de carga atômico baseado em Força ($25 + \text{Força} \times 25\text{ lb}$), com validação estrita prévia antes de qualquer coleta.
-- **Coleta e Devolução Rápida:** Funções *"Retirar tudo"* (*Take All*) e *"Devolver tudo"* (*Return All*) com conservação atômica de quantidades e preservação dos contêineres de origem.
-- **Barreira Explosiva do Templo:** Posicionamento de dinamite plástica, temporizador configurável (10 a 180 segundos), detonação atômica no relógio de jogo e abertura física da passagem para a elevação 2.
-- **Arrombamento e Portas:** Adaptador de arrombamento (*Lockpick*) determinístico para a segunda porta com concessão única de 25 XP; portas com abertura e bloqueio físico no grid.
+### 💾 Checkpoints & Session Persistence (v1 to v13)
+- **Multi-Map Atomic Serialization:** JSON-based persistence preserving doors, containers, placed items, inventory bag, combat state, weapon loads, perks, and Elder dialogue progress (`SavedElderState`).
+- **Backward Compatibility:** Automatic migration pipeline for legacy saves (`v1` through `v12`) to the consolidated `v13` schema.
 
-### 💾 Persistência e Checkpoints (v1 a v13)
-- **Serialização Multi-Mapa Atômica:** Gravação e restauração em JSON mantendo estado de portas, contêineres, itens posicionados/consumidos, inventário da bolsa, dados de combate, cargas de armas, perks e progresso de diálogos (`SavedElderState`).
-- **Compatibilidade Reversa:** Migração determinística automática de saves legados (`v1` a `v12`) para o schema consolidado `v13`.
-
-### 🗺️ Importação Direta e Geometria Hexagonal
-- **Leitura Nativa de Binários:** Carregamento de arquivos clássicos sem descompactação manual (`master.dat`, `critter.dat`, `*.map`, `*.pro`, `*.int`, `*.frm`, `*.msg`, `*.gam`).
-- **Grid Hexagonal Fiel:** Grid matemático de 40.000 hexágonos com conversão 3D/Hex, pathfinding BFS do CE e respeito a `NO_BLOCK`, `MULTIHEX` e elevações 0–2.
-- **Apresentação 3D:** Kit modular de pedras para o Templo dos Ensaios, modelos de natureza PBR (rochas e árvores queimadas) e sistema de corte de oclusão de paredes (*Wall Occlusion*).
+### 🗺️ Native Binary Parsing & Hexagonal Grid
+- **Direct Asset Extraction:** Reads classic game formats directly without unpacking (`master.dat`, `critter.dat`, `*.map`, `*.pro`, `*.int`, `*.frm`, `*.msg`, `*.gam`).
+- **Faithful 40,000-Hex Grid:** 3D/Hex coordinate conversion, CE BFS pathfinder respecting `NO_BLOCK`, `MULTIHEX`, and elevations 0–2.
+- **3D Presentation:** Modular stone architecture kit for the Temple of Trials, PBR nature models (rocks, burnt trees), and automatic wall occlusion.
 
 ---
 
-## 3. Como Executar
+## 3. How to Run
 
-### Pré-requisitos
+### Prerequisites
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Godot Engine 4 .NET (C#)](https://godotengine.org/download) (versão 4.3 ou 4.7 Mono)
-- Instalação clássica de **Fallout 2** (para fornecimento de `master.dat` e `critter.dat`). *Nenhum asset proprietário é distribuído no repositório.*
+- [Godot Engine 4 .NET (C#)](https://godotengine.org/download) (version 4.3 or 4.7 Mono)
+- A classic **Fallout 2** installation (to supply `master.dat` and `critter.dat`). *No proprietary assets are bundled in this repository.*
 
-### Compilação e Testes Sintéticos (.NET CLI)
+### Build & Synthetic Tests (.NET CLI)
 
-Na raiz do repositório:
+From the project root:
 
 ```powershell
-# 1. Compilar o projeto Godot e ferramentas
+# 1. Build the Godot C# project and tooling
 dotnet build 'Fallout Remake.csproj'
 
-# 2. Executar a suíte completa de 481 testes sintéticos (~1,4 segundo)
+# 2. Run the 481 synthetic test groups (~1.4s)
 dotnet run --project tools/TempleInspector -- --self-test
 ```
 
-### Relatórios e Conformidade de Dados Originais
+### Data Compliance & Original Binary Verification
 
-Para conferir a decodificação dos arquivos originais e a verificação byte a byte:
+To inspect map structure and execute byte-by-byte reconstruction tests:
 
 ```powershell
-$dataDir = "C:\Caminho\Para\Fallout2"
+$dataDir = "C:\Path\To\Fallout2"
 
-# Inspecionar mapa e integridade estrutural
+# Inspect map integrity and object structures
 dotnet run --project tools/TempleInspector -- --data-dir $dataDir
 
-# Relatório de regras de armas de fogo
+# Generate firearm rules compliance report
 dotnet run --project tools/TempleInspector -- --data-dir $dataDir --firearms-report
 
-# Relatório de diálogo da Anciã
+# Generate Arroyo Elder dialogue report
 dotnet run --project tools/TempleInspector -- --data-dir $dataDir --elder-report
 ```
 
-### Executar a Apresentação no Godot
+### Launch Godot Interactive Presentation
 
-1. Abra o arquivo `project.godot` no **Godot Engine (.NET)**.
-2. Pressione **F5** (ou clique em Reproduzir).
-3. Na primeira execução, se solicitado, aponte para a pasta de dados do seu Fallout 2 contendo `master.dat` e `critter.dat`. O caminho fica salvo localmente em `.local/`.
+1. Open `project.godot` with **Godot Engine (.NET)**.
+2. Press **F5** (or click Play).
+3. On first startup, point the file picker to your Fallout 2 directory containing `master.dat` and `critter.dat`. Settings are cached locally in `.local/`.
 
-### 🎥 Gravar Gameplay com a Ferramenta NVIDIA (NVIDIA App / ShadowPlay)
+### 🎥 Record Gameplay with NVIDIA Tools (NVIDIA App / ShadowPlay)
 
-O projeto suporta captura direta em 60 FPS com aceleração de hardware NVENC na GPU NVIDIA:
+The project supports 60 FPS hardware-accelerated video recording via NVENC on NVIDIA GPUs:
 
-1. Inicie a cena interativa do jogo:
+1. Launch the interactive game scene:
    ```powershell
    & "D:\Downloads\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe" --path .
    ```
-2. Utilize os atalhos oficiais da NVIDIA:
-   - **`Alt + F9`**: Iniciar ou encerrar a gravação de vídeo.
-   - **`Alt + Z`**: Abrir a sobreposição da NVIDIA App para ajustar resolução, taxa de quadros e atalhos.
-3. Os vídeos são salvos automaticamente no diretório padrão da NVIDIA (`%USERPROFILE%\Videos\NVIDIA\Desktop\`).
-
+2. Use standard NVIDIA overlay shortcuts:
+   - **`Alt + F9`**: Start or stop recording MP4 video.
+   - **`Alt + Z`**: Open the NVIDIA App overlay to configure resolution, bit rate, and microphone settings.
+3. Recorded clips are saved automatically to your NVIDIA recordings folder (`%USERPROFILE%\Videos\NVIDIA\Desktop\`).
 
 ---
 
-## 4. Controles Principais na Cena (`TemplePreview`)
+## 4. Key Controls (`TemplePreview`)
 
-| Tecla / Ação | Ação |
+| Key / Action | Function |
 | :--- | :--- |
-| **WASD** / Botão Direito | Movimentar a câmera isométrica livre |
-| **Q / E** | Girar a visão de câmera |
-| **Roda do Mouse** | Zoom in / Zoom out |
-| **C** | Centralizar câmera e acompanhar o personagem |
-| **M** | Alternar modo Caminhar (clique no chão para traçar rota por hexágonos) |
-| **U** | Interagir com porta (Abrir / Fechar) |
-| **L** | Arrombar porta trancada (Lockpick) |
-| **J** | Abrir contêiner / Coletar itens (*Take All* / Seleção de quantidade) |
-| **B** | Abrir bolsa do jogador (*Player Bag* / Gerenciamento de itens e peso) |
-| **I** | Inspecionar inventário original do objeto selecionado |
-| **K** | **Salvar Checkpoint** no slot local |
-| **R** | **Restaurar Checkpoint** do slot local |
-| **V** | Alternar corte automático de oclusão de paredes |
-| **G** | Mostrar / Ocultar grade de hexágonos |
-| **O** | Alternar sobreposição do piso original 2D |
-| **Enter** | Confirmar travessia de transição de elevação / área |
-| **Esc** | Parar caminhada no passo atual / Cancelar seleção |
+| **WASD** / Right Mouse Button | Pan isometric free camera |
+| **Q / E** | Rotate camera view |
+| **Mouse Wheel** | Zoom in / Zoom out |
+| **C** | Center camera and track player character |
+| **M** | Toggle Walk mode (click ground to pathfind along hexes) |
+| **U** | Interact with door (Open / Close) |
+| **L** | Pick locked door (Lockpick) |
+| **J** | Loot container (*Take All* / Specific quantity transfer) |
+| **B** | Open Player Bag (Inventory and carry weight management) |
+| **I** | Inspect original nested container inventory |
+| **K** | **Save Checkpoint** to local slot |
+| **R** | **Load Checkpoint** from local slot |
+| **V** | Toggle automatic Wall Occlusion cutaway |
+| **G** | Show / Hide hexagonal navigation grid |
+| **O** | Toggle original 2D floor texture overlay |
+| **Enter** | Confirm area or elevation transition traversal |
+| **Esc** | Stop walking on current step / Clear selection |
 
 ---
 
-## 5. Diretrizes para Desenvolvimento e IA
+## 5. Development & AI Protocol
 
-O projeto adota regras estritas de integridade técnica para desenvolvedores e agentes autônomos documentadas em [`AGENTS.md`](AGENTS.md):
+All contributors and autonomous agents must follow the engineering guidelines set out in [`AGENTS.md`](AGENTS.md):
 
-1. **Validação Obrigatória:** A suíte de 481 testes (`tools/TempleInspector --self-test`) deve ser executada e aprovada antes e depois de qualquer alteração em C#.
-2. **Ambiente Não Intrusivo:** Execuções do Godot para testes automatizados devem usar `--headless` ou o runner isolado [`tools/Run-QuietGodot.ps1`](tools/Run-QuietGodot.ps1).
-3. **Preservação dos Dados Originais:** Proibida qualquer alteração em IDs originais (PIDs, FIDs, SIDs), tabelas MSG ou binários clássicos.
+1. **Mandatory Test Verification:** The 481-test synthetic suite (`tools/TempleInspector --self-test`) must be run and pass before and after any C# edit.
+2. **Non-Intrusive Environment:** Godot runs for automated visual tests must use `--headless` or the isolated desktop runner [`tools/Run-QuietGodot.ps1`](tools/Run-QuietGodot.ps1).
+3. **Asset & Binary Preservation:** Never alter original Fallout 2 PIDs, FIDs, SIDs, MSG text files, or classic data archives.
 
 ---
 
-## 6. Licença e Reconhecimentos
+## 6. License & Acknowledgments
 
-- **Código:** Distribuído sob a licença [MIT](LICENSE).
-- **Fallout 2:** Marca registrada da Bethesda Softworks LLC / ZeniMax Media. Este é um projeto de estudo e engenharia reversa sem fins lucrativos.
-- **Fallout 2 Community Engine (CE):** Agradecimento especial ao projeto de engenharia reversa [fallout2-ce](https://github.com/alexbatalov/fallout2-ce) de Alex Batalov pelas referências de algoritmos e estruturas.
+- **Source Code:** Distributed under the [MIT License](LICENSE).
+- **Fallout 2:** Registered trademark of Bethesda Softworks LLC / ZeniMax Media. This is a non-commercial educational reverse-engineering study.
+- **Fallout 2 Community Engine (CE):** Special thanks to Alex Batalov's [fallout2-ce](https://github.com/alexbatalov/fallout2-ce) project for reference algorithms, opcodes, and data structures.
