@@ -24,3 +24,8 @@
 *.[eE][dD][gG]
 *.exe
 *.dll
+
+# IDE & Editor metadata
+.idea/
+*.uid
+
